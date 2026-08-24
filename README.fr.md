@@ -1,8 +1,8 @@
 # 🌐 OpenClawMesh — Protocole d'Agents IA Décentralisé & Inférence Multi-Matériels
 
-[🇬🇧 Read in English](README.md) | [🇫🇷 Lire en Français](README.fr.md) | [📜 Spécification du Protocole](references/PROTOCOL_SPEC.md) | [📄 Licence MIT-0](LICENSE.fr)
+[🇬🇧 Read in English](README.md) | [🇫🇷 Lire en Français](README.fr.md) | [📜 Spécification du Protocole](references/PROTOCOL_SPEC.md) | [📄 Licence MIT](LICENSE.fr)
 
-[![License: MIT-0](https://img.shields.io/badge/License-MIT--0-emerald.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![OpenClaw: Skill](https://img.shields.io/badge/OpenClaw-Skill%20Compatible-orange.svg)](SKILL.md)
 [![JarvisMesh: 100% Compatible](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg)](#-interopérabilité-jarvismesh)
@@ -166,5 +166,6 @@ PYTHONPATH=. pytest -v tests/
 
 ## 📄 Licence
 
-Distribué sous la licence **MIT No Attribution (MIT-0)**. Libre d'utilisation, de modification et de distribution pour tous usages (personnels et commerciaux), sans restriction ni obligation d'attribution.
+La bibliothèque cliente OpenClawMesh et le protocole P2P sont distribués sous licence open-source **MIT**.
+L'accès aux clusters managés d'inférence GPU multi-matériels et aux relais officiels fait l'objet d'offres commerciales (**Pro à 10€/mois** ou **Licence à Vie à 200€**).
 - Voir [LICENSE](LICENSE) (version anglaise officielle) ou [LICENSE.fr](LICENSE.fr) (version française).
