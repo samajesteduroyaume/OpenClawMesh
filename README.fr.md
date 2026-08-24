@@ -1,13 +1,40 @@
-# 🌐 OpenClawMesh — Skill P2P & Protocole Décentralisé pour OpenClaw
+# 🌐 OpenClawMesh — Protocole d'Agents IA Décentralisé & Inférence Multi-Matériels
 
-[🇬🇧 Read in English](README.md) | [🇫🇷 Lire en Français](README.fr.md) | [📜 Spécification du Protocole](references/PROTOCOL_SPEC.md) | [🔐 Modèle de Sécurité](references/SECURITY_MODEL.md)
+[🇬🇧 Read in English](README.md) | [🇫🇷 Lire en Français](README.fr.md) | [📜 Spécification du Protocole](references/PROTOCOL_SPEC.md) | [📄 Licence Commerciale](LICENSE.fr)
 
 [![License: Commercial & Evaluation](https://img.shields.io/badge/License-Commercial%20%26%20Evaluation-indigo.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![OpenClaw: Skill](https://img.shields.io/badge/OpenClaw-Skill%20Compatible-orange.svg)](SKILL.md)
-[![JarvisMesh: Compatible](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg)](#-compatibilité-jarvismesh)
+[![JarvisMesh: 100% Compatible](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg)](#-interopérabilité-jarvismesh)
+[![Hardware: Universal Acceleration](https://img.shields.io/badge/Hardware-NVIDIA%20%7C%20AMD%20%7C%20Intel%20%7C%20Apple-green.svg)](#-accélération-matérielle-universelle)
 
-**OpenClawMesh** est une compétence (Skill) et une bibliothèque réseau pair-à-pair (P2P) permettant à l'agent **OpenClaw** de collaborer nativement et en temps réel avec d'autres agents d'intelligence artificielle distribués sur le réseau local (LAN) ou distant, en s'appuyant rigoureusement sur le **Protocole JarvisMesh 1.0**.
+**OpenClawMesh** est une compétence (Skill) et un protocole réseau pair-à-pair (P2P) souverain pour agents d'intelligence artificielle.
+
+Il permet à vos agents **OpenClaw** de se découvrir mutuellement sur le réseau local, de déléguer des calculs lourds, d'exploiter la puissance des puces graphiques et d'accéder à une mémoire vectorielle partagée sans dépendre d'un cloud centralisé propriétaire.
+
+---
+
+## ✨ Fonctionnalités Clés
+
+1. 📡 **Découverte P2P Zero-Configuration (mDNS)** :
+   - Détection automatique et instantanée des agents et nœuds disponibles sur votre réseau local (LAN) et relais WAN.
+   - Introspection dynamique des capacités de chaque agent via `_describe_skills`.
+
+2. ⚡ **Inférence IA Multi-Matériels Universelle** :
+   - 🟢 **NVIDIA GPUs** : Accélération native CUDA / TensorRT / PyTorch.
+   - 🔴 **AMD GPUs** : Accélération ROCm / DirectML / HIP.
+   - 🔵 **Intel Core Ultra & Arc** : Accélération Intel NPU, OpenVINO, oneAPI et AVX-512.
+   - 🟣 **Apple Silicon (M1/M2/M3/M4)** : Inférence GPU Metal haute performance via MLX-LM.
+   - ⚪ **CPU Universel & Serveurs Locaux** : Fallback automatique optimisé (Ollama, llama.cpp, vLLM).
+
+3. 🌊 **Streaming Temps Réel Token-par-Token** :
+   - Émission et réception ultra-fluides des flux de génération LLM sans latence bloquante via trames `task_chunk`.
+
+4. 🧠 **Mémoire Vectorielle Persistante & RAG SQLite** :
+   - Stockage épisodique, recherche sémantique cosinus et conservation du contexte conversationnel entre sessions.
+
+5. 🔐 **Sécurité Asymétrique Zero-Trust** :
+   - Signatures cryptographiques **Ed25519**, liste blanche `TrustStore`, horodatage anti-rejeu et support HMAC-SHA256.
 
 ---
 
@@ -15,135 +42,110 @@
 
 ```mermaid
 graph TD
-    subgraph "Nœud OpenClaw (Machine Hôte)"
+    subgraph "Votre Machine (Agent OpenClaw)"
         OC["🤖 Agent OpenClaw"]
-        SKILL["📦 Skill `openclaw-mesh` (SKILL.md)"]
-        CLI["💻 CLI & Scripts (`scripts/`)"]
-        Client["📡 MeshClient (Multiplexé + mDNS)"]
-        Node["🌐 OpenClawMeshNode (Serveur d'outils)"]
-        
+        SKILL["📦 Skill OpenClawMesh (`SKILL.md`)"]
+        Client["📡 Client P2P & Moteur Universel"]
         OC --> SKILL
-        SKILL --> CLI
-        CLI --> Client
-        CLI --> Node
+        SKILL --> Client
     end
 
-    subgraph "Écosystème P2P (LAN / Relais WAN)"
-        JM1["🧠 JarvisNode (Inférence MLX Apple Silicon)"]
-        JM2["💾 JarvisNode (Mémoire Vectorielle SQLite RAG)"]
-        OC2["🤖 Autre Agent OpenClaw"]
+    subgraph "Réseau d'Agents Décentralisé (LAN / WAN)"
+        Node1["🟢 Nœud NVIDIA CUDA (GPU RTX/A100)"]
+        Node2["🟣 Nœud Apple Silicon (Metal MLX)"]
+        Node3["🔵 Nœud Intel Core Ultra (NPU OpenVINO)"]
+        Node4["💾 Nœud Mémoire Vectorielle SQLite"]
     end
 
-    Client <== "WebSockets Multiplexés (JSON / Chunks) + mDNS Zeroconf" ==> JM1
-    Client <== "WebSockets Multiplexés (JSON / Chunks) + mDNS Zeroconf" ==> JM2
-    Node <== "WebSockets Multiplexés + Signatures HMAC/Ed25519" ==> OC2
+    Client <== "WebSockets Multiplexés + mDNS Zeroconf" ==> Node1
+    Client <== "WebSockets Multiplexés + mDNS Zeroconf" ==> Node2
+    Client <== "WebSockets Multiplexés + mDNS Zeroconf" ==> Node3
+    Client <== "WebSockets Multiplexés + mDNS Zeroconf" ==> Node4
 ```
 
 ---
 
-## ✨ Fonctionnalités Clés
+## 🚀 Installation Rapide
 
-1. **Découverte Automatique Zero-Conf (mDNS)** :
-   - Découvre automatiquement tous les nœuds JarvisMesh (`_jarvismesh._tcp.local.`) et OpenClaw (`_openclawmesh._tcp.local.`).
-   - Introspection dynamique des compétences via la compétence interne réservée `_describe_skills`.
-
-2. **Délégation & Inférence IA Multi-Matériels Universelle** :
-   - **NVIDIA GPUs** : Accélération native CUDA / TensorRT / PyTorch.
-   - **AMD GPUs** : Accélération ROCm / DirectML / HIP.
-   - **Intel Core Ultra & Arc** : Accélération Intel NPU, OpenVINO, oneAPI et AVX-512.
-   - **Apple Silicon** : Inférence GPU Metal ultra-rapide via MLX-LM.
-   - **CPU Universel & Serveurs Locaux** : Fallback automatique optimisé (Ollama, llama.cpp, vLLM).
-   - Commande de diagnostic matériel : `openclaw-mesh hardware`.
-
-3. **Streaming Temps Réel Token-par-Token** :
-   - Réception et émission fluide des flux de tokens sans blocage grâce aux trames `task_chunk`.
-
-4. **Double Sécurité Cryptographique (Zero-Trust)** :
-   - **Mode PSK** : Signature HMAC-SHA256 pré-partagée.
-   - **Mode Asymétrique Ed25519** : Signature par clé privée avec vérification de clé publique et protection anti-rejeu par horodatage.
-
-5. **Exposition des Outils OpenClaw** :
-   - Exécute un serveur léger permettant aux autres agents du maillage d'appeler les outils de votre environnement OpenClaw.
-
-6. **Passerelle de Monétisation & Facturation (Stripe / Revolut)** :
-   - Système clé en main de vente de clés d'API (`openclaw_mesh/gateway`).
-   - Webhooks automatisés (Stripe / Lemon Squeezy) avec virements vers votre IBAN **Revolut**.
-   - Portail web client (`/portal`) et playground de test en direct.
-   - Voir le [💳 Guide de Monétisation](MONETIZATION_GUIDE.md).
-
----
-
-## 🚀 Installation & Utilisation
-
-### 1. Installation du Skill
 ```bash
-cd /Users/selim/Desktop/OpenClawMesh
-pip install -e ".[dev]"
-```
+# 1. Cloner le dépôt
+git clone https://github.com/samajesteduroyaume/OpenClawMesh.git
+cd OpenClawMesh
 
-Pour installer le skill directement dans le dossier des skills OpenClaw :
-```bash
+# 2. Installer le package et ses dépendances
+pip install -e .
+
+# 3. Lier le Skill à votre installation OpenClaw
 mkdir -p ~/.openclaw/skills
-ln -s /Users/selim/Desktop/OpenClawMesh ~/.openclaw/skills/openclaw-mesh
+ln -s "$(pwd)" ~/.openclaw/skills/openclaw-mesh
 ```
 
 ---
 
-## 💻 Commandes CLI (`openclaw-mesh` / `scripts/mesh_cli.py`)
+## 💻 Guide d'Utilisation en Ligne de Commande (CLI)
 
-### 🔍 1. Découvrir les pairs actifs
+### 1. 🔍 Diagnostiquer votre matériel IA
+Identifiez instantanément l'accélérateur matériel disponible sur votre machine :
+```bash
+python3 scripts/mesh_cli.py hardware
+```
+
+### 2. 📡 Découvrir les agents sur le réseau
+Scannez le réseau local pour lister les nœuds actifs et leurs compétences :
 ```bash
 python3 scripts/mesh_cli.py discover --inspect
 ```
-Sortie JSON brute pour l'agent :
+
+### 3. 💬 Déléguer une tâche en streaming
+Envoyez un prompt à un nœud d'inférence avec affichage continu token-par-token :
 ```bash
-python3 scripts/mesh_discover.py
+python3 scripts/mesh_cli.py stream --skill llm_stream --payload '{"prompt": "Explique l'informatique quantique en 2 phrases."}'
 ```
 
-### ⚡ 2. Déléguer une tâche
+### 4. 💾 Interroger la mémoire vectorielle
+Effectuez une recherche sémantique sur la mémoire du maillage :
 ```bash
-# Routage automatique vers le meilleur pair
-python3 scripts/mesh_cli.py call --skill llm --payload '{"prompt": "Écris un script Python de benchmark."}'
-
-# Ciblage d'un pair spécifique
-python3 scripts/mesh_cli.py call --peer mac-m3 --skill memory_search --payload '{"query": "Metal GPU", "top_k": 3}'
+python3 scripts/mesh_cli.py call --skill memory_search --payload '{"query": "architecture P2P", "top_k": 3}'
 ```
 
-### 🌊 3. Consommer un LLM en streaming continu
+### 5. 🌐 Exposer votre machine comme nœud du réseau
+Partagez les outils de votre machine avec les autres agents du maillage :
 ```bash
-python3 scripts/mesh_cli.py stream --skill llm_stream --payload '{"prompt": "Explique le protocole P2P."}'
+python3 scripts/mesh_cli.py serve --name mon-agent --port 8770
 ```
 
-### 🩺 4. Vérifier la santé et latence d'un pair
-```bash
-python3 scripts/mesh_cli.py ping --peer mac-m3
-```
+---
 
-### 🌐 5. Lancer un nœud OpenClaw sur le maillage
-```bash
-python3 scripts/mesh_cli.py serve --name openclaw-mac --port 8770
-```
+## 💳 Offres & Licences d'Accès
 
-### 🔑 6. Générer une identité Ed25519
+OpenClawMesh propose des options d'accès flexibles adaptées à tous les usages :
+
+| Offre | Tarif | Modalité | Description |
+| :--- | :---: | :---: | :--- |
+| 🆓 **Découverte** | **0 €** | Gratuit | 3 requêtes de test par jour pour évaluer la compétence. |
+| ⚡ **Pro Mensuel** | **10 € / mois** | Abonnement | Requêtes illimitées, inférence accélérée GPU/NPU et RAG. |
+| 👑 **Licence à Vie** | **200 €** | **Paiement Unique** | **Accès illimité permanent sans abonnement**, toutes futures mises à jour incluses et support prioritaire VIP. |
+
+### Configuration de votre Clé d'Accès :
+Une fois votre clé obtenue sur le portail client :
 ```bash
-python3 scripts/mesh_cli.py keygen --out node_id.key
+export OPENCLAW_API_KEY="sk_claw_..."
 ```
 
 ---
 
 ## 🧪 Exécution des Tests
 
+La suite de tests vérifie l'ensemble du réseau P2P, la cryptographie et l'interopérabilité matérielle :
 ```bash
 PYTHONPATH=. pytest -v tests/
 ```
 
-La suite de tests vérifie :
-- La sérialisation conforme des messages (`TaskRequest`, `TaskChunk`, `TaskResponse`).
-- La signature et vérification HMAC-SHA256 et Ed25519.
-- Le cycle de communication Client/Serveur asynchrone et streaming.
-- L'interopérabilité directe et bidirectionnelle avec le code source de **JarvisMesh**.
-
 ---
 
 ## 📄 Licence
-Distribué sous la licence **OpenClawMesh Commercial & Evaluation License**. Gratuit pour évaluation et tests personnels ; l'usage commercial et l'accès à la passerelle multi-matériels requièrent une licence active (Abonnement Pro à 10€/mois ou Licence à Vie à 200€). Voir [LICENSE](LICENSE) (version anglaise officielle) ou [LICENSE.fr](LICENSE.fr) (version française).
+
+Distribué sous la licence **OpenClawMesh Commercial & Evaluation License**.
+- Gratuit pour usage personnel et évaluation.
+- L'usage commercial et l'accès à la passerelle multi-matériels requièrent une licence active (**Pro à 10€/mois** ou **Licence à Vie à 200€**).
+- Voir [LICENSE](LICENSE) (version anglaise officielle) ou [LICENSE.fr](LICENSE.fr) (version française).

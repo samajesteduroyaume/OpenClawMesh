@@ -332,17 +332,17 @@ def render_portal_html(portal_title: str = "OpenClawMesh — API Store & Gateway
 
     <header>
         <div class="logo">
-            ⚡ OpenClawMesh <span class="badge">SaaS Gateway</span>
+            ⚡ OpenClawMesh <span class="badge">API Access</span>
         </div>
         <div>
-            <span style="font-size: 0.9rem; color: var(--text-muted);">Payouts reliés à <strong>Revolut</strong></span>
+            <span style="font-size: 0.9rem; color: var(--text-muted);">🔒 Paiement Sécurisé CB & Apple Pay</span>
         </div>
     </header>
 
     <main>
         <section class="hero">
-            <h1>Monétisez vos Compétences IA</h1>
-            <p>Achetez ou testez un accès instantané aux compétences premium d'OpenClaw et JarvisMesh.</p>
+            <h1>Débloquez la Puissance d'OpenClawMesh</h1>
+            <p>Accédez instantanément à l'inférence IA multi-matériels haute performance et au réseau décentralisé d'agents autonomes.</p>
         </section>
 
         <!-- Pricing Cards -->
@@ -449,7 +449,7 @@ def render_portal_html(portal_title: str = "OpenClawMesh — API Store & Gateway
     </div>
 
     <footer>
-        OpenClawMesh Gateway &copy; 2026 — Compatible Stripe, Lemon Squeezy & Revolut.
+        OpenClawMesh &copy; 2026 — Inférence IA Décentralisée & Multi-Matériels. Tous droits réservés.
     </footer>
 
     <script>

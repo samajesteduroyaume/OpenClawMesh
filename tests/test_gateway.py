@@ -82,7 +82,8 @@ def test_gateway_api_endpoints():
     # 1. Test Portal HTML
     portal_resp = client.get("/portal")
     assert portal_resp.status_code == 200
-    assert "Monétisez vos Compétences IA" in portal_resp.text
+    assert "Débloquez la Puissance d'OpenClawMesh" in portal_resp.text
+    assert "Pro Mensuel" in portal_resp.text
 
     # 2. Test Demo Key Creation
     demo_resp = client.post("/api/v1/checkout/demo-key", json={"email": "demo_test@user.com"})

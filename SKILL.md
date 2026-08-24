@@ -18,12 +18,13 @@ metadata:
 ## 🎯 When to Use This Skill (Triggers)
 
 Activate this skill when:
-1. **Local MLX LLM Delegation**: The user wants to run inference on an Apple Silicon GPU node (e.g. `mlx-community/Qwen2.5-Coder-7B-Instruct-4bit`, `Llama-3.1-8B-Instruct`) without cloud API keys.
+1. **Multi-Hardware AI Inference & Delegation**: The user wants to run inference on NVIDIA CUDA, AMD ROCm, Intel Core Ultra NPU/OpenVINO, or Apple Silicon Metal GPUs (e.g. `Qwen2.5-Coder`, `Llama-3.1`) with optimal local hardware acceleration.
 2. **Streaming AI Responses**: Real-time token streaming is required for interactive dialogue or large code generation (`llm_stream`).
 3. **Local Vector Memory & RAG**: Querying or updating persistent episodic memory stored on SQLite vector store nodes (`memory_search`, `memory_store`, `memory_recall`, `rag_query`).
 4. **Multimodal Vision & Audio STT**: Transcribing audio via local Whisper (`transcribe_audio`) or analyzing images with Vision models (`vlm_analyze`).
 5. **Cluster Peer Discovery**: Checking what AI nodes, machines, and tools are available across your machines on the local Wi-Fi/LAN (`discover`).
-6. **Exposing OpenClaw Tools**: Publishing OpenClaw tools so other JarvisMesh / OpenClaw agents can call them remotely.
+6. **Hardware Acceleration Diagnostic**: Inspecting local AI hardware accelerators (`hardware`).
+7. **Exposing OpenClaw Tools**: Publishing OpenClaw tools so other JarvisMesh / OpenClaw agents can call them remotely.
 
 ---
 
