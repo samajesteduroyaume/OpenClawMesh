@@ -1,35 +1,15 @@
-Licence Commerciale & d'Évaluation OpenClawMesh
-Version 1.0 — Copyright (c) 2026 samajesteduroyaume / Contributeurs OpenClawMesh.
-Tous droits réservés.
+Licence MIT Sans Attribution (MIT-0)
 
-IMPORTANT : VEUILLEZ LIRE ATTENTIVEMENT CE DOCUMENT AVANT D'UTILISER CE LOGICIEL.
+Copyright 2026 samajesteduroyaume / Contributeurs OpenClawMesh
 
-1. CONCESSION DE LICENCE
-Sous réserve du respect des termes et conditions du présent Contrat, le Concédant vous accorde une licence non exclusive, non transférable et révocable d'utilisation, d'installation et d'exécution du logiciel, des compétences et des bibliothèques clientes OpenClawMesh selon les conditions suivantes :
+L'autorisation est par la présente accordée, gratuitement, à toute personne obtenant une copie
+du présent logiciel et des fichiers de documentation associés (le « Logiciel »), d'utiliser
+le Logiciel sans restriction, y compris sans limitation les droits d'utiliser, de copier, de modifier,
+de fusionner, de publier, de distribuer, de sous-licencier et/ou de vendre des copies du Logiciel,
+et d'autoriser les personnes à qui le Logiciel est fourni à le faire.
 
-(a) ÉVALUATION ET USAGE PERSONNEL :
-Vous pouvez utiliser ce logiciel gratuitement à des fins non commerciales, d'évaluation et de tests personnels, dans la limite des quotas standards de découverte et d'essai.
-
-(b) USAGE COMMERCIAL ET DE PRODUCTION :
-Toute utilisation en production, commerciale ou professionnelle d'OpenClawMesh et de ses fonctionnalités premium (incluant, sans s'y limiter, la passerelle d'inférence multi-matériels, la délégation de tâches illimitée et le backend de mémoire vectorielle) nécessite une licence active et payante souscrite via les canaux officiels :
-  - Abonnement Pro (10 € / mois), ou
-  - Licence à Vie (200 € en paiement unique).
-
-2. RESTRICTIONS
-Sauf autorisation expresse prévue dans le présent Contrat, vous n'êtes PAS autorisé à :
-(a) Modifier, contourner, désactiver ou altérer les mécanismes d'authentification cryptographique, de validation des clés d'API ou de passerelle de paiement ;
-(b) Revendre, redistribuer, concéder en sous-licence, louer ou distribuer en marque blanche ce logiciel ou ses services backend sous forme d'un service SaaS, d'une passerelle d'API ou d'une plateforme d'hébergement concurrente ;
-(c) Supprimer, modifier ou masquer les mentions de droit d'auteur (copyright), les avis de propriété ou les marques associées au logiciel ;
-(d) Utiliser le logiciel pour générer, héberger ou exploiter des services illicites, frauduleux ou portant atteinte aux droits de tiers.
-
-3. PROPRIÉTÉ INTELLECTUELLE
-Le Concédant conserve l'intégralité des droits, titres, intérêts, brevets, marques et droits d'auteur relatifs au logiciel OpenClawMesh, à son architecture, à ses backends et à ses documentations associées.
-
-4. EXCLUSION DE GARANTIE
-LE LOGICIEL EST FOURNI « EN L'ÉTAT », SANS GARANTIE D'AUCUNE SORTE, EXPRESSE OU IMPLICITE, Y COMPRIS, MAIS SANS S'Y LIMITER, LES GARANTIES DE QUALITÉ MARCHANDE, D'ADÉQUATION À UN USAGE PARTICULIER ET D'ABSENCE DE CONTREFAÇON. EN AUCUN CAS LES AUTEURS OU TITULAIRES DU DROIT D'AUTEUR NE POURRONT ÊTRE TENUS RESPONSABLES DE TOUTE RÉCLAMATION, DOMMAGE OU AUTRE RESPONSABILITÉ, QU'ELLE SOIT CONTRACTUELLE, DÉLICTUELLE OU AUTRE, DÉCOULANT DU LOGICIEL OU DE SON UTILISATION.
-
-5. RÉSILIATION
-La présente licence demeure en vigueur jusqu'à sa résiliation. Vos droits au titre de cette licence prendront fin automatiquement et sans préavis en cas de non-respect de l'une quelconque de ses dispositions. En cas de résiliation, vous devez cesser toute utilisation du logiciel et en détruire toutes les copies.
-
-Pour toute demande commerciale, souscription d'entreprise ou support :
-https://github.com/samajesteduroyaume/OpenClawMesh
+LE LOGICIEL EST FOURNI « EN L'ÉTAT », SANS GARANTIE D'AUCUNE SORTE, EXPRESSE OU IMPLICITE,
+Y COMPRIS MAIS NON LIMITÉ AUX GARANTIES DE QUALITÉ MARCHANDE, D'ADÉQUATION À UN USAGE
+PARTICULIER ET D'ABSENCE DE CONTREFAÇON. EN AUCUN CAS LES AUTEURS OU TITULAIRES DU DROIT
+D'AUTEUR NE SERONT RESPONSABLES DE TOUTE RÉCLAMATION, DOMMAGE OU AUTRE RESPONSABILITÉ,
+QUE CE SOIT DANS LE CADRE D'UN CONTRAT, D'UN DÉLIT OU AUTRE, DÉCOULANT DU LOGICIEL OU DE SON UTILISATION.

@@ -1,8 +1,8 @@
 # 🌐 OpenClawMesh — Decentralized AI Agent Protocol & Universal Multi-Hardware Inference
 
-[🇬🇧 Read in English](README.md) | [🇫🇷 Lire en Français](README.fr.md) | [📜 Protocol Specification](references/PROTOCOL_SPEC.md) | [📄 Commercial License](LICENSE)
+[🇬🇧 Read in English](README.md) | [🇫🇷 Lire en Français](README.fr.md) | [📜 Protocol Specification](references/PROTOCOL_SPEC.md) | [📄 MIT-0 License](LICENSE)
 
-[![License: Commercial & Evaluation](https://img.shields.io/badge/License-Commercial%20%26%20Evaluation-indigo.svg)](LICENSE)
+[![License: MIT-0](https://img.shields.io/badge/License-MIT--0-emerald.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![OpenClaw: Skill](https://img.shields.io/badge/OpenClaw-Skill%20Compatible-orange.svg)](SKILL.md)
 [![JarvisMesh: 100% Compatible](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg)](#-jarvismesh-interoperability)
@@ -166,7 +166,5 @@ PYTHONPATH=. pytest -v tests/
 
 ## 📄 License
 
-Distributed under the **OpenClawMesh Commercial & Evaluation License**.
-- Free for evaluation and personal testing.
-- Commercial production use and premium multi-hardware gateway access require an active license (**Pro at €10/mo** or **Lifetime at €200**).
+Distributed under the **MIT No Attribution (MIT-0)** License. Free to use, modify, publish, distribute, and sell without restriction or attribution requirements.
 - See [LICENSE](LICENSE) (English official) or [LICENSE.fr](LICENSE.fr) (French).

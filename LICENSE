@@ -1,35 +1,16 @@
-OpenClawMesh Commercial & Evaluation License
-Version 1.0 — Copyright (c) 2026 samajesteduroyaume / OpenClawMesh Contributors.
-All rights reserved.
+MIT No Attribution
 
-IMPORTANT: PLEASE READ CAREFULLY BEFORE USING THIS SOFTWARE.
+Copyright 2026 samajesteduroyaume / OpenClawMesh Contributors
 
-1. GRANT OF LICENSE
-Subject to the terms and conditions of this Agreement, the Licensor grants you a non-exclusive, non-transferable, revocable license to use, install, and execute the OpenClawMesh software, skills, and client libraries under the following terms:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so.
 
-(a) EVALUATION & PERSONAL USE:
-You may use this software free of charge for non-commercial, evaluation, and personal testing purposes with standard discovery and testing limits.
-
-(b) COMMERCIAL & PRODUCTION USE:
-Production, business, or commercial use of OpenClawMesh and its premium features (including, without limitation, the full multi-hardware inference gateway, unlimited task delegation, and vector memory backend) requires an active, paid license obtained through the official channels:
-  - Pro Subscription (€10 / month), or
-  - Lifetime License (€200 one-time payment).
-
-2. RESTRICTIONS
-Except as expressly permitted in this Agreement, you shall NOT:
-(a) Modify, bypass, disable, or circumvent the cryptographic authentication, API key validation, or payment gateway mechanisms;
-(b) Resell, redistribute, sub-license, rent, lease, or white-label this software or its backend services as a competing commercial SaaS, API gateway, or hosting platform;
-(c) Remove, alter, or obscure any copyright, proprietary notices, or trademark branding from the software;
-(d) Use the software to generate, distribute, or operate fraudulent, unlawful, or infringing services.
-
-3. INTELLECTUAL PROPERTY
-The Licensor retains all right, title, interest, ownership, patents, trademarks, and copyright in and to the OpenClawMesh software, architecture, backend systems, and associated documentation.
-
-4. DISCLAIMER OF WARRANTIES
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-5. TERMINATION
-This license is effective until terminated. Your rights under this license will terminate automatically without notice if you fail to comply with any of its terms. Upon termination, you must cease all use and destroy all copies of the software.
-
-For commercial inquiries, licensing, and enterprise support, visit:
-https://github.com/samajesteduroyaume/OpenClawMesh
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
