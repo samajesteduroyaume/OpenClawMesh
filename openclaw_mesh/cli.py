@@ -312,6 +312,74 @@ def cmd_hardware(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------- #
+# Commande : relay
+# ---------------------------------------------------------------------- #
+async def cmd_relay(args: argparse.Namespace) -> None:
+    from .network.relay import WANRelayServer
+    server = WANRelayServer(host=args.host, port=args.port, name=args.name)
+    await server.start()
+    print(f"🌐 Relais WAN OpenClawMesh '{args.name}' actif sur ws://{args.host}:{args.port}")
+    print("Prêt à router les paquets chiffrés E2EE entre pairs. Appuyez sur Ctrl+C pour arrêter...")
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    except (asyncio.CancelledError, KeyboardInterrupt):
+        pass
+    finally:
+        await server.stop()
+
+
+# ---------------------------------------------------------------------- #
+# Commande : dht
+# ---------------------------------------------------------------------- #
+def cmd_dht(args: argparse.Namespace) -> None:
+    from .network.dht import KademliaDHT
+    dht = KademliaDHT(name=args.name, host=args.host, port=args.port)
+    if args.advertise:
+        key = dht.advertise_skill(args.advertise, {"host": args.host, "port": args.port, "name": args.name})
+        print(f"📢 Compétence '{args.advertise}' publiée dans la DHT !")
+        print(f"🔑 Clé 160-bit Kademlia : {key}")
+    elif args.lookup:
+        info = dht.lookup_skill(args.lookup)
+        if info:
+            print(f"✅ Compétence '{args.lookup}' trouvée : {info}")
+        else:
+            print(f"❌ Compétence '{args.lookup}' non trouvée dans l'espace local DHT.")
+    else:
+        print(f"🗺️ Nœud DHT Kademlia '{args.name}' initialisé.")
+        print(f"🆔 Node ID 160-bit : {dht.node_id}")
+        print(f"📍 Endpoints : {args.host}:{args.port}")
+
+
+# ---------------------------------------------------------------------- #
+# Commande : multimodal
+# ---------------------------------------------------------------------- #
+async def cmd_multimodal(args: argparse.Namespace) -> None:
+    from .engines.multimodal import MultiModalEngine
+    engine = MultiModalEngine()
+    
+    if args.task == "vision":
+        res = await engine.analyze_image(image_base64="aGVsbG9fdmlzaW9u", prompt=args.prompt or "Décris l'image.")
+        _print_json(res)
+    elif args.task == "stt":
+        res = await engine.transcribe_audio(audio_base64="YXVkaW9fZXhhbXBsZQ==", language="fr")
+        _print_json(res)
+    elif args.task == "tts":
+        res = await engine.synthesize_speech(text=args.prompt or "Bienvenue sur OpenClawMesh.")
+        _print_json(res)
+
+
+# ---------------------------------------------------------------------- #
+# Commande : e2ee
+# ---------------------------------------------------------------------- #
+def cmd_e2ee(args: argparse.Namespace) -> None:
+    from .crypto_e2ee import E2EESession
+    session = E2EESession()
+    print(f"🔐 Session E2EE Initialisée (X25519 & ChaCha20-Poly1305)")
+    print(f"🔓 Clé Publique X25519 (Hex) : {session.public_key_hex}")
+
+
+# ---------------------------------------------------------------------- #
 # Parser CLI Principal
 # ---------------------------------------------------------------------- #
 def main() -> None:
@@ -375,6 +443,28 @@ def main() -> None:
     p_hw = subparsers.add_parser("hardware", help="Diagnostique le matériel IA (NVIDIA, AMD, Intel Core Ultra, Apple Silicon)")
     p_hw.add_argument("--json", action="store_true", help="Sortie au format JSON brut")
 
+    # 8. relay
+    p_relay = subparsers.add_parser("relay", help="Démarre un serveur de relais WAN WebSocket E2EE")
+    p_relay.add_argument("--host", default="0.0.0.0", help="Hôte d'écoute du relais (défaut: 0.0.0.0)")
+    p_relay.add_argument("--port", type=int, default=8790, help="Port d'écoute (défaut: 8790)")
+    p_relay.add_argument("--name", default="openclaw-wan-relay", help="Nom du relais")
+
+    # 9. dht
+    p_dht = subparsers.add_parser("dht", help="Gestionnaire de table de hachage distribuée Kademlia")
+    p_dht.add_argument("--name", default="dht-node", help="Nom du nœud")
+    p_dht.add_argument("--host", default="127.0.0.1", help="Hôte")
+    p_dht.add_argument("--port", type=int, default=8780, help="Port")
+    p_dht.add_argument("--advertise", help="Publier une compétence dans la DHT (ex: --advertise llm)")
+    p_dht.add_argument("--lookup", help="Rechercher une compétence dans la DHT (ex: --lookup llm)")
+
+    # 10. multimodal
+    p_multi = subparsers.add_parser("multimodal", help="Exécute des compétences multi-modales (vision, stt, tts)")
+    p_multi.add_argument("--task", choices=["vision", "stt", "tts"], default="vision", help="Tâche multi-modale")
+    p_multi.add_argument("--prompt", help="Prompt ou texte d'entrée")
+
+    # 11. e2ee
+    p_e2ee = subparsers.add_parser("e2ee", help="Génère ou teste les clés de chiffrement de bout en bout")
+
     args = parser.parse_args()
 
     if args.command == "keygen":
@@ -391,6 +481,14 @@ def main() -> None:
         asyncio.run(cmd_serve(args))
     elif args.command == "hardware":
         cmd_hardware(args)
+    elif args.command == "relay":
+        asyncio.run(cmd_relay(args))
+    elif args.command == "dht":
+        cmd_dht(args)
+    elif args.command == "multimodal":
+        asyncio.run(cmd_multimodal(args))
+    elif args.command == "e2ee":
+        cmd_e2ee(args)
 
 
 if __name__ == "__main__":

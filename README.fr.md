@@ -10,31 +10,38 @@
 
 **OpenClawMesh** est une compétence (Skill) et un protocole réseau pair-à-pair (P2P) souverain pour agents d'intelligence artificielle.
 
-Il permet à vos agents **OpenClaw** de se découvrir mutuellement sur le réseau local, de déléguer des calculs lourds, d'exploiter la puissance des puces graphiques et d'accéder à une mémoire vectorielle partagée sans dépendre d'un cloud centralisé propriétaire.
+Il permet à vos agents **OpenClaw** de se découvrir mutuellement sur le réseau local et sur Internet (WAN), de déléguer des calculs lourds, d'exploiter la puissance des puces graphiques, de router des flux chiffrés de bout en bout et d'accéder à une mémoire vectorielle partagée sans dépendre d'un cloud centralisé propriétaire.
 
 ---
 
 ## ✨ Fonctionnalités Clés
 
-1. 📡 **Découverte P2P Zero-Configuration (mDNS)** :
-   - Détection automatique et instantanée des agents et nœuds disponibles sur votre réseau local (LAN) et relais WAN.
-   - Introspection dynamique des capacités de chaque agent via `_describe_skills`.
+1. 📡 **Découverte P2P LAN (mDNS) & DHT Kademlia WAN (160-bit)** :
+   - Détection automatique sur le réseau local via mDNS Zeroconf.
+   - Routage décentralisé à grande échelle via table de hachage distribuée **Kademlia 160-bit** avec $k$-buckets ($k=20$).
 
-2. ⚡ **Inférence IA Multi-Matériels Universelle** :
+2. ⚡ **Inférence IA Multi-Matériels & Auto-Quantification** :
    - 🟢 **NVIDIA GPUs** : Accélération native CUDA / TensorRT / PyTorch.
    - 🔴 **AMD GPUs** : Accélération ROCm / DirectML / HIP.
    - 🔵 **Intel Core Ultra & Arc** : Accélération Intel NPU, OpenVINO, oneAPI et AVX-512.
    - 🟣 **Apple Silicon (M1/M2/M3/M4)** : Inférence GPU Metal haute performance via MLX-LM.
    - ⚪ **CPU Universel & Serveurs Locaux** : Fallback automatique optimisé (Ollama, llama.cpp, vLLM).
+   - **Auto-Quantification VRAM** : Sélection automatique du meilleur modèle et format (4-bit, 8-bit, FP16) selon la mémoire disponible.
 
-3. 🌊 **Streaming Temps Réel Token-par-Token** :
-   - Émission et réception ultra-fluides des flux de génération LLM sans latence bloquante via trames `task_chunk`.
+3. 🔀 **Parallélisme par Pipeline & MoE Distribué** :
+   - Découpage et exécution de très grands modèles (LLM / MoE) en étapes séquentielles à travers plusieurs machines du maillage.
 
-4. 🧠 **Mémoire Vectorielle Persistante & RAG SQLite** :
-   - Stockage épisodique, recherche sémantique cosinus et conservation du contexte conversationnel entre sessions.
+4. 👁️ **Moteur Multi-Modal Natif** :
+   - **Vision VLM** : Analyse d'images, OCR et raisonnement visuel (Qwen2-VL / Pixtral).
+   - **Speech-to-Text (STT)** : Transcription audio multilingue Whisper.
+   - **Text-to-Speech (TTS)** : Synthèse vocale haute fidélité.
 
-5. 🔐 **Sécurité Asymétrique Zero-Trust** :
-   - Signatures cryptographiques **Ed25519**, liste blanche `TrustStore`, horodatage anti-rejeu et support HMAC-SHA256.
+5. 🔐 **Sécurité Zero-Trust & Chiffrement E2EE** :
+   - Chiffrement de Bout en Bout (**ChaCha20-Poly1305 AEAD & X25519 ECDH**) : les relais WAN ne peuvent jamais lire les données en clair.
+   - Signatures cryptographiques **Ed25519**, liste blanche `TrustStore` et protection anti-rejeu.
+
+6. 🌐 **Traversée NAT (STUN) & Relais WAN WebSocket** :
+   - Détection automatique de l'IP publique et franchissement des pare-feux pour relier des machines distantes sur Internet.
 
 ---
 
@@ -46,8 +53,10 @@ graph TD
         OC["🤖 Agent OpenClaw"]
         SKILL["📦 Skill OpenClawMesh (`SKILL.md`)"]
         Client["📡 Client P2P & Moteur Universel"]
+        E2EE["🔐 Chiffrement E2EE X25519"]
         OC --> SKILL
         SKILL --> Client
+        Client --> E2EE
     end
 
     subgraph "Réseau d'Agents Décentralisé (LAN / WAN)"
@@ -55,12 +64,14 @@ graph TD
         Node2["🟣 Nœud Apple Silicon (Metal MLX)"]
         Node3["🔵 Nœud Intel Core Ultra (NPU OpenVINO)"]
         Node4["💾 Nœud Mémoire Vectorielle SQLite"]
+        Relay["⚡ Relais WAN WebSocket E2EE"]
     end
 
-    Client <== "WebSockets Multiplexés + mDNS Zeroconf" ==> Node1
-    Client <== "WebSockets Multiplexés + mDNS Zeroconf" ==> Node2
-    Client <== "WebSockets Multiplexés + mDNS Zeroconf" ==> Node3
-    Client <== "WebSockets Multiplexés + mDNS Zeroconf" ==> Node4
+    E2EE <== "mDNS / DHT Kademlia / Relais WAN" ==> Node1
+    E2EE <== "mDNS / DHT Kademlia / Relais WAN" ==> Node2
+    E2EE <== "mDNS / DHT Kademlia / Relais WAN" ==> Node3
+    E2EE <== "mDNS / DHT Kademlia / Relais WAN" ==> Node4
+    E2EE <== "Tunnel Chiffré Opaque" ==> Relay
 ```
 
 ---
@@ -84,32 +95,45 @@ ln -s "$(pwd)" ~/.openclaw/skills/openclaw-mesh
 
 ## 💻 Guide d'Utilisation en Ligne de Commande (CLI)
 
-### 1. 🔍 Diagnostiquer votre matériel IA
-Identifiez instantanément l'accélérateur matériel disponible sur votre machine :
+### 1. 🔍 Diagnostiquer votre matériel IA & VRAM
 ```bash
 python3 scripts/mesh_cli.py hardware
 ```
 
 ### 2. 📡 Découvrir les agents sur le réseau
-Scannez le réseau local pour lister les nœuds actifs et leurs compétences :
 ```bash
 python3 scripts/mesh_cli.py discover --inspect
 ```
 
 ### 3. 💬 Déléguer une tâche en streaming
-Envoyez un prompt à un nœud d'inférence avec affichage continu token-par-token :
 ```bash
 python3 scripts/mesh_cli.py stream --skill llm_stream --payload '{"prompt": "Explique l'informatique quantique en 2 phrases."}'
 ```
 
-### 4. 💾 Interroger la mémoire vectorielle
-Effectuez une recherche sémantique sur la mémoire du maillage :
+### 4. 🗺️ Publier ou rechercher une compétence dans la DHT Kademlia
 ```bash
-python3 scripts/mesh_cli.py call --skill memory_search --payload '{"query": "architecture P2P", "top_k": 3}'
+# Publier une compétence sur le réseau décentralisé
+python3 scripts/mesh_cli.py dht --advertise llm
+
+# Rechercher l'adresse d'un nœud fournissant la compétence
+python3 scripts/mesh_cli.py dht --lookup llm
 ```
 
-### 5. 🌐 Exposer votre machine comme nœud du réseau
-Partagez les outils de votre machine avec les autres agents du maillage :
+### 5. ⚡ Lancer un Relais WAN WebSocket (Traversée NAT)
+```bash
+python3 scripts/mesh_cli.py relay --port 8790
+```
+
+### 6. 👁️ Exécuter des tâches Multi-Modales (Vision, STT, TTS)
+```bash
+# Analyse d'image Vision VLM
+python3 scripts/mesh_cli.py multimodal --task vision --prompt "Analyse cette interface graphique."
+
+# Synthèse vocale TTS
+python3 scripts/mesh_cli.py multimodal --task tts --prompt "Bonjour, agent OpenClaw connecté au maillage."
+```
+
+### 7. 🌐 Exposer votre machine comme nœud du réseau
 ```bash
 python3 scripts/mesh_cli.py serve --name mon-agent --port 8770
 ```
@@ -118,8 +142,6 @@ python3 scripts/mesh_cli.py serve --name mon-agent --port 8770
 
 ## 💳 Offres & Licences d'Accès
 
-OpenClawMesh propose des options d'accès flexibles adaptées à tous les usages :
-
 | Offre | Tarif | Modalité | Description |
 | :--- | :---: | :---: | :--- |
 | 🆓 **Découverte** | **0 €** | Gratuit | 3 requêtes de test par jour pour évaluer la compétence. |
@@ -127,7 +149,6 @@ OpenClawMesh propose des options d'accès flexibles adaptées à tous les usages
 | 👑 **Licence à Vie** | **200 €** | **Paiement Unique** | **Accès illimité permanent sans abonnement**, toutes futures mises à jour incluses et support prioritaire VIP. |
 
 ### Configuration de votre Clé d'Accès :
-Une fois votre clé obtenue sur le portail client :
 ```bash
 export OPENCLAW_API_KEY="sk_claw_..."
 ```
@@ -136,10 +157,10 @@ export OPENCLAW_API_KEY="sk_claw_..."
 
 ## 🧪 Exécution des Tests
 
-La suite de tests vérifie l'ensemble du réseau P2P, la cryptographie et l'interopérabilité matérielle :
 ```bash
 PYTHONPATH=. pytest -v tests/
 ```
+> Suite de **35 tests automatisés** validant le protocole P2P, le DHT Kademlia, le chiffrement E2EE, le relais WAN, l'auto-quantification VRAM et le multi-modal.
 
 ---
 
