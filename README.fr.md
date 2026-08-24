@@ -146,4 +146,4 @@ La suite de tests vérifie :
 ---
 
 ## 📄 Licence
-Distribué sous la licence **OpenClawMesh Commercial & Evaluation License**. Gratuit pour évaluation et tests personnels ; l'usage commercial et l'accès à la passerelle multi-matériels requièrent une licence active (Abonnement Pro à 10€/mois ou Licence à Vie à 200€). Voir [LICENSE](LICENSE) pour les termes légaux complets.
+Distribué sous la licence **OpenClawMesh Commercial & Evaluation License**. Gratuit pour évaluation et tests personnels ; l'usage commercial et l'accès à la passerelle multi-matériels requièrent une licence active (Abonnement Pro à 10€/mois ou Licence à Vie à 200€). Voir [LICENSE](LICENSE) (version anglaise officielle) ou [LICENSE.fr](LICENSE.fr) (version française).
