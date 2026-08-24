@@ -2,7 +2,7 @@
 
 [🇬🇧 Read in English](README.md) | [🇫🇷 Lire en Français](README.fr.md) | [📜 Spécification du Protocole](references/PROTOCOL_SPEC.md) | [🔐 Modèle de Sécurité](references/SECURITY_MODEL.md)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
+[![License: Commercial & Evaluation](https://img.shields.io/badge/License-Commercial%20%26%20Evaluation-indigo.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![OpenClaw: Skill](https://img.shields.io/badge/OpenClaw-Skill%20Compatible-orange.svg)](SKILL.md)
 [![JarvisMesh: Compatible](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg)](#-compatibilité-jarvismesh)
@@ -146,4 +146,4 @@ La suite de tests vérifie :
 ---
 
 ## 📄 Licence
-Ce projet est distribué sous licence MIT.
+Distribué sous la licence **OpenClawMesh Commercial & Evaluation License**. Gratuit pour évaluation et tests personnels ; l'usage commercial et l'accès à la passerelle multi-matériels requièrent une licence active (Abonnement Pro à 10€/mois ou Licence à Vie à 200€). Voir [LICENSE](LICENSE) pour les termes légaux complets.

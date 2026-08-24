@@ -2,7 +2,7 @@
 
 [🇬🇧 Read in English](README.md) | [🇫🇷 Lire en Français](README.fr.md) | [📜 Protocol Specification](references/PROTOCOL_SPEC.md) | [🔐 Security Model](references/SECURITY_MODEL.md)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
+[![License: Commercial & Evaluation](https://img.shields.io/badge/License-Commercial%20%26%20Evaluation-indigo.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![OpenClaw: Skill](https://img.shields.io/badge/OpenClaw-Skill%20Compatible-orange.svg)](SKILL.md)
 [![JarvisMesh: Compatible](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg)](#-jarvismesh-interoperability)
@@ -139,4 +139,4 @@ PYTHONPATH=. pytest -v tests/
 ---
 
 ## 📄 License
-Released under the MIT License.
+Distributed under the OpenClawMesh Commercial & Evaluation License. Free for evaluation and personal testing; commercial use and premium multi-hardware gateway access require an active license (Pro at €10/mo or Lifetime at €200). See [LICENSE](LICENSE) for full legal terms.
