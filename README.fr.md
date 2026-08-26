@@ -86,6 +86,9 @@ cd OpenClawMesh
 # 2. Installer le package et ses dépendances
 pip install -e .
 
+# Extras optionnels : crypto, rich, validation, gateway, all
+pip install -e ".[all]"
+
 # 3. Lier le Skill à votre installation OpenClaw
 mkdir -p ~/.openclaw/skills
 ln -s "$(pwd)" ~/.openclaw/skills/openclaw-mesh
