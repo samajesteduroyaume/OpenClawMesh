@@ -398,7 +398,7 @@ client = "openclaw"
 | `STORE` | Déposer une valeur sur un pair |
 
 ```python
-dht = KademliaDHT(host="0.0.0.0", port=8780)
+dht = KademliaDHT(host="127.0.0.1", port=8780)
 await dht.start_network()
 await dht.bootstrap([Contact(node_id="...", host="seed.example.com", port=8780)])
 
@@ -589,7 +589,7 @@ uvicorn openclaw_mesh.gateway.server:app --host 127.0.0.1 --port 8000
 # Production (avec gunicorn)
 gunicorn openclaw_mesh.gateway.server:app \
   -w 4 -k uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:8000 \
+    --bind 127.0.0.1:8000 \
   --access-logfile /var/log/openclaw/access.log
 ```
 
@@ -763,7 +763,7 @@ async def start_wan_node():
     await node.start()
 
     # 3. DHT Kademlia
-    dht = KademliaDHT(host="0.0.0.0", port=8780)
+    dht = KademliaDHT(host="127.0.0.1", port=8780)
     await dht.start_network()
     await dht.bootstrap([
         Contact(node_id="aabbcc...", host="seed.openclaw.io", port=8780)

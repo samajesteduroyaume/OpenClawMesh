@@ -305,7 +305,7 @@ export GATEWAY_ADMIN_TOKEN="votre_token_admin_secret"
 export BTC_WALLET_ADDRESS="bc1qwq8sll9vrl83lclyhha2gyncpd5275cdr2wul5"
 export GATEWAY_DB_PATH="/data/openclaw_keys.db"
 
-uvicorn openclaw_mesh.gateway.server:app --host 0.0.0.0 --port 8000
+uvicorn openclaw_mesh.gateway.server:app --host 127.0.0.1 --port 8000
 ```
 
 ---

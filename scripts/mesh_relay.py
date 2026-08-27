@@ -18,7 +18,7 @@ from openclaw_mesh.network.relay import WANRelayServer
 
 async def main():
     parser = argparse.ArgumentParser(description="Serveur de Relais WAN OpenClawMesh")
-    parser.add_argument("--host", default="0.0.0.0", help="Hôte d'écoute (défaut: 0.0.0.0)")
+    parser.add_argument("--host", default="127.0.0.1", help="Hôte d'écoute (défaut: localhost)")
     parser.add_argument("--port", type=int, default=8790, help="Port d'écoute (défaut: 8790)")
     parser.add_argument("--name", default="openclaw-wan-relay", help="Nom du relais")
     args = parser.parse_args()

@@ -107,7 +107,7 @@ async def _run(args: argparse.Namespace) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Nœud DHT Kademlia OpenClawMesh (LAN/WAN)")
     parser.add_argument("--name", default="dht-node", help="Nom du nœud")
-    parser.add_argument("--host", default="0.0.0.0", help="Hôte d'écoute UDP")
+    parser.add_argument("--host", default="127.0.0.1", help="Hôte d'écoute UDP (défaut: localhost)")
     parser.add_argument("--port", type=int, default=8780, help="Port d'écoute UDP")
     parser.add_argument("--advertise", help="Publier une compétence (réseau si --bootstrap)")
     parser.add_argument("--lookup", help="Rechercher une compétence dans la DHT")
