@@ -183,23 +183,25 @@ openclaw-mesh multimodal --task tts    --prompt "Bienvenue sur OpenClawMesh."
 
 ```python
 import asyncio
+import os
 from openclaw_mesh import OpenClawMeshNode, MeshClient, SkillRegistry
 
 # ── Démarrer un nœud ──────────────────────────────────────────────────
 registry = SkillRegistry(name="mon-nœud")
 
-@registry.register
 async def llm(payload: dict) -> dict:
     return {"text": f"Réponse : {payload.get('prompt')}", "model": "local"}
 
+registry.register(llm, expose_remote=True)
+
 async def servir():
-    node = OpenClawMeshNode(name="mon-nœud", port=8770, psk="secret", registry=registry)
-    await node.start(enable_zeroconf=True)
+    node = OpenClawMeshNode(name="mon-nœud", port=8770, psk=os.environ["OPENCLAW_PSK"], registry=registry)
+    await node.start(enable_zeroconf=False)  # Activer uniquement après revue de l’exposition LAN.
     await asyncio.Event().wait()
 
 # ── Appeler depuis un client ──────────────────────────────────────────
 async def demo_client():
-    client = MeshClient(name="orchestrateur", psk="secret")
+    client = MeshClient(name="orchestrateur", psk=os.environ["OPENCLAW_PSK"], enable_discovery=False)
     await client.start()
     await asyncio.sleep(3)  # Découverte mDNS
 

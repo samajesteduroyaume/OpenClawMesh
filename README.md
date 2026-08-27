@@ -160,8 +160,8 @@ openclaw-mesh stream my-node llm --payload '{"prompt": "Write a haiku"}'
 openclaw-mesh ping my-node
 
 # Serve this machine as a mesh node
-# WARNING: accepts remote task traffic; use only with trusted peers and authentication.
-openclaw-mesh serve --name my-agent --port 8770 --psk mysecret
+# WARNING: accepts remote task traffic; use only with trusted peers and a randomly generated secret.
+openclaw-mesh serve --name my-agent --port 8770 --psk "$(openssl rand -hex 32)"
 
 # Generate Ed25519 identity
 # WARNING: creates a private key; protect this file and never commit it.
@@ -191,25 +191,26 @@ openclaw-mesh e2ee --action test
 
 ```python
 import asyncio
+import os
 from openclaw_mesh import OpenClawMeshNode, MeshClient, SkillRegistry
 
 # ── Start a node ──────────────────────────────────────────────────────
 registry = SkillRegistry(name="my-node")
 
-@registry.register
 async def llm(payload: dict) -> dict:
     return {"text": f"Answer: {payload.get('prompt')}", "model": "local"}
 
+registry.register(llm, expose_remote=True)
+
 async def serve():
-    node = OpenClawMeshNode(name="my-node", port=8770, psk="secret", registry=registry)
+    node = OpenClawMeshNode(name="my-node", port=8770, psk=os.environ["OPENCLAW_PSK"], registry=registry)
     await node.start(enable_zeroconf=False)  # Enable only after reviewing LAN exposure.
     await asyncio.Event().wait()
 
 # ── Call from a client ────────────────────────────────────────────────
 async def client_demo():
-    client = MeshClient(name="orchestrator", psk="secret")
+    client = MeshClient(name="orchestrator", psk=os.environ["OPENCLAW_PSK"], enable_discovery=False)
     await client.start()
-    await asyncio.sleep(3)  # mDNS discovery
 
     # Direct call
     resp = await client.call("my-node", "llm", {"prompt": "What is P2P?"})
