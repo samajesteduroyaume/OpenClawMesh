@@ -25,10 +25,8 @@ def test_universal_inference_engine_sync():
     assert "recommended_backend" in status
 
     async def _run():
-        res = await engine.generate(prompt="Test prompt", model="test", max_tokens=10)
-        assert "text" in res
-        assert "backend" in res
-        assert len(res["text"]) > 0
+        with pytest.raises(RuntimeError, match="backend d'inférence réel"):
+            await engine.generate(prompt="Test prompt", model="test", max_tokens=10)
 
     asyncio.run(_run())
 
@@ -37,11 +35,8 @@ def test_universal_inference_engine_stream():
     engine = UniversalInferenceEngine()
 
     async def _run():
-        chunks = []
-        async for chunk in engine.generate_stream(prompt="Test streaming", model="test"):
-            chunks.append(chunk.get("text", ""))
-        assert len(chunks) > 0
-        full_text = "".join(chunks)
-        assert len(full_text) > 0
+        with pytest.raises(RuntimeError, match="backend de streaming réel"):
+            async for _chunk in engine.generate_stream(prompt="Test streaming", model="test"):
+                pass
 
     asyncio.run(_run())

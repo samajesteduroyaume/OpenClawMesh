@@ -7,11 +7,18 @@ metadata:
     requires:
       bins:
         - python3
+
+      # Permissions et consentement
+      # - Exécution : python3 uniquement.
+      # - Réseau sortant : mDNS/LAN, WebSocket/WSS, UDP DHT et STUN uniquement sur demande.
+      # - Fichiers sensibles : accès aux clés Ed25519/PSK/TrustStore uniquement si configuré par l'utilisateur.
+      # - Réseau entrant : désactivé par défaut ; toute exposition WAN exige TLS et PSK ou TrustStore.
+      # - Les invites, fichiers, images, audio et résultats envoyés à un pair peuvent quitter la machine locale.
 ---
 
 # 🌐 OpenClawMesh — Decentralized P2P AI Mesh Skill
 
-`openclaw-mesh` enables your OpenClaw agent to seamlessly discover, collaborate with, and delegate tasks to other AI agent nodes on your local network (LAN) and peer-to-peer clusters across all hardware architectures, fully utilizing the **JarvisMesh 1.0 P2P Protocol**.
+`openclaw-mesh` enables your OpenClaw agent to discover, collaborate with, and delegate tasks to other AI agent nodes on your local network. These operations are opt-in and may transmit prompts, files, images, audio, memory queries, and tool results to selected peers; verify peer identity and permissions before sending sensitive data.
 
 ---
 

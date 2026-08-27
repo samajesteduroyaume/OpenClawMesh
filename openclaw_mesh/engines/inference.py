@@ -117,15 +117,9 @@ class UniversalInferenceEngine:
             except Exception as e:
                 logger.debug(f"Fallback OpenVINO: {e}")
 
-        # 4. Fallback Universel Haute Performance (Simulation ou Moteur Local)
-        duration_ms = (time.perf_counter() - t0) * 1000.0
-        return {
-            "text": f"🤖 [{self.hardware.accelerator_name}] Réponse calculée avec succès pour l'objectif : '{prompt[:80]}...'",
-            "model": model or "openclaw-universal-v1",
-            "backend": f"universal_{self.backend}",
-            "hardware": self.hardware.accelerator_name,
-            "duration_ms": round(duration_ms, 2),
-        }
+        raise RuntimeError(
+            "Aucun backend d'inférence réel n'est disponible; aucune réponse simulée ne sera produite."
+        )
 
     # ------------------------------------------------------------------ #
     # 2. Inférence Streaming Token-par-Token
@@ -154,13 +148,6 @@ class UniversalInferenceEngine:
             except Exception as e:
                 logger.debug(f"Fallback MLX Stream: {e}")
 
-        # 2. Fallback Streaming Universel Découpé (Simulation fluide multi-matériel)
-        full_text = f"[{self.hardware.accelerator_name}] Traitement de la requête multi-plateforme : '{prompt}' terminé avec succès."
-        words = full_text.split()
-        for i, w in enumerate(words):
-            yield {
-                "text": w + (" " if i < len(words) - 1 else ""),
-                "index": i,
-                "backend": self.backend,
-            }
-            await asyncio.sleep(0.03)
+        raise RuntimeError(
+            "Aucun backend de streaming réel n'est disponible; aucun flux simulé ne sera produit."
+        )

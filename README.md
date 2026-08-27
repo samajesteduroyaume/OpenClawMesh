@@ -65,7 +65,7 @@ Payments for the managed gateway are **Bitcoin-only** — no account, no KYC, no
 
 **₿ Bitcoin Payment Gateway**
 - No Stripe, no PayPal — pure **BTC on-chain**
-- Automatic on-chain verification → API key activated after confirmation
+- On-chain verification is disabled by default; enable it explicitly after reviewing the operational risks
 - BTC/EUR oracle with cached multi-source median and fixed quote per payment
 
 </td>
@@ -268,7 +268,7 @@ data   = session.decrypt(packet)
 | Plan | Price | Duration | Access |
 |---|---|---|---|
 | 🆓 **Free Demo** | Free | 7 days | 3 API calls |
-| ⚡ **Pro Monthly** | ≈ €10/month in BTC | 30 days renewable | Unlimited requests |
+| ⚡ **Pro Monthly** | ≈ €10/month in BTC | 30 days per payment; new key on renewal | No quota limit (subject to rate limits and capacity) |
 | 👑 **Lifetime** | ≈ €200 one-time in BTC | Forever | All future updates · VIP support |
 
 **Bitcoin wallet:** `bc1qwq8sll9vrl83lclyhha2gyncpd5275cdr2wul5`

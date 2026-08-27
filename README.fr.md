@@ -265,12 +265,12 @@ data   = session.decrypt(packet)
 | Plan | Prix | Durée | Accès |
 |---|---|---|---|
 | 🆓 **Démo Gratuite** | Gratuit | 7 jours | 3 appels API |
-| ⚡ **Pro Mensuel** | ≈ 10 €/mois en BTC | 30 jours renouvelables | Requêtes illimitées |
+| ⚡ **Pro Mensuel** | ≈ 10 €/mois en BTC | 30 jours par paiement ; nouvelle clé lors du renouvellement | Sans quota numérique (limité par le débit et la capacité) |
 | 👑 **Licence à Vie** | ≈ 200 € unique en BTC | À vie | Toutes MAJ futures · Support VIP |
 
 **Adresse Bitcoin :** `bc1qwq8sll9vrl83lclyhha2gyncpd5275cdr2wul5`
 
-Le service calcule le montant en satoshis avec le cours BTC/EUR de l’oracle au moment de la soumission. Le taux et le montant attendu sont ensuite figés pour ce paiement. Après le nombre de confirmations configuré (`BTC_REQUIRED_CONFIRMATIONS`), la clé est activée automatiquement. Le statut se consulte avec le `status_token` privé retourné lors de la soumission.
+Le service calcule le montant en satoshis avec le cours BTC/EUR de l'oracle au moment de la soumission. Le taux et le montant attendu sont ensuite figés pour ce paiement. Par défaut, une confirmation administrateur est nécessaire ; l'activation automatique après `BTC_REQUIRED_CONFIRMATIONS` confirmations n'a lieu que si `BTC_AUTO_VERIFY=true` est explicitement configuré. Chaque nouveau paiement confirmé crée une nouvelle clé. Le statut se consulte avec le `status_token` privé retourné lors de la soumission.
 
 ### Flux de Paiement
 

@@ -572,7 +572,7 @@ def render_portal_html(
                     <div class="card-price">10€ <span>/ mois en BTC</span></div>
                 </div>
                 <ul class="features-list">
-                    <li>Requêtes IA illimitées</li>
+                    <li>Sans quota numérique (débit et capacité applicables)</li>
                     <li>Inférence GPU NVIDIA / AMD / Apple Silicon</li>
                     <li>Recherche Vectorielle RAG</li>
                     <li>Renouvellement simple en BTC</li>
@@ -824,7 +824,8 @@ def render_portal_html(
             if (remoteAccess && !token) {{ showAlert('wanAlert', '⚠️ Le jeton administrateur est requis pour l’accès distant.', 'error'); return; }}
             showAlert('wanAlert', '⌛ Modification de l’état du nœud WAN...', 'success');
             try {{
-                const headers = token ? {{ 'X-Admin-Token': token }} : {{}};
+                if (remoteAccess && !confirm('Activer l’accès WAN exposera un port réseau entrant. Continuer ?')) return;
+                const headers = {{ 'Content-Type': 'application/json', ...(token ? {{ 'X-Admin-Token': token }} : {{}}) }};
                 const res = await fetch('/api/v1/admin/wan/toggle', {{
                     method: 'POST', headers, body: JSON.stringify({{ remote_access: remoteAccess }})
                 }});
