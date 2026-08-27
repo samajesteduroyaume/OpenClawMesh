@@ -110,7 +110,7 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------ #
     # Configuration DHT Kademlia
     # ------------------------------------------------------------------ #
-    dht_enabled: bool = Field(default=True, description="Activer DHT Kademlia")
+    dht_enabled: bool = Field(default=False, description="Activer DHT Kademlia (opt-in)")
     dht_id_bits: int = Field(default=160, description="Nombre de bits pour les IDs DHT")
     dht_k_bucket_size: int = Field(default=20, description="Taille des k-buckets Kademlia")
     dht_alpha: int = Field(default=3, description="Paramètre alpha Kademlia (lookups parallèles)")

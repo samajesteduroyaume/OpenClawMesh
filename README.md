@@ -38,7 +38,7 @@ Payments for the managed gateway are **Bitcoin-only** — no account, no KYC, no
 
 **🌐 Dual-Layer Discovery**
 - Zero-config LAN via **mDNS Zeroconf** (dual service type: JarvisMesh & OpenClawMesh)
-- Global WAN via **Kademlia DHT 160-bit** (real UDP, *k*=20, α=3, iterative lookups)
+- Global WAN via **Kademlia DHT 160-bit** (real UDP, *k*=20, α=3, iterative lookups), only after explicit opt-in
 
 **⚡ Universal Inference Engine**
 - 🟢 **NVIDIA** — CUDA / TensorRT / PyTorch

@@ -40,7 +40,7 @@ Les paiements pour la passerelle managée sont **exclusivement en Bitcoin** — 
 
 **🌐 Découverte Double Couche**
 - LAN sans configuration via **mDNS Zeroconf** (double type de service : JarvisMesh & OpenClawMesh)
-- WAN mondial via **DHT Kademlia 160-bit** (UDP réel, *k*=20, α=3, lookups itératifs)
+- WAN mondial via **DHT Kademlia 160-bit** (UDP réel, *k*=20, α=3, lookups itératifs), uniquement après activation explicite
 
 **⚡ Moteur d'Inférence Universel**
 - 🟢 **NVIDIA** — CUDA / TensorRT / PyTorch
