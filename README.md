@@ -21,7 +21,7 @@
 
 ---
 
-**OpenClawMesh** is a sovereign peer-to-peer framework and modular Skill for **OpenClaw** AI agents.
+**OpenClawMesh** is a sovereign peer-to-peer framework and modular Skill for **OpenClaw** AI agents. LAN connectivity is the default use case; WAN features (DHT, relay, and STUN) are optional and must be enabled separately.
 
 Agents discover each other over LAN and the Internet, delegate compute, leverage local GPU/NPU hardware, route end-to-end encrypted payloads, and share persistent vector memory — **with zero dependency on any centralized cloud provider**.
 Payments for the managed gateway are **Bitcoin-only** — no account, no KYC, no banks.
@@ -147,7 +147,8 @@ pip install -e ".[all]"     # Everything
 openclaw-mesh hardware
 
 # Discover LAN peers
-openclaw-mesh discover --timeout 5 --inspect
+# WARNING: scans the LAN and introspects peer capabilities; review the results before sending data.
+openclaw-mesh discover --enable-discovery --timeout 5 --inspect
 
 # Call a skill on a peer
 openclaw-mesh call my-node llm --payload '{"prompt": "Hello"}'
@@ -163,6 +164,7 @@ openclaw-mesh ping my-node
 openclaw-mesh serve --name my-agent --port 8770 --psk mysecret
 
 # Generate Ed25519 identity
+# WARNING: creates a private key; protect this file and never commit it.
 openclaw-mesh keygen --output ~/.openclaw/identity.key
 
 # Kademlia DHT — publish & lookup

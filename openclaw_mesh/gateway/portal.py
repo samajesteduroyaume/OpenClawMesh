@@ -41,9 +41,6 @@ def render_portal_html(
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self';">
     <title>{portal_title}</title>
     <meta name="description" content="Accédez à l'inférence IA décentralisée OpenClawMesh par paiement Bitcoin — pas de compte, pas de tracking.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {{
             --bg: #080c14;
@@ -676,6 +673,7 @@ def render_portal_html(
                     <label>Note (optionnel)</label>
                     <input type="text" id="submitNote" placeholder="Ex: depuis Bisq, wallet Electrum...">
                 </div>
+                <p style="color:var(--text-muted); font-size:0.85rem;">Vos email, txid et note sont transmis à cette passerelle et conservés avec le statut du paiement pour la vérification. N’envoyez pas de données personnelles inutiles.</p>
                 <button class="btn" style="width:auto; padding:0.85rem 2.5rem;" onclick="submitPayment()">₿ Soumettre mon paiement</button>
                 <div id="submitAlert"></div>
             </div>

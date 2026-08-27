@@ -21,7 +21,7 @@
 
 ---
 
-**OpenClawMesh** est un protocole pair-à-pair souverain et un Skill modulaire pour les agents IA **OpenClaw**.
+**OpenClawMesh** est un protocole pair-à-pair souverain et un Skill modulaire pour les agents IA **OpenClaw**. La connectivité LAN est le cas par défaut ; les fonctions WAN (DHT, relais et STUN) sont optionnelles et doivent être activées séparément.
 
 Les agents se découvrent sur le réseau local et Internet, délèguent du calcul, exploitent les GPU/NPU locaux, routent des charges utiles chiffrées de bout en bout et partagent une mémoire vectorielle persistante — **sans dépendre d'aucun prestataire cloud centralisé**.
 Les paiements pour la passerelle managée sont **exclusivement en Bitcoin** — pas de compte, pas de KYC, pas de banque.

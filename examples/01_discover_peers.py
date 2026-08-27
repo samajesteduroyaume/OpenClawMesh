@@ -14,6 +14,10 @@ from openclaw_mesh import MeshClient
 
 async def main():
     print("⚠️ Ce script sonde le LAN et interroge les pairs détectés.")
+    answer = input("Continuer ? [y/N] ").strip().lower()
+    if answer not in {"y", "yes", "o", "oui"}:
+        print("Scan annulé.")
+        return
     print("🔍 Démarrage du client et écoute mDNS (2 secondes)...")
     client = MeshClient(name="openclaw-discoverer", enable_discovery=True)
     await client.start()
