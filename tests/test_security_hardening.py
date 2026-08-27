@@ -5,6 +5,8 @@ from openclaw_mesh.engines.inference import UniversalInferenceEngine
 from openclaw_mesh.crypto import NodeIdentity
 from openclaw_mesh.crypto_e2ee import E2EESession
 from openclaw_mesh.network.dht import Contact, KademliaDHT
+from openclaw_mesh.gateway.portal import render_portal_html
+from openclaw_mesh.gateway.db import KeyDatabase
 
 
 def test_system_diagnostics_are_not_exposed_remotely():
@@ -15,6 +17,26 @@ def test_system_diagnostics_are_not_exposed_remotely():
     assert registry.is_remote_exposed("echo") is True
     assert registry.is_remote_exposed("openclaw_info") is False
     assert "openclaw_info" not in registry.describe()["skills"]
+
+
+def test_portal_has_no_external_qr_or_font_resources():
+    html = render_portal_html(btc_address="bc1qtest")
+
+    assert "api.qrserver.com" not in html
+    assert "fonts.googleapis.com" not in html
+    assert "data:image/svg+xml;base64," in html
+
+
+def test_api_key_secret_is_not_persisted(tmp_path):
+    database = KeyDatabase(tmp_path / "keys.db")
+    record = database.create_key(email="secret@example.com")
+
+    with database._get_connection() as connection:
+        row = connection.execute("SELECT key, key_hash FROM api_keys").fetchone()
+
+    assert row["key"] is None
+    assert row["key_hash"]
+    assert record.key not in str(dict(row))
 
 
 def test_dht_rejects_invalid_storage_keys():
