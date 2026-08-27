@@ -636,8 +636,7 @@ def render_portal_html(
                         ₿ Scannez le QR code avec votre wallet (Electrum, BlueWallet, Phoenix, Muun…)<br>
                         ou copiez l'adresse manuellement.<br><br>
                         <strong style="color:var(--text);">Taux de change :</strong>
-                        consultez <a href="https://www.coinbase.com/converter/btc/eur" target="_blank" style="color:var(--btc);">Coinbase</a>,
-                        <a href="https://bisq.network" target="_blank" style="color:var(--btc);">Bisq</a> ou votre exchange habituel.
+                        consultez votre portefeuille ou exchange habituel dans un autre onglet.
                     </p>
                 </div>
             </div>

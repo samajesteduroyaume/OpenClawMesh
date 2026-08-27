@@ -24,6 +24,8 @@ def test_portal_has_no_external_qr_or_font_resources():
 
     assert "api.qrserver.com" not in html
     assert "fonts.googleapis.com" not in html
+    assert "coinbase.com" not in html
+    assert "bisq.network" not in html
     assert "data:image/svg+xml;base64," in html
 
 
