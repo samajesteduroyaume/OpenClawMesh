@@ -157,16 +157,19 @@ openclaw-mesh stream my-node llm --payload '{"prompt": "Write a haiku"}'
 openclaw-mesh ping my-node
 
 # Serve this machine as a mesh node
+# WARNING: accepts remote task traffic; use only with trusted peers and authentication.
 openclaw-mesh serve --name my-agent --port 8770 --psk mysecret
 
 # Generate Ed25519 identity
 openclaw-mesh keygen --output ~/.openclaw/identity.key
 
 # Kademlia DHT — publish & lookup
+# WARNING: publishes node/capability metadata over UDP to the configured bootstrap peer.
 openclaw-mesh dht --advertise llm --bootstrap 192.0.2.5:8780
 openclaw-mesh dht --lookup llm   --bootstrap 192.0.2.5:8780
 
 # Start WAN WebSocket relay
+# WARNING: exposes an inbound relay service; configure TLS/authentication and a firewall first.
 openclaw-mesh relay --port 8790
 
 # Multi-modal inference

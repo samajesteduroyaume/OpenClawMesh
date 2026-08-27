@@ -8,20 +8,25 @@ Usage:
 import argparse
 import json
 import sys
+import time
 import urllib.request
+from urllib.parse import urlparse
 
 
 def main():
     parser = argparse.ArgumentParser(description="Simulateur de Webhook de Paiement")
-    parser.add_argument("--url", default="http://localhost:8000/api/webhooks/stripe", help="URL du Webhook")
+    parser.add_argument("--url", default="http://localhost:8000/api/webhooks/stripe", help="URL locale du Webhook de test")
     parser.add_argument("--email", default="selim@example.com", help="Email du client")
     parser.add_argument("--plan", default="pro_monthly", help="Nom du plan")
     parser.add_argument("--amount", type=int, default=1000, help="Montant en centimes (ex: 1000 = 10.00€)")
     args = parser.parse_args()
+    parsed_url = urlparse(args.url)
+    if parsed_url.hostname not in {"localhost", "127.0.0.1", "::1"}:
+        parser.error("Le simulateur accepte uniquement un endpoint localhost.")
 
     # Payload simulant un événement Stripe checkout.session.completed
     mock_event = {
-        "id": f"evt_sim_{int(urllib.request.time.time())}",
+        "id": f"evt_sim_{int(time.time())}",
         "type": "checkout.session.completed",
         "data": {
             "object": {
@@ -32,8 +37,8 @@ def main():
                 "amount_total": args.amount,
                 "currency": "eur",
                 "payment_status": "paid",
-                "subscription": f"sub_sim_{int(urllib.request.time.time())}",
-                "customer": f"cus_sim_{int(urllib.request.time.time())}",
+                "subscription": f"sub_sim_{int(time.time())}",
+                "customer": f"cus_sim_{int(time.time())}",
             }
         }
     }

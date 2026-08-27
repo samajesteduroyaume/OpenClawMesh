@@ -180,7 +180,9 @@ class KeyDatabase:
         expires_at = (now + (days_valid * 86400)) if days_valid and days_valid > 0 else None
 
         import json
-        meta_json = json.dumps(metadata or {})
+        safe_metadata = dict(metadata or {})
+        safe_metadata.setdefault("key_id", _key_audit_id(key))
+        meta_json = json.dumps(safe_metadata)
 
         with self._get_connection() as conn:
             conn.execute(
@@ -202,7 +204,7 @@ class KeyDatabase:
             expires_at=expires_at,
             quota_limit=quota_limit,
             quota_used=0,
-            metadata=metadata or {},
+            metadata=safe_metadata,
             customer_id=customer_id,
             subscription_id=subscription_id,
         )
@@ -402,6 +404,7 @@ class KeyDatabase:
                 "payment_id": raw_data.get("payment_id"),
                 "confirmed_by": confirmed_by,
                 "confirmed_at": now,
+                "key_id": _key_audit_id(key),
             }
             conn.execute(
                 "INSERT INTO api_keys (key, key_hash, email, plan, active, created_at, expires_at, "

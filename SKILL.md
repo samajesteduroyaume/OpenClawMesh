@@ -1,6 +1,6 @@
 ---
 name: openclaw-mesh
-description: Connect OpenClaw to local and LAN P2P AI agent meshes (JarvisMesh & OpenClawMesh). Discover active peer nodes, delegate heavy tasks across all hardware architectures (NVIDIA CUDA, AMD ROCm, Intel Core Ultra NPU/OpenVINO, Apple Silicon Metal, and CPU), run Whisper audio STT, Vision models, SQLite vector memory RAG, stream real-time tokens, and expose local tools to the decentralized network.
+description: Connect OpenClaw to local and LAN P2P AI agent meshes (JarvisMesh & OpenClawMesh). Requires explicit user consent for mDNS, LAN/WAN network access, remote delegation, key-file access, and exposing local tools. Remote traffic may transmit prompts, files, memory, media, and tool results to selected peers.
 version: 1.1.0
 metadata:
   openclaw:
@@ -8,15 +8,17 @@ metadata:
       bins:
         - python3
 
-      # Permissions et consentement
-      # - Exécution : python3 uniquement.
-      # - Réseau sortant : mDNS/LAN, WebSocket/WSS, UDP DHT et STUN uniquement sur demande.
-      # - Fichiers sensibles : accès aux clés Ed25519/PSK/TrustStore uniquement si configuré par l'utilisateur.
-      # - Réseau entrant : désactivé par défaut ; toute exposition WAN exige TLS et PSK ou TrustStore.
-      # - Les invites, fichiers, images, audio et résultats envoyés à un pair peuvent quitter la machine locale.
 ---
 
 # 🌐 OpenClawMesh — Decentralized P2P AI Mesh Skill
+
+## Permissions et consentement
+
+- Exécution : `python3` uniquement.
+- Réseau sortant : mDNS/LAN, WebSocket/WSS, UDP DHT et STUN uniquement après demande explicite.
+- Fichiers sensibles : clés Ed25519, PSK et `TrustStore` uniquement si configurés par l'utilisateur.
+- Réseau entrant : désactivé par défaut ; toute exposition WAN exige TLS et PSK ou `TrustStore`.
+- Les invites, fichiers, images, audio, requêtes mémoire et résultats d'outils envoyés à un pair peuvent quitter la machine locale.
 
 `openclaw-mesh` enables your OpenClaw agent to discover, collaborate with, and delegate tasks to other AI agent nodes on your local network. These operations are opt-in and may transmit prompts, files, images, audio, memory queries, and tool results to selected peers; verify peer identity and permissions before sending sensitive data.
 

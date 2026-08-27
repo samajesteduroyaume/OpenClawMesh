@@ -59,10 +59,10 @@ def main():
     if args.action == "list":
         keys = db.list_all_keys(limit=args.limit)
         if args.json or not _HAS_RICH:
-            print(json.dumps([k.to_dict() for k in keys], indent=2))
+            print(json.dumps([k.to_dict(include_key=False) for k in keys], indent=2))
         else:
             table = Table(title="🔑 Clés d'API Enregistrées", header_style="bold cyan")
-            table.add_column("Clé d'API", style="green")
+            table.add_column("Identifiant clé", style="green")
             table.add_column("Email", style="white")
             table.add_column("Plan", style="yellow")
             table.add_column("Statut", style="bold")
@@ -74,7 +74,8 @@ def main():
                 status_str = "[green]Active[/green]" if valid else "[red]Inactive[/red]"
                 quota_str = f"{k.quota_used} / {k.quota_limit if k.quota_limit != -1 else '∞'}"
                 expires_str = f"{round((k.expires_at - time.time())/86400, 1)}j" if k.expires_at else "Jamais"
-                table.add_row(k.key, k.email, k.plan, status_str, quota_str, expires_str)
+                key_id = k.metadata.get("key_id", "non divulgué")
+                table.add_row(str(key_id), k.email, k.plan, status_str, quota_str, expires_str)
 
             console.print(table)
 
@@ -104,7 +105,7 @@ def main():
             print(f"❌ Clé non trouvée.")
             sys.exit(1)
         valid, reason = key_rec.is_valid()
-        print(json.dumps(key_rec.to_dict(), indent=2))
+        print(json.dumps(key_rec.to_dict(include_key=False), indent=2))
         print(f"\nStatut actuel : {'VALIDE' if valid else 'INVALIDE (' + reason + ')'}")
 
 

@@ -93,7 +93,11 @@ class MeshDiscovery:
         self._running = False
 
     async def start(self, advertise: bool = True) -> None:
-        """Démarre Zeroconf et l'écoute des services réseau."""
+        """Démarre Zeroconf et l'écoute des services réseau.
+
+        ``advertise=True`` publie le nom, le port et les compétences sur le LAN;
+        l'appelant doit obtenir un consentement explicite avant de l'activer.
+        """
         if self._running:
             return
 
