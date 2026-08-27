@@ -6,24 +6,35 @@ séparés par Internet ou des pare-feux stricts interdisant les connexions P2P d
 Le serveur relais ne peut jamais déchiffrer le contenu des messages.
 """
 from __future__ import annotations
+
 import asyncio
 import json
 import logging
+import os
+import re
+import secrets
 import time
-from typing import Any, Callable, Dict, Optional, Set
+from collections.abc import Callable
+from typing import Any
+
 import websockets
-from websockets.server import WebSocketServerProtocol
+from websockets import ServerConnection as WebSocketServerProtocol
+
+from ..config import get_settings
 
 logger = logging.getLogger("openclaw_mesh.relay")
+_settings = get_settings()
 
 
 class WANRelayServer:
     """Serveur relais WAN WebSocket qui route les trames chiffrées sans les inspecter."""
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 8790, name: str = "openclaw-wan-relay"):
-        self.host = host
-        self.port = port
-        self.name = name
+    def __init__(self, host: str | None = None, port: int | None = None, name: str | None = None,
+                 auth_token: str | None = None):
+        self.host = host or _settings.relay_host
+        self.port = port or _settings.relay_port
+        self.name = name or _settings.relay_name
+        self.auth_token = auth_token or os.getenv("OPENCLAW_RELAY_AUTH_TOKEN")
         self._server = None
         self._clients: dict[str, WebSocketServerProtocol] = {}  # node_id -> websocket
         self._client_info: dict[str, dict[str, Any]] = {}
@@ -31,6 +42,8 @@ class WANRelayServer:
 
     async def start(self) -> None:
         """Démarre le serveur relais."""
+        if self.host not in {"127.0.0.1", "::1", "localhost"} and not self.auth_token:
+            raise RuntimeError("Un relais exposé doit définir OPENCLAW_RELAY_AUTH_TOKEN.")
         self._running = True
         self._server = await websockets.serve(self._handle_client, self.host, self.port)
         logger.info(f"⚡ Serveur Relais WAN actif sur ws://{self.host}:{self.port}")
@@ -47,7 +60,7 @@ class WANRelayServer:
         logger.info("Serveur Relais WAN arrêté.")
 
     async def _handle_client(self, websocket: WebSocketServerProtocol) -> None:
-        registered_node_id: Optional[str] = None
+        registered_node_id: str | None = None
         try:
             async for raw_msg in websocket:
                 try:
@@ -60,7 +73,16 @@ class WANRelayServer:
                 # 1. Enregistrement du nœud
                 if msg_type == "register":
                     node_id = data.get("node_id")
-                    if node_id:
+                    supplied_token = data.get("auth_token", "")
+                    if (node_id and isinstance(node_id, str)
+                            and re.fullmatch(r"[A-Za-z0-9_.-]{3,128}", node_id)
+                            and (not self.auth_token or (
+                                isinstance(supplied_token, str)
+                                and secrets.compare_digest(supplied_token, self.auth_token)
+                            ))):
+                        if node_id in self._clients and self._clients[node_id] is not websocket:
+                            await websocket.send(json.dumps({"type": "error", "code": "node_id_in_use"}))
+                            continue
                         registered_node_id = node_id
                         self._clients[node_id] = websocket
                         self._client_info[node_id] = {
@@ -119,10 +141,12 @@ class WANRelayServer:
 class WANRelayClient:
     """Client se connectant à un serveur relais WAN pour communiquer avec des pairs distants."""
 
-    def __init__(self, relay_url: str, node_id: str, name: str = "openclaw-client"):
+    def __init__(self, relay_url: str, node_id: str, name: str = "openclaw-client",
+                 auth_token: str | None = None):
         self.relay_url = relay_url
         self.node_id = node_id
         self.name = name
+        self.auth_token = auth_token
         self._ws = None
         self._running = False
         self._incoming_callbacks: list[Callable[[str, Any], None]] = []
@@ -137,6 +161,7 @@ class WANRelayClient:
                 "type": "register",
                 "node_id": self.node_id,
                 "name": self.name,
+                "auth_token": self.auth_token,
             }))
             resp = await self._ws.recv()
             data = json.loads(resp)

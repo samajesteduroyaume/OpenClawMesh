@@ -1,8 +1,14 @@
+import time
+
 import pytest
+from cryptography.exceptions import InvalidTag
+
+from openclaw_mesh.crypto import NodeIdentity
 from openclaw_mesh.crypto_e2ee import (
     E2EESession,
-    encrypt_message_for_peer,
+    ReplayError,
     decrypt_message_with_key,
+    encrypt_message_for_peer,
 )
 
 
@@ -32,7 +38,6 @@ def test_e2ee_session_establishment_and_exchange():
 
 
 def test_e2ee_direct_helper_functions():
-    alice_session = E2EESession()
     bob_session = E2EESession()
 
     msg = "Top secret instructions for autonomous agent"
@@ -56,5 +61,111 @@ def test_e2ee_tamper_detection():
     corrupted_bytes[0] ^= 0xFF
     pkg["ciphertext"] = corrupted_bytes.hex()
 
-    with pytest.raises(Exception):
+    with pytest.raises(InvalidTag):
         bob.decrypt(pkg)
+
+
+def test_e2ee_replay_detection_same_nonce_rejected():
+    """Un paquet capturé et réinjecté immédiatement est rejeté par le cache de nonces."""
+    alice = E2EESession()
+    bob = E2EESession()
+    alice.establish_with_peer(bob.public_key_bytes)
+    bob.establish_with_peer(alice.public_key_bytes)
+
+    pkg = alice.encrypt({"cmd": "launch_sequential"})
+    # Première réception légitime
+    assert bob.decrypt(pkg) == {"cmd": "launch_sequential"}
+
+    # Rejeu du même paquet → rejeté anti-rejeu
+    with pytest.raises(ReplayError):
+        bob.decrypt(pkg)
+
+
+def test_e2ee_stale_timestamp_rejected():
+    """Un paquet dont l'horodatage est en dehors de la fenêtre de tolérance est rejeté."""
+    alice = E2EESession()
+    bob = E2EESession()
+    alice.establish_with_peer(bob.public_key_bytes)
+    bob.establish_with_peer(alice.public_key_bytes)
+
+    pkg = alice.encrypt({"cmd": "run_task"})
+    # Simulation d'un paquet capturé et réinjecté 600s plus tard (hors fenêtre)
+    pkg["timestamp"] = time.time() - 600
+    with pytest.raises(ReplayError):
+        bob.decrypt(pkg)
+
+
+def test_e2ee_future_timestamp_rejected():
+    """Un paquet dont l'horodatage est trop en avance est rejeté (anti-rejeu/freshness)."""
+    alice = E2EESession()
+    bob = E2EESession()
+    alice.establish_with_peer(bob.public_key_bytes)
+    bob.establish_with_peer(alice.public_key_bytes)
+
+    pkg = alice.encrypt({"cmd": "run_task"})
+    pkg["timestamp"] = time.time() + 600
+    with pytest.raises(ReplayError):
+        bob.decrypt(pkg)
+
+
+def test_e2ee_replay_cache_disabled_accepting_replay():
+    """Sans cache de nonces, le replay est uniquement contrôlé par l'horodatage."""
+    alice = E2EESession()
+    bob = E2EESession()
+    alice.establish_with_peer(bob.public_key_bytes)
+    # Désactivation du cache de nonces mais horodatage valide
+    bob_cacheless = E2EESession(
+        local_private_key=bob._private_key,
+        peer_public_key_bytes=alice.public_key_bytes,
+        enable_nonce_replay=False,
+    )
+    pkg = alice.encrypt({"cmd": "replay_allowed"})
+    assert bob_cacheless.decrypt(pkg) == {"cmd": "replay_allowed"}
+    # Rejeu accepté car le cache de nonces est désactivé
+    assert bob_cacheless.decrypt(pkg) == {"cmd": "replay_allowed"}
+
+
+def test_e2ee_unique_nonces_no_collision():
+    """Deux encryptions successives produisent des nonces distincts."""
+    alice = E2EESession()
+    bob = E2EESession()
+    alice.establish_with_peer(bob.public_key_bytes)
+    bob.establish_with_peer(alice.public_key_bytes)
+
+    pkg1 = alice.encrypt({"n": 1})
+    pkg2 = alice.encrypt({"n": 2})
+    assert pkg1["nonce"] != pkg2["nonce"]
+    assert bob.decrypt(pkg1) == {"n": 1}
+    assert bob.decrypt(pkg2) == {"n": 2}
+
+
+def test_e2ee_stateless_helper_timestamp_enforced():
+    """Le helper stateless déclenche une erreur sur un horodatage périmé."""
+    alice = E2EESession()
+    pkg = encrypt_message_for_peer(alice.public_key_hex, {"msg": "hi"})
+    pkg["timestamp"] = time.time() - 9999
+    with pytest.raises(ReplayError):
+        decrypt_message_with_key(alice._private_key.private_bytes_raw(), pkg)
+
+
+def test_e2ee_authenticated_identity_rejects_tampering():
+    """L’identité Ed25519 authentifie la clé de session et ses métadonnées."""
+    alice_identity = NodeIdentity.generate()
+    bob_identity = NodeIdentity.generate()
+    alice = E2EESession(
+        identity=alice_identity,
+        peer_identity_public_key=bob_identity.public_key_hex,
+    )
+    bob = E2EESession(
+        identity=bob_identity,
+        peer_identity_public_key=alice_identity.public_key_hex,
+    )
+    alice.establish_with_peer(bob.public_key_bytes)
+    bob.establish_with_peer(alice.public_key_bytes)
+
+    package = alice.encrypt({"authenticated": True})
+    assert bob.decrypt(package) == {"authenticated": True}
+
+    package["identity_signature"] = "00" * 64
+    with pytest.raises(ReplayError):
+        bob.decrypt(package)

@@ -7,19 +7,23 @@ Fournit des compétences multi-modales prêtes à l'emploi et intégrées au mai
 - 🔊 Text-to-Speech (Synthèse vocale locale)
 """
 from __future__ import annotations
+
 import base64
 import logging
 import time
-from typing import Any, Optional
-from .hardware import detect_hardware, HardwareProfile
+from typing import Any
+
+from ..config import get_settings
+from .hardware import HardwareProfile, detect_hardware
 
 logger = logging.getLogger("openclaw_mesh.multimodal")
+_settings = get_settings()
 
 
 class MultiModalEngine:
     """Gestionnaire des tâches d'intelligence artificielle multi-modales."""
 
-    def __init__(self, hardware: Optional[HardwareProfile] = None):
+    def __init__(self, hardware: HardwareProfile | None = None) -> None:
         self.hardware = hardware or detect_hardware()
 
     # ------------------------------------------------------------------ #
@@ -29,7 +33,7 @@ class MultiModalEngine:
         self,
         image_base64: str,
         prompt: str = "Décris cette image en détail et extrais tout texte visible (OCR).",
-        model: Optional[str] = None,
+        model: str | None = None,
     ) -> dict[str, Any]:
         """Analyse une image encodée en Base64 à l'aide d'un modèle de vision multimodal."""
         t0 = time.perf_counter()

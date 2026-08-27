@@ -2,35 +2,58 @@ Licence MIT avec Addendum de Services Commerciaux
 
 Copyright (c) 2026 samajesteduroyaume / Contributeurs OpenClawMesh
 
-L'autorisation est par la présente accordée, gratuitement, à toute personne obtenant une copie
-du présent logiciel et des fichiers de documentation associés (le « Logiciel »), de traiter
-le Logiciel sans restriction, y compris sans limitation les droits d'utiliser, de copier, de modifier,
-de fusionner, de publier, de distribuer, de sous-licencier et/ou de vendre des copies du Logiciel,
-et d'autoriser les personnes à qui le Logiciel est fourni à le faire, sous réserve des conditions suivantes :
+L'autorisation est par la présente accordée, gratuitement, à toute personne
+obtenant une copie du présent logiciel et des fichiers de documentation associés
+(le « Logiciel »), de traiter le Logiciel sans restriction, y compris sans
+limitation les droits d'utiliser, de copier, de modifier, de fusionner, de
+publier, de distribuer, de sous-licencier et/ou de vendre des copies du Logiciel,
+et d'autoriser les personnes à qui le Logiciel est fourni à le faire, sous
+réserve des conditions suivantes :
 
-La notice de droit d'auteur ci-dessus et la présente notice d'autorisation doivent être incluses dans toutes
-les copies ou parties substantielles du Logiciel.
+La notice de droit d'auteur ci-dessus et la présente notice d'autorisation
+doivent être incluses dans toutes les copies ou parties substantielles du Logiciel.
 
-LE LOGICIEL EST FOURNI « EN L'ÉTAT », SANS GARANTIE D'AUCUNE SORTE, EXPRESSE OU IMPLICITE,
-Y COMPRIS MAIS NON LIMITÉ AUX GARANTIES DE QUALITÉ MARCHANDE, D'ADÉQUATION À UN USAGE
-PARTICULIER ET D'ABSENCE DE CONTREFAÇON. EN AUCUN CAS LES AUTEURS OU TITULAIRES DU DROIT
-D'AUTEUR NE SERONT RESPONSABLES DE TOUTE RÉCLAMATION, DOMMAGE OU AUTRE RESPONSABILITÉ,
-QUE CE SOIT DANS LE CADRE D'UN CONTRAT, D'UN DÉLIT OU AUTRE, DÉCOULANT DU LOGICIEL OU DE SON UTILISATION.
+LE LOGICIEL EST FOURNI « EN L'ÉTAT », SANS GARANTIE D'AUCUNE SORTE, EXPRESSE
+OU IMPLICITE, Y COMPRIS MAIS NON LIMITÉ AUX GARANTIES DE QUALITÉ MARCHANDE,
+D'ADÉQUATION À UN USAGE PARTICULIER ET D'ABSENCE DE CONTREFAÇON. EN AUCUN CAS
+LES AUTEURS OU TITULAIRES DU DROIT D'AUTEUR NE SERONT RESPONSABLES DE TOUTE
+RÉCLAMATION, DOMMAGE OU AUTRE RESPONSABILITÉ, QUE CE SOIT DANS LE CADRE D'UN
+CONTRAT, D'UN DÉLIT OU AUTRE, DÉCOULANT DU LOGICIEL OU DE SON UTILISATION.
 
---------------------------------------------------------------------------------
-ADDENDUM : SERVICES COMMERCIAUX & ACCÈS PASSERELLE PREMIUM
---------------------------------------------------------------------------------
+────────────────────────────────────────────────────────────────────────────────
+ADDENDUM : SERVICES COMMERCIAUX — PAIEMENT BITCOIN NATIF
+────────────────────────────────────────────────────────────────────────────────
 
-1. Open-Source vs Services Hébergés :
-La bibliothèque cliente OpenClawMesh, le protocole P2P et la spécification SKILL.md sont
-distribués sous la licence open-source MIT ci-dessus.
+1. Cœur Open-Source vs. Services Hébergés
+   La bibliothèque cliente OpenClawMesh, le protocole P2P et la spécification
+   SKILL.md sont distribués sous la licence open-source MIT ci-dessus.
+   Vous êtes libre d'auto-héberger, forker et modifier le logiciel sans restriction.
 
-2. Accès aux Passerelles d'Inférence Premium :
-L'accès aux clusters managés d'inférence GPU multi-matériels (NVIDIA CUDA, AMD ROCm,
-Intel Core Ultra NPU, Apple Silicon Metal) et relais cloud officiels fait l'objet d'offres commerciales :
-  - Abonnement Pro Mensuel : 10 € / mois (Requêtes accélérées illimitées)
-  - Licence d'Accès à Vie : 200 € en paiement unique (Accès permanent sans abonnement)
+2. Passerelle d'Inférence Premium — Plans d'Accès par Bitcoin
 
-3. Demandes Entreprise & Support Commercial :
-Pour les déploiements managés, clusters dédiés et licences d'entreprise :
-https://github.com/samajesteduroyaume/OpenClawMesh
+   La passerelle managée (gateway/server.py) et les relais cloud officiels sont
+   des services commerciaux accessibles uniquement par paiement Bitcoin :
+
+   ┌──────────────────────┬──────────────────────┬──────────────────────────────────┐
+   │ Plan                 │ Prix (équiv. BTC)    │ Description                      │
+   ├──────────────────────┼──────────────────────┼──────────────────────────────────┤
+   │ Démo Gratuite        │ Gratuit (3 requêtes) │ Clé 7 jours, 3 appels API        │
+   │ Pro Mensuel          │ ≈ 10 € / mois en BTC │ Requêtes illimitées, GPU accéléré│
+   │ Licence à Vie        │ ≈ 200 € en BTC       │ Accès permanent, toutes MAJ      │
+   └──────────────────────┴──────────────────────┴──────────────────────────────────┘
+
+   Adresse Bitcoin : bc1qwq8sll9vrl83lclyhha2gyncpd5275cdr2wul5
+
+   Processus de paiement :
+   a. Consultez le cours BTC/EUR et le montant en satoshis affichés par la passerelle.
+   b. Envoyez le montant exact à l'adresse ci-dessus.
+   c. Soumettez votre email, plan et txid via le portail.
+   d. La passerelle vérifie automatiquement la transaction on-chain.
+   e. Après le nombre de confirmations requis, votre clé est activée automatiquement.
+   f. Conservez le status_token privé retourné pour consulter votre paiement.
+
+   Aucune création de compte. Aucun KYC. Aucun intermédiaire bancaire.
+
+3. Déploiements Entreprise & Licences Personnalisées
+   Pour clusters dédiés, accords de niveau de service et licences en volume :
+   → https://github.com/samajesteduroyaume/OpenClawMesh

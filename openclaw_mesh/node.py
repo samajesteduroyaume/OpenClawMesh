@@ -6,31 +6,31 @@ de s'annoncer sur le réseau mDNS et de servir des requêtes entrantes
 provenant d'autres nœuds OpenClaw ou JarvisMesh.
 """
 from __future__ import annotations
+
 import asyncio
 import inspect
 import logging
 import ssl as ssl_module
 import time
-from typing import Any, Callable, Optional
+from collections.abc import Callable
 
 import websockets
 
-from .protocol import (
-    PROTOCOL_VERSION,
-    DESCRIBE_SKILL,
-    HEALTH_SKILL,
-    RESERVED_SKILLS,
-    TaskRequest,
-    TaskChunk,
-    TaskResponse,
-    parse_message,
-    verify_request,
-)
+from .bridge import SkillRegistry
+from .config import get_settings
 from .crypto import NodeIdentity, TrustStore, verify_ed25519_signature
 from .discovery import MeshDiscovery, get_local_ip
-from .bridge import SkillRegistry
+from .protocol import (
+    DESCRIBE_SKILL,
+    HEALTH_SKILL,
+    TaskChunk,
+    TaskRequest,
+    TaskResponse,
+    parse_message,
+)
 
 logger = logging.getLogger("openclaw_mesh.node")
+_settings = get_settings()
 
 
 class OpenClawMeshNode:
@@ -38,31 +38,32 @@ class OpenClawMeshNode:
 
     def __init__(
         self,
-        name: str = "openclaw-node",
-        port: int = 8770,
-        host: str = "0.0.0.0",
-        advertise_ip: Optional[str] = None,
-        registry: Optional[SkillRegistry] = None,
-        psk: Optional[str] = None,
-        identity: Optional[NodeIdentity] = None,
-        trust_store: Optional[TrustStore] = None,
-        ssl_context: Optional[ssl_module.SSLContext] = None,
-        health_extra: Optional[Callable[[], dict]] = None,
+        name: str | None = None,
+        port: int | None = None,
+        host: str | None = None,
+        advertise_ip: str | None = None,
+        registry: SkillRegistry | None = None,
+        psk: str | None = None,
+        identity: NodeIdentity | None = None,
+        trust_store: TrustStore | None = None,
+        ssl_context: ssl_module.SSLContext | None = None,
+        health_extra: Callable[[], dict] | None = None,
     ):
-        self.name = name
-        self.port = port
-        self.host = host
+        self.name = name or _settings.node_name
+        self.port = port or _settings.default_port
+        self.host = host or _settings.default_host
         self.advertise_ip = advertise_ip or get_local_ip()
-        self.registry = registry or SkillRegistry(name=name)
-        self.psk = psk
+        self.registry = registry or SkillRegistry(name=self.name)
+        self.psk = psk or _settings.psk
         self.identity = identity
         self.trust_store = trust_store
         self.ssl_context = ssl_context
         self.health_extra = health_extra
 
-        self.discovery: Optional[MeshDiscovery] = None
+        self.discovery: MeshDiscovery | None = None
         self._ws_server = None
         self._active_tasks = 0
+        self._task_semaphore = asyncio.Semaphore(max(1, _settings.max_active_tasks))
         self._start_time = time.time()
         self._running = False
 
@@ -70,6 +71,10 @@ class OpenClawMeshNode:
         """Démarre le serveur WebSocket et la publication Zeroconf."""
         if self._running:
             return
+        if self.host not in {"127.0.0.1", "::1", "localhost"} and not (
+            self.psk or self.trust_store or self.ssl_context
+        ):
+            raise RuntimeError("Un nœud exposé doit utiliser PSK, TrustStore ou TLS.")
 
         self._start_time = time.time()
         self._ws_server = await websockets.serve(
@@ -118,11 +123,25 @@ class OpenClawMeshNode:
         send_lock = asyncio.Lock()
         try:
             async for raw in ws:
-                asyncio.ensure_future(self._process_message(ws, raw, send_lock))
+                asyncio.create_task(self._process_message_with_timeout(ws, raw, send_lock))
         except (asyncio.CancelledError, websockets.ConnectionClosed):
             pass
         except Exception as e:
             logger.debug(f"Connexion client fermée: {e}")
+
+    async def _process_message_with_timeout(
+        self,
+        ws: websockets.WebSocketServerProtocol,
+        raw: str,
+        send_lock: asyncio.Lock,
+    ) -> None:
+        try:
+            await asyncio.wait_for(
+                self._process_message(ws, raw, send_lock),
+                timeout=max(0.1, _settings.task_timeout),
+            )
+        except asyncio.TimeoutError:
+            logger.warning("Tâche P2P interrompue après dépassement du délai")
 
     async def _process_message(
         self,
@@ -259,6 +278,12 @@ class OpenClawMeshNode:
                 await ws.send(resp.to_json())
             return
 
+        if self._task_semaphore.locked():
+            resp = TaskResponse(request_id=req.request_id, ok=False, error="Capacité du nœud atteinte", handled_by=self.name)
+            async with send_lock:
+                await ws.send(resp.to_json())
+            return
+        await self._task_semaphore.acquire()
         self._active_tasks += 1
         try:
             # Gestion des générateurs asynchrones (Streaming)
@@ -325,13 +350,9 @@ class OpenClawMeshNode:
 
         except Exception as exec_err:
             logger.error(f"Erreur lors de l'exécution de '{req.skill}': {exec_err}", exc_info=True)
-            resp = TaskResponse(
-                request_id=req.request_id,
-                ok=False,
-                error=str(exec_err),
-                handled_by=self.name,
-            )
+            resp = TaskResponse(request_id=req.request_id, ok=False, error="Erreur d'exécution", handled_by=self.name)
             async with send_lock:
                 await ws.send(resp.to_json())
         finally:
             self._active_tasks = max(0, self._active_tasks - 1)
+            self._task_semaphore.release()

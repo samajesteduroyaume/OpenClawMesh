@@ -20,21 +20,40 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
---------------------------------------------------------------------------------
-COMMERCIAL SERVICES & HOSTED GATEWAY TERMS (ADDENDUM)
---------------------------------------------------------------------------------
+────────────────────────────────────────────────────────────────────────────────
+COMMERCIAL SERVICES ADDENDUM
+────────────────────────────────────────────────────────────────────────────────
 
-1. Open-Source vs Hosted Services:
-The OpenClawMesh client library, P2P protocol, and SKILL.md specification are licensed
-under the standard MIT License above.
+1. Open-Source Core vs. Managed Services
+   The OpenClawMesh client library, P2P protocol, and SKILL.md specification
+   are distributed under the open-source MIT license above.
+   You may self-host, fork, and modify the software freely.
 
-2. Premium Gateway & Inference Access:
-Access to official high-throughput multi-hardware inference gateways (NVIDIA CUDA,
-AMD ROCm, Intel Core Ultra NPU, Apple Silicon Metal clusters) and managed cloud relays
-is provided under commercial terms:
-  - Pro Monthly Subscription: €10 / month (Unlimited accelerated queries)
-  - Lifetime Access License: €200 one-time payment (Permanent unlimited access)
+2. Bitcoin-Native Payment Gateway — Premium Access Plans
 
-3. Enterprise & Commercial Inquiries:
-For managed deployments, private clusters, and enterprise licensing:
-https://github.com/samajesteduroyaume/OpenClawMesh
+   The managed inference gateway (gateway/server.py) and official hosted relay
+   infrastructure are commercial services, accessible via Bitcoin payment:
+
+   ┌──────────────────┬──────────────────────┬──────────────────────────────────────┐
+   │ Plan             │ Price (BTC equiv.)   │ Description                          │
+   ├──────────────────┼──────────────────────┼──────────────────────────────────────┤
+   │ Free Demo        │ Free (3 requests)    │ 7-day evaluation key, 3 API calls    │
+   │ Pro Monthly      │ ≈ €10 / month in BTC │ Unlimited requests, GPU acceleration │
+   │ Lifetime License │ ≈ €200 one-time BTC  │ Permanent access, all future updates │
+   └──────────────────┴──────────────────────┴──────────────────────────────────────┘
+
+   Bitcoin Wallet: bc1qwq8sll9vrl83lclyhha2gyncpd5275cdr2wul5
+
+   Payment Process:
+   a. Check the BTC/EUR rate and satoshi amount displayed by the gateway.
+   b. Send the exact amount to the wallet above.
+   c. Submit your email, plan, and txid through the portal.
+   d. The gateway automatically verifies the transaction on-chain.
+   e. After the required confirmation count, your API key is activated automatically.
+   f. Keep the private status_token returned by the submission to check payment status.
+
+   No account creation. No KYC. No third-party processors.
+
+3. Enterprise & Custom Deployments
+   For dedicated clusters, SLA agreements, and volume licensing:
+   → https://github.com/samajesteduroyaume/OpenClawMesh

@@ -5,14 +5,18 @@ Permet d'enregistrer des fonctions synchrones, asynchrones, générateurs
 (streaming) et outils OpenClaw pour les exposer aux autres agents du maillage.
 """
 from __future__ import annotations
-import asyncio
-import functools
+
 import inspect
 import os
 import platform
-import sys
-import time
-from typing import Any, AsyncGenerator, Callable, Generator, Optional, Union
+from collections.abc import Callable
+from typing import Any
+
+try:
+    from importlib.metadata import version as _pkg_version
+    _OPENCLAW_VERSION = _pkg_version("openclaw-mesh")
+except Exception:
+    _OPENCLAW_VERSION = "1.1.0"  # fallback si package non installé en mode éditable
 
 try:
     from pydantic import BaseModel
@@ -23,17 +27,17 @@ except ImportError:
 
 
 def skill(
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    schema: Optional[Any] = None,
-):
+    name: str | None = None,
+    description: str | None = None,
+    schema: Any | None = None,
+) -> Callable[[Callable], Callable]:
     """Décorateur pour enregistrer une fonction en tant que compétence OpenClawMesh."""
-    def decorator(fn: Callable):
-        setattr(fn, "__is_openclaw_skill__", True)
-        setattr(fn, "__is_jarvismesh_skill__", True)
-        setattr(fn, "__skill_name__", name or fn.__name__)
-        setattr(fn, "__skill_desc__", description or (inspect.getdoc(fn) or "").strip())
-        setattr(fn, "__skill_schema__", schema)
+    def decorator(fn: Callable) -> Callable:
+        fn.__is_openclaw_skill__ = True
+        fn.__is_jarvismesh_skill__ = True
+        fn.__skill_name__ = name or fn.__name__
+        fn.__skill_desc__ = description or (inspect.getdoc(fn) or "").strip()
+        fn.__skill_schema__ = schema
         return fn
     return decorator
 
@@ -41,7 +45,7 @@ def skill(
 class SkillRegistry:
     """Registre central des compétences d'un nœud OpenClawMesh."""
 
-    def __init__(self, name: str = "default"):
+    def __init__(self, name: str = "default") -> None:
         self.name = name
         self._skills: dict[str, Callable] = {}
         self._schemas: dict[str, Any] = {}
@@ -57,9 +61,9 @@ class SkillRegistry:
     def register(
         self,
         fn: Callable,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        schema: Optional[Any] = None,
+        name: str | None = None,
+        description: str | None = None,
+        schema: Any | None = None,
     ) -> Callable:
         """Enregistre une fonction Python comme compétence du nœud."""
         skill_name = name or getattr(fn, "__skill_name__", fn.__name__)
@@ -78,7 +82,7 @@ class SkillRegistry:
         for name, fn in skills.items():
             self.register(fn, name=name)
 
-    def get(self, name: str) -> Optional[Callable]:
+    def get(self, name: str) -> Callable | None:
         return self._skills.get(name)
 
     def list_names(self) -> list[str]:
@@ -103,21 +107,21 @@ class SkillRegistry:
     # Compétences Intégrées
     # ------------------------------------------------------------------ #
     @staticmethod
-    def _echo(payload: dict) -> dict:
+    def _echo(payload: dict[str, Any]) -> dict[str, Any]:
         return payload
 
     @staticmethod
-    def _openclaw_info(payload: dict) -> dict:
+    def _openclaw_info(payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "agent": "OpenClaw",
-            "version": "1.0.0",
+            "version": _OPENCLAW_VERSION,
             "protocol": "1.0",
             "os": platform.system(),
             "python": platform.python_version(),
         }
 
     @staticmethod
-    def _system_info(payload: dict) -> dict:
+    def _system_info(payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "platform": platform.platform(),
             "machine": platform.machine(),

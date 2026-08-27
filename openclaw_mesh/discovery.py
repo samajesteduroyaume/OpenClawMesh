@@ -5,20 +5,24 @@ Découvre automatiquement les nœuds JarvisMesh et OpenClawMesh sur le LAN,
 et publie l'identité et les compétences du nœud local.
 """
 from __future__ import annotations
+
 import asyncio
 import socket
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Any
 
 from zeroconf import IPVersion, ServiceStateChange
-from zeroconf.asyncio import AsyncZeroconf, AsyncServiceInfo, AsyncServiceBrowser
+from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
+from .config import get_settings
 from .protocol import (
     SERVICE_TYPE_JARVISMESH,
-    SERVICE_TYPE_OPENCLAW,
     SERVICE_TYPES,
 )
+
+_settings = get_settings()
 
 
 def get_local_ip() -> str:
@@ -42,14 +46,14 @@ class PeerInfo:
     skills: list[str] = field(default_factory=list)
     service_type: str = SERVICE_TYPE_JARVISMESH
     last_seen: float = field(default_factory=time.time)
-    health: Optional[dict] = None
-    rtt_ms: Optional[float] = None
+    health: dict[str, Any] | None = None
+    rtt_ms: float | None = None
 
     @property
     def ws_url(self) -> str:
         return f"ws://{self.address}:{self.port}"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "address": self.address,
@@ -68,12 +72,12 @@ class MeshDiscovery:
 
     def __init__(
         self,
-        node_name: Optional[str] = None,
-        port: Optional[int] = None,
-        skills: Optional[list[str]] = None,
-        advertise_ip: Optional[str] = None,
-        on_peer_changed: Optional[Callable[[str, Optional[PeerInfo]], None]] = None,
-        service_types: Optional[list[str]] = None,
+        node_name: str | None = None,
+        port: int | None = None,
+        skills: list[str] | None = None,
+        advertise_ip: str | None = None,
+        on_peer_changed: Callable[[str, PeerInfo | None], None] | None = None,
+        service_types: list[str] | None = None,
     ):
         self.node_name = node_name
         self.port = port
@@ -83,7 +87,7 @@ class MeshDiscovery:
         self.service_types = service_types or SERVICE_TYPES
 
         self.peers: dict[str, PeerInfo] = {}
-        self._zc: Optional[AsyncZeroconf] = None
+        self._zc: AsyncZeroconf | None = None
         self._service_infos: list[AsyncServiceInfo] = []
         self._browsers: list[AsyncServiceBrowser] = []
         self._running = False
@@ -140,7 +144,7 @@ class MeshDiscovery:
             await self._zc.async_close()
             self._zc = None
 
-    def _on_service_state_change(self, zeroconf, service_type: str, name: str, state_change: ServiceStateChange) -> None:
+    def _on_service_state_change(self, zeroconf: Any, service_type: str, name: str, state_change: ServiceStateChange) -> None:
         peer_name = name
         for st in SERVICE_TYPES:
             if peer_name.endswith(f".{st}"):
@@ -157,7 +161,7 @@ class MeshDiscovery:
             if removed and self.on_peer_changed:
                 self.on_peer_changed(peer_name, None)
 
-    async def _resolve_peer(self, zeroconf, service_type: str, name: str, peer_name: str) -> None:
+    async def _resolve_peer(self, zeroconf: Any, service_type: str, name: str, peer_name: str) -> None:
         info = AsyncServiceInfo(service_type, name)
         ok = await info.async_request(zeroconf, 3000)
         if not ok or not info.addresses:
@@ -180,7 +184,7 @@ class MeshDiscovery:
         if self.on_peer_changed:
             self.on_peer_changed(peer_name, peer)
 
-    def add_static_peer(self, name: str, address: str, port: int, skills: Optional[list[str]] = None) -> PeerInfo:
+    def add_static_peer(self, name: str, address: str, port: int, skills: list[str] | None = None) -> PeerInfo:
         """Ajoute manuellement un pair (pratique en environnement sans multicast)."""
         peer = PeerInfo(
             name=name,
@@ -200,8 +204,10 @@ class MeshDiscovery:
         return [p for p in self.peers.values() if skill in p.skills]
 
 
-async def scan_mesh_peers(timeout: float = 2.5, service_types: Optional[list[str]] = None) -> dict[str, PeerInfo]:
+async def scan_mesh_peers(timeout: float | None = None, service_types: list[str] | None = None) -> dict[str, PeerInfo]:
     """Effectue un scan réseau ponctuel pour découvrir les pairs actifs."""
+    if timeout is None:
+        timeout = _settings.discovery_timeout
     discovery = MeshDiscovery(service_types=service_types)
     await discovery.start(advertise=False)
     await asyncio.sleep(timeout)

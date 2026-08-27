@@ -5,12 +5,11 @@ Détermine automatiquement l'adresse IP publique et le port externe du nœud
 pour établir des liaisons directes P2P à travers les pare-feux et routeurs (NAT).
 """
 from __future__ import annotations
-import asyncio
+
 import logging
 import socket
 import struct
 from dataclasses import dataclass
-from typing import Optional, Tuple
 
 logger = logging.getLogger("openclaw_mesh.nat")
 
@@ -24,8 +23,8 @@ DEFAULT_STUN_SERVERS = [
 
 @dataclass
 class NATProfile:
-    public_ip: Optional[str]
-    public_port: Optional[int]
+    public_ip: str | None
+    public_port: int | None
     local_ip: str
     local_port: int
     nat_type: str  # "Open/Public", "Full-Cone", "Restricted", "Symmetric", "Blocked/Unknown"
@@ -76,9 +75,9 @@ async def discover_nat_and_public_ip(
                         x_family, x_port = struct.unpack("!BBH", data[idx+4:idx+8])
                         xor_port = x_port ^ 0x2112
                         xor_ip_bytes = data[idx+8:idx+12]
-                        real_ip_bytes = bytes(b ^ m for b, m in zip(xor_ip_bytes, magic_cookie))
+                        real_ip_bytes = bytes(b ^ m for b, m in zip(xor_ip_bytes, magic_cookie, strict=True))
                         pub_ip = socket.inet_ntoa(real_ip_bytes)
-                        
+
                         return NATProfile(
                             public_ip=pub_ip,
                             public_port=xor_port,

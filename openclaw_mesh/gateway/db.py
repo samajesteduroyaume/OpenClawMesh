@@ -5,13 +5,17 @@ Gère les clés d'API (création, validation, décompte de quotas, expirations, 
 les transactions de paiement et les logs d'utilisation.
 """
 from __future__ import annotations
-import os
+
 import secrets
 import sqlite3
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
+
+from ..config import get_settings
+
+_settings = get_settings()
 
 
 @dataclass
@@ -21,12 +25,12 @@ class KeyRecord:
     plan: str
     active: bool = True
     created_at: float = field(default_factory=time.time)
-    expires_at: Optional[float] = None
+    expires_at: float | None = None
     quota_limit: int = -1  # -1 = illimité
     quota_used: int = 0
     metadata: dict[str, Any] = field(default_factory=dict)
-    customer_id: Optional[str] = None
-    subscription_id: Optional[str] = None
+    customer_id: str | None = None
+    subscription_id: str | None = None
 
     def is_valid(self) -> tuple[bool, str]:
         if not self.active:
@@ -44,8 +48,8 @@ class KeyRecord:
 class KeyDatabase:
     """Base de données SQLite autonome pour les clés de monétisation."""
 
-    def __init__(self, db_path: str | Path = "openclaw_keys.db"):
-        self.db_path = Path(db_path).resolve()
+    def __init__(self, db_path: str | Path | None = None):
+        self.db_path = Path(db_path or _settings.gateway_db_path).resolve()
         self._init_db()
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -82,9 +86,17 @@ class KeyDatabase:
                     amount_cents INTEGER,
                     currency TEXT,
                     created_at REAL NOT NULL,
-                    raw_payload_json TEXT
+                    raw_payload_json TEXT,
+                    txid TEXT
                 )
             """)
+            columns = {row["name"] for row in conn.execute("PRAGMA table_info(payment_events)")}
+            if "txid" not in columns:
+                conn.execute("ALTER TABLE payment_events ADD COLUMN txid TEXT")
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_events_bitcoin_txid "
+                "ON payment_events(provider, txid) WHERE provider = 'bitcoin' AND txid IS NOT NULL"
+            )
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS usage_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,12 +115,12 @@ class KeyDatabase:
         self,
         email: str,
         plan: str = "pro_monthly",
-        days_valid: Optional[int] = 30,
+        days_valid: int | None = 30,
         quota_limit: int = -1,
-        customer_id: Optional[str] = None,
-        subscription_id: Optional[str] = None,
+        customer_id: str | None = None,
+        subscription_id: str | None = None,
         custom_prefix: str = "sk_claw_",
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> KeyRecord:
         """Génère une nouvelle clé d'API et la persiste en base."""
         key = f"{custom_prefix}{secrets.token_hex(20)}"
@@ -143,7 +155,7 @@ class KeyDatabase:
             subscription_id=subscription_id,
         )
 
-    def get_key(self, key_str: str) -> Optional[KeyRecord]:
+    def get_key(self, key_str: str) -> KeyRecord | None:
         """Récupère une clé par sa valeur."""
         import json
         with self._get_connection() as conn:
@@ -198,6 +210,23 @@ class KeyDatabase:
             )
         return True
 
+    def reserve_usage(self, key_str: str, skill_name: str = "") -> bool:
+        """Réserve atomiquement une unité de quota avant exécution."""
+        now = time.time()
+        with self._get_connection() as conn:
+            result = conn.execute(
+                "UPDATE api_keys SET quota_used = quota_used + 1 WHERE key = ? "
+                "AND active = 1 AND (quota_limit = -1 OR quota_used < quota_limit)",
+                (key_str,),
+            )
+            if result.rowcount != 1:
+                return False
+            conn.execute(
+                "INSERT INTO usage_logs (key, skill, ts, duration_ms, status) VALUES (?, ?, ?, ?, ?)",
+                (key_str, skill_name, now, 0.0, "reserved"),
+            )
+            return True
+
     def revoke_key(self, key_str: str) -> bool:
         """Désactive une clé."""
         with self._get_connection() as conn:
@@ -246,10 +275,11 @@ class KeyDatabase:
         event_id: str,
         provider: str,
         event_type: str,
-        customer_email: Optional[str] = None,
+        customer_email: str | None = None,
         amount_cents: int = 0,
         currency: str = "eur",
-        raw_payload: Optional[dict] = None,
+        raw_payload: dict | None = None,
+        txid: str | None = None,
     ) -> bool:
         import json
         with self._get_connection() as conn:
@@ -258,15 +288,87 @@ class KeyDatabase:
                     """
                     INSERT INTO payment_events (
                         event_id, provider, event_type, customer_email,
-                        amount_cents, currency, created_at, raw_payload_json
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        amount_cents, currency, created_at, raw_payload_json, txid
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         event_id, provider, event_type, customer_email,
-                        amount_cents, currency, time.time(), json.dumps(raw_payload or {})
+                        amount_cents, currency, time.time(), json.dumps(raw_payload or {}), txid
                     )
                 )
                 return True
             except sqlite3.IntegrityError:
                 # Événement déjà traité (idempotence)
                 return False
+
+    def confirm_payment(
+        self,
+        event_id: str,
+        *,
+        quota_limit: int = -1,
+        days_valid: int | None = None,
+        confirmed_by: str = "admin",
+        confirmation_metadata: dict[str, Any] | None = None,
+    ) -> KeyRecord | None:
+        """Confirme un paiement et crée sa clé dans une transaction atomique."""
+        import json
+
+        now = time.time()
+        with self._get_connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT * FROM payment_events WHERE event_id = ?", (event_id,)
+            ).fetchone()
+            if not row:
+                return None
+
+            raw_data = json.loads(row["raw_payload_json"] or "{}")
+            existing_key = raw_data.get("confirmed_key")
+            if row["event_type"] == "confirmed" and existing_key:
+                key_row = conn.execute(
+                    "SELECT * FROM api_keys WHERE key = ?", (existing_key,)
+                ).fetchone()
+                if key_row:
+                    return self._key_from_row(key_row)
+            if row["event_type"] != "pending_verification":
+                return None
+
+            plan = raw_data.get("plan", "pro_monthly")
+            email = row["customer_email"]
+            key = f"sk_claw_{secrets.token_hex(20)}"
+            expires_at = now + days_valid * 86400 if days_valid and days_valid > 0 else None
+            metadata = {
+                "provider": "bitcoin",
+                "txid": row["txid"] or raw_data.get("txid"),
+                "payment_id": raw_data.get("payment_id"),
+                "confirmed_by": confirmed_by,
+                "confirmed_at": now,
+            }
+            conn.execute(
+                "INSERT INTO api_keys (key, email, plan, active, created_at, expires_at, "
+                "quota_limit, quota_used, metadata_json) VALUES (?, ?, ?, 1, ?, ?, ?, 0, ?)",
+                (key, email, plan, now, expires_at, quota_limit, json.dumps(metadata)),
+            )
+            raw_data.update({"confirmed_at": now, "confirmed_key": key})
+            if confirmation_metadata:
+                raw_data.update(confirmation_metadata)
+            conn.execute(
+                "UPDATE payment_events SET event_type = 'confirmed', raw_payload_json = ? "
+                "WHERE event_id = ? AND event_type = 'pending_verification'",
+                (json.dumps(raw_data), event_id),
+            )
+            return KeyRecord(
+                key=key, email=email, plan=plan, created_at=now,
+                expires_at=expires_at, quota_limit=quota_limit, metadata=metadata,
+            )
+
+    @staticmethod
+    def _key_from_row(row: sqlite3.Row) -> KeyRecord:
+        import json
+        return KeyRecord(
+            key=row["key"], email=row["email"], plan=row["plan"],
+            active=bool(row["active"]), created_at=row["created_at"],
+            expires_at=row["expires_at"], quota_limit=row["quota_limit"],
+            quota_used=row["quota_used"], metadata=json.loads(row["metadata_json"] or "{}"),
+            customer_id=row["customer_id"], subscription_id=row["subscription_id"],
+        )

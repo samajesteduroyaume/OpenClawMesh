@@ -1,7 +1,7 @@
 ---
 name: openclaw-mesh
 description: Connect OpenClaw to local and LAN P2P AI agent meshes (JarvisMesh & OpenClawMesh). Discover active peer nodes, delegate heavy tasks across all hardware architectures (NVIDIA CUDA, AMD ROCm, Intel Core Ultra NPU/OpenVINO, Apple Silicon Metal, and CPU), run Whisper audio STT, Vision models, SQLite vector memory RAG, stream real-time tokens, and expose local tools to the decentralized network.
-version: 1.0.0
+version: 1.1.0
 metadata:
   openclaw:
     requires:
@@ -27,7 +27,7 @@ Activate this skill when:
 2. **Streaming AI Responses**: Real-time token streaming is required for interactive dialogue or large code generation (`llm_stream`).
 3. **Local Vector Memory & RAG**: Querying or updating persistent episodic memory stored on SQLite vector store nodes (`memory_search`, `memory_store`, `memory_recall`, `rag_query`).
 4. **Multimodal Vision & Audio STT**: Transcribing audio via Whisper (`transcribe_audio`) or analyzing images with Vision models (`vlm_analyze`).
-5. **Cluster Peer Discovery**: Checking what AI nodes, machines, and tools are available across your machines on the local Wi-Fi/LAN (`discover`).
+5. **Cluster Peer Discovery**: Checking what AI nodes, machines, and tools are available across your machines on the local Wi-Fi/LAN and the WAN Kademlia DHT (`discover`).
 6. **Hardware Acceleration Diagnostic**: Inspecting local AI hardware accelerators (`hardware`).
 7. **Exposing OpenClaw Tools**: Publishing OpenClaw tools so other JarvisMesh / OpenClaw agents can call them remotely.
 
@@ -122,9 +122,32 @@ python3 scripts/mesh_cli.py call --skill llm --payload '{"prompt": "Hello"}' --p
    python3 scripts/mesh_cli.py keygen --out ~/.openclaw/identity.key
    ```
 2. Call nodes using the private key:
-   ```bash
-   python3 scripts/mesh_cli.py call --skill llm --payload '{"prompt": "Hello"}' --keyfile ~/.openclaw/identity.key
-   ```
+    ```bash
+    python3 scripts/mesh_cli.py call --skill llm --payload '{"prompt": "Hello"}' --keyfile ~/.openclaw/identity.key
+    ```
+
+### C. End-to-End Encryption (E2EE) with Anti-Replay
+
+When an E2EE session is enabled, payloads are encrypted with **ChaCha20-Poly1305 AEAD** over an **X25519 ECDH** session (HKDF-SHA256). For production, bind the session to trusted Ed25519 identities; X25519 alone does not prevent an active MITM. The WAN relay only forwards opaque E2EE blobs and never sees the plaintext.
+
+```python
+from openclaw_mesh import E2EESession
+
+alice = E2EESession()
+bob = E2EESession()
+alice.establish_with_peer(bob.public_key_bytes)
+bob.establish_with_peer(alice.public_key_bytes)
+
+pkg = alice.encrypt({"prompt": "secure task"})
+bob.decrypt(pkg)  # ✅ first reception
+bob.decrypt(pkg)  # ❌ ReplayError — captured packet re-injected
+```
+
+For authenticated E2EE, pass `identity=` and `peer_identity_public_key=` to both sessions. DHT RPCs can be authenticated with the shared `OPENCLAW_PSK`.
+
+Each `E2EESession` enforces **anti-replay** by combining a timestamp freshness window (`e2ee_max_drift_seconds`, default 300s) and a bounded sliding-window nonce cache (`e2ee_nonce_cache_size`). Staler or duplicated packets are rejected with `ReplayError`.
+
+WAN nodes are routed through a **WebSocket relay** (`mesh_cli.py relay`), and the **Kademlia DHT** (`mesh_cli.py dht`) provides global decentralized skill lookup over real UDP transport with iterative alpha-parallel lookups.
 
 ---
 

@@ -5,11 +5,13 @@ Permet de répartir l'exécution d'un grand modèle de langage (LLM / MoE)
 entre plusieurs machines du maillage OpenClawMesh lorsque la mémoire d'un seul nœud est insuffisante.
 """
 from __future__ import annotations
+
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger("openclaw_mesh.moe")
 
@@ -27,7 +29,7 @@ class PipelineStage:
 class DistributedMoEOrchestrator:
     """Orchestre la répartition des étapes d'inférence ou d'experts à travers le maillage."""
 
-    def __init__(self, cluster_nodes: Optional[list[str]] = None):
+    def __init__(self, cluster_nodes: list[str] | None = None):
         self.nodes = cluster_nodes or ["local-node"]
         self.stages: list[PipelineStage] = []
         self._build_pipeline_stages()
@@ -57,7 +59,7 @@ class DistributedMoEOrchestrator:
     async def execute_distributed_pipeline(
         self,
         prompt: str,
-        delegate_fn: Optional[Callable[[str, dict[str, Any]], Any]] = None,
+        delegate_fn: Callable[[str, dict[str, Any]], Any] | None = None,
     ) -> dict[str, Any]:
         """
         Exécute le pipeline séquentiel distribué à travers les nœuds du maillage.

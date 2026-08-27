@@ -9,12 +9,17 @@ Détecte et caractérise automatiquement :
 - ⚪ CPU Universel (AVX2, AVX-512, ARM Neon)
 """
 from __future__ import annotations
+
+import importlib.util
 import os
 import platform
 import subprocess
-import sys
-from dataclasses import dataclass, field, asdict
-from typing import Any, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any
+
+from ..config import get_settings
+
+_settings = get_settings()
 
 
 @dataclass
@@ -50,7 +55,7 @@ def _get_cpu_name() -> str:
             cmd = ["sysctl", "-n", "machdep.cpu.brand_string"]
             return subprocess.check_output(cmd).decode().strip()
         elif system == "Linux":
-            with open("/proc/cpuinfo", "r") as f:
+            with open("/proc/cpuinfo") as f:
                 for line in f:
                     if "model name" in line:
                         return line.split(":", 1)[1].strip()
@@ -148,15 +153,12 @@ def detect_hardware() -> HardwareProfile:
     # 3. Détection AMD ROCm / DirectML
     # ------------------------------------------------------------------ #
     if not has_cuda and not has_apple_metal:
-        try:
-            import torch_directml  # type: ignore
+        if importlib.util.find_spec("torch_directml") is not None:
             has_directml = True
             acc_type = "amd_directml"
             acc_name = "AMD DirectML / Windows GPU"
             rec_backend = "directml"
             devices.append({"type": "directml", "name": "DirectML Device"})
-        except ImportError:
-            pass
 
         # Vérification ROCm
         if os.path.exists("/opt/rocm") or "rocm" in os.environ.get("HIP_PATH", "").lower():

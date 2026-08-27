@@ -7,44 +7,43 @@ le chiffrement de bout en bout (E2EE), la délégation multi-matériels (NVIDIA,
 et l'inférence multi-modale (Vision, Whisper STT, TTS, MoE).
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
+from .bridge import SkillRegistry
+from .client import MeshClient
+from .config import Settings, get_settings, reload_settings, reset_settings
+from .crypto import NodeIdentity, TrustStore, verify_ed25519_signature
+from .crypto_e2ee import E2EESession, decrypt_message_with_key, encrypt_message_for_peer
+from .discovery import MeshDiscovery, PeerInfo
+from .engines import (
+    AutoModelManager,
+    DistributedMoEOrchestrator,
+    HardwareProfile,
+    ModelRecommendation,
+    MultiModalEngine,
+    UniversalInferenceEngine,
+    detect_hardware,
+)
+from .network import (
+    Contact,
+    KademliaDHT,
+    NATProfile,
+    RoutingTable,
+    WANRelayClient,
+    WANRelayServer,
+    discover_nat_and_public_ip,
+)
+from .node import OpenClawMeshNode
 from .protocol import (
     PROTOCOL_VERSION,
     SERVICE_TYPE_JARVISMESH,
     SERVICE_TYPE_OPENCLAW,
-    TaskRequest,
     TaskChunk,
+    TaskRequest,
     TaskResponse,
+    parse_message,
     sign_request,
     verify_request,
-    parse_message,
-)
-from .crypto import NodeIdentity, TrustStore, verify_ed25519_signature
-from .crypto_e2ee import E2EESession, encrypt_message_for_peer, decrypt_message_with_key
-from .discovery import MeshDiscovery, PeerInfo
-from .client import MeshClient
-from .node import OpenClawMeshNode
-from .bridge import SkillRegistry
-
-from .network import (
-    discover_nat_and_public_ip,
-    NATProfile,
-    WANRelayServer,
-    WANRelayClient,
-    KademliaDHT,
-    Contact,
-    RoutingTable,
-)
-
-from .engines import (
-    detect_hardware,
-    HardwareProfile,
-    UniversalInferenceEngine,
-    AutoModelManager,
-    ModelRecommendation,
-    DistributedMoEOrchestrator,
-    MultiModalEngine,
 )
 
 __all__ = [
@@ -82,4 +81,8 @@ __all__ = [
     "ModelRecommendation",
     "DistributedMoEOrchestrator",
     "MultiModalEngine",
+    "Settings",
+    "get_settings",
+    "reload_settings",
+    "reset_settings",
 ]

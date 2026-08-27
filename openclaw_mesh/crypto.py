@@ -6,19 +6,25 @@ Gère les clés privées/publiques Ed25519, la signature, la vérification anti-
 et la liste blanche de confiance (TrustStore).
 """
 from __future__ import annotations
+
 import json
 import os
+import re
+import tempfile
 import time
 from pathlib import Path
-from typing import Optional, Set
+from typing import Any
+
+from .config import get_settings
 
 try:
-    from cryptography.hazmat.primitives.asymmetric import ed25519
     from cryptography.hazmat.primitives import serialization
-    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric import ed25519
     _HAS_CRYPTO = True
 except ImportError:
     _HAS_CRYPTO = False
+
+_settings = get_settings()
 
 
 def _signing_base_ed25519(
@@ -26,7 +32,7 @@ def _signing_base_ed25519(
     origin: str,
     skill: str,
     ts: float,
-    payload: dict,
+    payload: dict[str, Any],
     pubkey_hex: str = ""
 ) -> bytes:
     """Génère la chaîne canonique d'octets à signer en Ed25519 (compatible JarvisMesh)."""
@@ -38,7 +44,7 @@ def _signing_base_ed25519(
 class NodeIdentity:
     """Représente l'identité cryptographique d'un nœud OpenClaw (Ed25519)."""
 
-    def __init__(self, private_key: "ed25519.Ed25519PrivateKey"):
+    def __init__(self, private_key: ed25519.Ed25519PrivateKey):
         if not _HAS_CRYPTO:
             raise ImportError(
                 "La bibliothèque 'cryptography' est requise pour l'identité Ed25519. "
@@ -98,7 +104,7 @@ class NodeIdentity:
         raw = file_path.read_bytes()
         return cls.from_private_bytes(raw)
 
-    def sign(self, request_id: str, origin: str, skill: str, ts: float, payload: dict) -> str:
+    def sign(self, request_id: str, origin: str, skill: str, ts: float, payload: dict[str, Any]) -> str:
         """Signe canoniquement une requête TaskRequest en Ed25519."""
         data_to_sign = _signing_base_ed25519(request_id, origin, skill, ts, payload, self.public_key_hex)
         sig = self._private_key.sign(data_to_sign)
@@ -111,9 +117,9 @@ def verify_ed25519_signature(
     origin: str,
     skill: str,
     ts: float,
-    payload: dict,
+    payload: dict[str, Any],
     signature_hex: str,
-    max_drift_seconds: float = 300.0,
+    max_drift_seconds: float | None = None,
 ) -> bool:
     """
     Vérifie la signature Ed25519 d'une requête ainsi que l'horodatage anti-rejeu.
@@ -124,8 +130,9 @@ def verify_ed25519_signature(
         return False
 
     # Protection anti-rejeu par horodatage (tolérance +/- max_drift_seconds)
+    drift_limit = max_drift_seconds or _settings.signature_max_drift_seconds
     now = time.time()
-    if abs(now - ts) > max_drift_seconds:
+    if abs(now - ts) > drift_limit:
         return False
 
     try:
@@ -142,17 +149,19 @@ def verify_ed25519_signature(
 class TrustStore:
     """Gestionnaire de confiance des clés publiques pour OpenClawMesh."""
 
-    def __init__(self, allowed_keys: Optional[Set[str]] = None, allow_all: bool = False):
-        self.allowed_keys: Set[str] = {k.lower() for k in (allowed_keys or set())}
+    def __init__(self, allowed_keys: set[str] | None = None, allow_all: bool = False):
+        self.allowed_keys: set[str] = {k.lower() for k in (allowed_keys or set())}
         self.allow_all = allow_all
 
     def trust(self, pubkey_hex: str) -> None:
+        if not isinstance(pubkey_hex, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", pubkey_hex):
+            raise ValueError("Clé publique Ed25519 invalide")
         self.allowed_keys.add(pubkey_hex.lower())
 
     def revoke(self, pubkey_hex: str) -> None:
         self.allowed_keys.discard(pubkey_hex.lower())
 
-    def is_trusted(self, pubkey_hex: Optional[str]) -> bool:
+    def is_trusted(self, pubkey_hex: str | None) -> bool:
         if self.allow_all:
             return True
         if not pubkey_hex:
@@ -164,9 +173,22 @@ class TrustStore:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "allow_all": self.allow_all,
-            "allowed_keys": sorted(list(self.allowed_keys)),
+            "allowed_keys": sorted(self.allowed_keys),
         }
-        file_path.write_text(json.dumps(data, indent=2))
+        fd, temp_name = tempfile.mkstemp(prefix="truststore-", dir=file_path.parent)
+        try:
+            os.fchmod(fd, 0o600)
+            with os.fdopen(fd, "w") as temp_file:
+                temp_file.write(json.dumps(data, indent=2))
+                temp_file.flush()
+                os.fsync(temp_file.fileno())
+            os.replace(temp_name, file_path)
+        except Exception:
+            try:
+                os.unlink(temp_name)
+            except OSError:
+                pass
+            raise
 
     @classmethod
     def load(cls, path: str | Path) -> TrustStore:

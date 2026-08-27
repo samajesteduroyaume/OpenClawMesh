@@ -9,21 +9,24 @@ Supporte automatiquement et de manière transparente :
 5. ⚪ Serveurs Locaux (Ollama, llama.cpp, vLLM via REST) & Fallback CPU universel
 """
 from __future__ import annotations
+
 import asyncio
-import json
 import logging
 import time
-from typing import Any, AsyncGenerator, Callable, Generator, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
 
-from .hardware import detect_hardware, HardwareProfile
+from ..config import get_settings
+from .hardware import HardwareProfile, detect_hardware
 
 logger = logging.getLogger("openclaw_mesh.inference")
+_settings = get_settings()
 
 
 class UniversalInferenceEngine:
     """Moteur d'inférence agnostique du matériel, optimisé pour chaque puce."""
 
-    def __init__(self, hardware: Optional[HardwareProfile] = None):
+    def __init__(self, hardware: HardwareProfile | None = None) -> None:
         self.hardware = hardware or detect_hardware()
         self.backend = self.hardware.recommended_backend
         logger.info(f"Moteur d'Inférence initialisé avec l'accélérateur : {self.hardware.accelerator_name}")
@@ -48,10 +51,10 @@ class UniversalInferenceEngine:
     async def generate(
         self,
         prompt: str,
-        model: Optional[str] = None,
+        model: str | None = None,
         max_tokens: int = 512,
         temperature: float = 0.3,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
     ) -> dict[str, Any]:
         """Génère une réponse complète en utilisant le meilleur matériel disponible."""
         t0 = time.perf_counter()
@@ -59,7 +62,8 @@ class UniversalInferenceEngine:
         # 1. Tentative Apple Silicon Metal (MLX)
         if self.backend == "mlx" and model != "test":
             try:
-                from mlx_lm import load, generate as mlx_gen
+                from mlx_lm import generate as mlx_gen
+                from mlx_lm import load
                 mlx_model_name = model or "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit"
                 model_obj, tokenizer = load(mlx_model_name)
                 formatted_prompt = f"{system_prompt}\n{prompt}" if system_prompt else prompt
@@ -126,7 +130,7 @@ class UniversalInferenceEngine:
     async def generate_stream(
         self,
         prompt: str,
-        model: Optional[str] = None,
+        model: str | None = None,
         temperature: float = 0.3,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Génère et émet les tokens en continu (streaming temps réel)."""

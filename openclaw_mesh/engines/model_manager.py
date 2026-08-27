@@ -8,12 +8,13 @@ la meilleure version et quantification de modèle IA :
 - Gestion du cache local (~/.cache/openclaw_mesh/models)
 """
 from __future__ import annotations
-import os
-from pathlib import Path
-from typing import Any, Optional
-from dataclasses import dataclass, field
 
-from .hardware import detect_hardware, HardwareProfile
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from .hardware import HardwareProfile, detect_hardware
 
 
 @dataclass
@@ -30,7 +31,7 @@ class ModelRecommendation:
 class AutoModelManager:
     """Gestionnaire de modèles IA avec sélection et quantification dynamique."""
 
-    def __init__(self, hardware: Optional[HardwareProfile] = None, cache_dir: Optional[Path] = None):
+    def __init__(self, hardware: HardwareProfile | None = None, cache_dir: Path | None = None):
         self.hardware = hardware or detect_hardware()
         self.cache_dir = cache_dir or Path(os.path.expanduser("~/.cache/openclaw_mesh/models"))
         self.cache_dir.mkdir(parents=True, exist_ok=True)
