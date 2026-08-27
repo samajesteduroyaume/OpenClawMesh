@@ -672,6 +672,22 @@ def render_portal_html(
 
         <!-- Playground -->
         <div class="form-section">
+            <h2>🌐 Nœud WAN</h2>
+            <p style="color:var(--text-muted); margin-bottom:1rem;">Contrôle réservé à l’administrateur. Un PSK ou un TrustStore doit être configuré.</p>
+            <div class="form-group">
+                <label>Jeton administrateur</label>
+                <input type="password" id="wanAdminToken" placeholder="X-Admin-Token">
+            </div>
+            <label style="display:flex; align-items:center; gap:0.6rem; color:var(--text-muted); margin-bottom:1rem;">
+                <input type="checkbox" id="wanRemoteAccess">
+                Autoriser l’accès distant WAN (requiert le jeton administrateur)
+            </label>
+            <button class="btn-outline" onclick="toggleWanNode()">🌐 Activer / désactiver le nœud WAN</button>
+            <div id="wanAlert" style="margin-top:1rem;"></div>
+        </div>
+
+        <!-- Playground -->
+        <div class="form-section">
             <h2>🧪 Tester votre Clé en Direct</h2>
 
             <div class="form-group">
@@ -780,6 +796,21 @@ def render_portal_html(
         }}
 
         let paymentStatusToken = '';
+
+        async function toggleWanNode() {{
+            const token = document.getElementById('wanAdminToken').value.trim();
+            const remoteAccess = document.getElementById('wanRemoteAccess').checked;
+            if (remoteAccess && !token) {{ showAlert('wanAlert', '⚠️ Le jeton administrateur est requis pour l’accès distant.', 'error'); return; }}
+            showAlert('wanAlert', '⌛ Modification de l’état du nœud WAN...', 'success');
+            try {{
+                const headers = token ? {{ 'X-Admin-Token': token }} : {{}};
+                const res = await fetch('/api/v1/admin/wan/toggle', {{
+                    method: 'POST', headers, body: JSON.stringify({{ remote_access: remoteAccess }})
+                }});
+                const data = await res.json();
+                showAlert('wanAlert', (res.ok ? '✅ ' : '❌ ') + (data.message || data.detail || 'Erreur.'), res.ok ? 'success' : 'error');
+            }} catch (err) {{ showAlert('wanAlert', '❌ Erreur réseau : ' + err, 'error'); }}
+        }}
 
         // ── Soumettre paiement BTC ─────────────────────────────────────
         async function submitPayment() {{

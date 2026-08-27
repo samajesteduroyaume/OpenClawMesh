@@ -41,8 +41,11 @@ class KeyRecord:
             return False, f"Quota de requêtes épuisé ({self.quota_used}/{self.quota_limit})."
         return True, "ok"
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+    def to_dict(self, include_key: bool = True) -> dict[str, Any]:
+        data = asdict(self)
+        if not include_key:
+            data.pop("key", None)
+        return data
 
 
 class KeyDatabase:

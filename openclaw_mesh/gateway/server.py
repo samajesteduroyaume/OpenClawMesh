@@ -18,8 +18,10 @@ import os
 import re
 import secrets
 import time
+from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from decimal import ROUND_CEILING, Decimal
+from pathlib import Path
 from typing import Any
 from urllib.error import URLError
 from urllib.request import Request as URLRequest
@@ -31,13 +33,47 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from ..bridge import SkillRegistry
+from ..config import get_settings
+from ..crypto import TrustStore
+from ..node import OpenClawMeshNode
 from .db import KeyDatabase
 from .portal import render_portal_html
 
 logger = logging.getLogger("openclaw_mesh.gateway")
+_settings = get_settings()
 
 # Configuration de l'environnement
-ADMIN_TOKEN = os.getenv("GATEWAY_ADMIN_TOKEN") or secrets.token_urlsafe(32)
+def _load_or_create_admin_token() -> str:
+    """Charge le jeton admin depuis l'environnement ou un fichier privé persistant."""
+    configured = os.getenv("GATEWAY_ADMIN_TOKEN")
+    if configured:
+        return configured
+
+    token_path = Path(
+        os.getenv(
+            "GATEWAY_ADMIN_TOKEN_FILE",
+            str(Path.home() / ".config" / "openclaw-mesh" / "gateway_admin.token"),
+        )
+    ).expanduser()
+    try:
+        if token_path.is_file():
+            token = token_path.read_text(encoding="utf-8").strip()
+            if token:
+                return token
+        token = secrets.token_urlsafe(32)
+        token_path.parent.mkdir(parents=True, exist_ok=True)
+        token_path.write_text(token + "\n", encoding="utf-8")
+        os.chmod(token_path, 0o600)
+        logger.warning("Jeton admin généré automatiquement. Fichier privé : %s", token_path)
+        return token
+    except OSError as exc:
+        raise RuntimeError(
+            "Impossible de créer le jeton admin. Définissez GATEWAY_ADMIN_TOKEN "
+            "ou GATEWAY_ADMIN_TOKEN_FILE."
+        ) from exc
+
+
+ADMIN_TOKEN = _load_or_create_admin_token()
 DEFAULT_DB_PATH = os.getenv("GATEWAY_DB_PATH", "openclaw_keys.db")
 
 # Adresse Bitcoin de réception des paiements
@@ -68,6 +104,7 @@ except (TypeError, ValueError, json.JSONDecodeError):
     BTC_PLAN_MIN_SATS = {}
 _payment_verifier_task: asyncio.Task | None = None
 _btc_price_cache: tuple[Decimal, float] | None = None
+_wan_node: OpenClawMeshNode | None = None
 
 # Tarifs EUR indicatifs (le client envoie le montant BTC équivalent)
 PLAN_PRICES_EUR: dict[str, int] = {
@@ -78,12 +115,15 @@ PLAN_PRICES_EUR: dict[str, int] = {
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    global _payment_verifier_task
+    global _payment_verifier_task, _wan_node
     if BTC_AUTO_VERIFY and _payment_verifier_task is None:
         _payment_verifier_task = asyncio.create_task(_verify_pending_payments())
     try:
         yield
     finally:
+        if _wan_node is not None:
+            await _wan_node.stop()
+            _wan_node = None
         if _payment_verifier_task:
             _payment_verifier_task.cancel()
             await asyncio.gather(_payment_verifier_task, return_exceptions=True)
@@ -264,6 +304,32 @@ db = KeyDatabase(DEFAULT_DB_PATH)
 # Registre local des compétences exécutables par la passerelle
 gateway_registry = SkillRegistry(name="gateway-engine")
 _demo_issued_emails: set[str] = set()
+_rate_limit_events: dict[str, deque[float]] = defaultdict(deque)
+_rate_limit_lock = asyncio.Lock()
+
+
+async def _enforce_rate_limit(request: Request) -> None:
+    """Limite les endpoints HTTP même lorsqu'aucun reverse proxy n'est présent."""
+    if not os.getenv("OPENCLAW_RATE_LIMIT_ENABLED", "true").lower() in {"1", "true", "yes", "on"}:
+        return
+    client = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    window = 60.0
+    limit = max(1, int(os.getenv("OPENCLAW_RATE_LIMIT_REQUESTS_PER_MINUTE", "60")))
+    async with _rate_limit_lock:
+        events = _rate_limit_events[client]
+        while events and now - events[0] >= window:
+            events.popleft()
+        if len(events) >= limit:
+            raise HTTPException(status_code=429, detail="Trop de requêtes, veuillez réessayer plus tard.")
+        events.append(now)
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    if request.url.path.startswith("/api/"):
+        await _enforce_rate_limit(request)
+    return await call_next(request)
 
 
 def _new_payment_id() -> str:
@@ -304,6 +370,10 @@ class CreateKeyAdminPayload(BaseModel):
     days_valid: int | None = 30
     quota_limit: int = -1
     custom_prefix: str = "sk_claw_"
+
+
+class WanTogglePayload(BaseModel):
+    remote_access: bool = False
 
 
 # ---------------------------------------------------------------------- #
@@ -477,10 +547,6 @@ def _extract_api_key(request: Request, x_api_key: str | None = Header(None)) -> 
     if auth_header.lower().startswith("bearer "):
         return auth_header[7:].strip()
 
-    key_param = request.query_params.get("api_key")
-    if key_param:
-        return key_param.strip()
-
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Clé d'API requise dans le header 'X-API-Key' ou 'Authorization: Bearer <clé>'",
@@ -614,7 +680,59 @@ async def admin_list_keys(token: str = Header(None, alias="X-Admin-Token")):
     """Liste toutes les clés enregistrées (protégé par token admin)."""
     _require_admin(token)
     keys = db.list_all_keys()
-    return {"count": len(keys), "keys": [k.to_dict() for k in keys]}
+    return {"count": len(keys), "keys": [k.to_dict(include_key=False) for k in keys]}
+
+
+@app.post("/api/v1/admin/wan/toggle")
+async def admin_toggle_wan_node(
+    request: Request,
+    payload: WanTogglePayload | None = None,
+    token: str = Header(None, alias="X-Admin-Token"),
+):
+    """Active ou désactive le nœud WAN depuis le portail administrateur."""
+    global _wan_node
+    client_host = request.client.host if request.client else ""
+    is_local_request = client_host in {"127.0.0.1", "::1", "localhost"}
+    remote_access = payload.remote_access if payload else False
+    # Exposer le port sur le WAN est une opération privilégiée, même depuis localhost.
+    if not is_local_request or remote_access:
+        _require_admin(token)
+    if _wan_node is not None:
+        await _wan_node.stop()
+        _wan_node = None
+        return {"ok": True, "active": False, "message": "Nœud WAN désactivé."}
+
+    if not _settings.psk and not _settings.trust_store_path:
+        raise HTTPException(
+            status_code=409,
+            detail="Configurez OPENCLAW_PSK ou OPENCLAW_TRUST_STORE_PATH avant d'activer le nœud WAN.",
+        )
+    _wan_node = OpenClawMeshNode(
+        name=_settings.node_name,
+        host="0.0.0.0" if remote_access else "127.0.0.1",
+        port=_settings.default_port,
+        registry=gateway_registry,
+        psk=_settings.psk,
+        trust_store=(
+            TrustStore.load(_settings.trust_store_path)
+            if _settings.trust_store_path
+            else None
+        ),
+    )
+    try:
+        await _wan_node.start(enable_zeroconf=False)
+    except Exception:
+        _wan_node = None
+        logger.exception("Échec d'activation du nœud WAN")
+        raise HTTPException(status_code=500, detail="Impossible d'activer le nœud WAN.") from None
+    return {
+        "ok": True,
+        "active": True,
+        "remote_access": remote_access,
+        "host": "0.0.0.0" if remote_access else "127.0.0.1",
+        "port": _settings.default_port,
+        "message": "Nœud WAN activé. Utilisez une connexion authentifiée.",
+    }
 
 
 @app.get("/api/v1/admin/payments/pending")

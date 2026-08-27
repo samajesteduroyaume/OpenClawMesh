@@ -350,6 +350,9 @@ class KademliaDHT:
         """Envoie un message JSON au pair (sans attendre de réponse)."""
         if self._transport is None:
             raise RuntimeError("Transport UDP non démarré : appelez start_network() d'abord.")
+        if not self.psk and addr[0] not in {"127.0.0.1", "::1", "localhost"}:
+            logger.warning("RPC DHT non authentifiée rejetée depuis %s", addr)
+            return
         if self.psk:
             unsigned = {key: value for key, value in message.items() if key != _DHT_SIGNATURE_FIELD}
             canonical = json.dumps(unsigned, sort_keys=True, separators=(",", ":"))
@@ -436,9 +439,12 @@ class KademliaDHT:
                 },
             )
         elif msg_type == "store":
-            resp = self.rpc_store(
-                sender, msg.get("key", ""), msg.get("value"), ttl=msg.get("ttl", DEFAULT_TTL)
-            )
+            try:
+                resp = self.rpc_store(
+                    sender, msg.get("key", ""), msg.get("value"), ttl=msg.get("ttl", DEFAULT_TTL)
+                )
+            except (TypeError, ValueError, OverflowError) as exc:
+                resp = {"status": "error", "stored": False, "error": str(exc)}
             self._reply(
                 addr,
                 txid,
@@ -669,6 +675,8 @@ class KademliaDHT:
         """Traite une requête de stockage distribuée."""
         if ttl <= 0 or ttl > MAX_DHT_TTL:
             raise ValueError("TTL DHT hors limites")
+        if not isinstance(key, str) or not key or len(key) > 512:
+            raise ValueError("Clé DHT invalide")
         if len(json.dumps(value, separators=(",", ":"), default=str).encode("utf-8")) > MAX_DHT_VALUE_BYTES:
             raise ValueError("Valeur DHT trop volumineuse")
         self.routing_table.add_contact(sender)

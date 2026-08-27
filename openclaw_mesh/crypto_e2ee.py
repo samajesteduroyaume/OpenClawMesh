@@ -115,6 +115,7 @@ class E2EESession:
         enable_nonce_replay: bool = True,
         identity: Any | None = None,
         peer_identity_public_key: str | None = None,
+        require_identity_binding: bool | None = None,
     ):
         self._private_key = local_private_key or x25519.X25519PrivateKey.generate()
         self._public_key = self._private_key.public_key()
@@ -137,6 +138,17 @@ class E2EESession:
         self._sent_nonces: set[bytes] = set()
         self._identity = identity
         self._peer_identity_public_key = peer_identity_public_key.lower() if peer_identity_public_key else None
+        self._require_identity_binding = (
+            _settings.e2ee_require_identity_binding
+            if require_identity_binding is None
+            else require_identity_binding
+        )
+        if self._require_identity_binding and (
+            self._identity is None or self._peer_identity_public_key is None
+        ):
+            raise ValueError(
+                "Une identité locale et la clé d'identité attendue du pair sont requises en mode E2EE strict."
+            )
 
         if peer_public_key_bytes:
             self.establish_with_peer(peer_public_key_bytes)
@@ -223,6 +235,8 @@ class E2EESession:
             auth_base = _e2ee_auth_base(package)
             package["identity_pubkey"] = self._identity.public_key_hex
             package["identity_signature"] = self._identity._private_key.sign(auth_base).hex()
+        elif self._require_identity_binding:
+            raise RuntimeError("Impossible de produire un paquet E2EE sans identité authentifiée")
         return package
 
     def decrypt(
@@ -266,6 +280,8 @@ class E2EESession:
         ts = encrypted_package.get("timestamp")
         if not isinstance(ts, (int, float)):
             raise ReplayError("Horodatage E2EE absent ou invalide")
+        if self._require_identity_binding and not self._peer_identity_public_key:
+            raise ReplayError("Liaison d'identité E2EE obligatoire")
         if self._peer_identity_public_key:
             identity_hex = encrypted_package.get("identity_pubkey", "")
             signature_hex = encrypted_package.get("identity_signature", "")

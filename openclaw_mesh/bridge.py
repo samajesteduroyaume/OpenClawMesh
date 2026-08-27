@@ -50,13 +50,14 @@ class SkillRegistry:
         self._skills: dict[str, Callable] = {}
         self._schemas: dict[str, Any] = {}
         self._descriptions: dict[str, str] = {}
+        self._remote_exposed: set[str] = set()
         self._register_builtins()
 
     def _register_builtins(self) -> None:
         """Enregistre les compétences utilitaires intégrées par défaut."""
         self.register(self._echo, name="echo", description="Renvoie le payload reçu tel quel.")
         self.register(self._openclaw_info, name="openclaw_info", description="Retourne les informations du nœud OpenClaw.")
-        self.register(self._system_info, name="system_info", description="Retourne les métriques système (OS, CPU, Python).")
+        self.register(self._system_info, name="system_info", description="Retourne les métriques système (OS, CPU, Python).", expose_remote=False)
 
     def register(
         self,
@@ -64,6 +65,7 @@ class SkillRegistry:
         name: str | None = None,
         description: str | None = None,
         schema: Any | None = None,
+        expose_remote: bool = True,
     ) -> Callable:
         """Enregistre une fonction Python comme compétence du nœud."""
         skill_name = name or getattr(fn, "__skill_name__", fn.__name__)
@@ -75,6 +77,10 @@ class SkillRegistry:
             self._descriptions[skill_name] = desc
         if sch:
             self._schemas[skill_name] = sch
+        if expose_remote:
+            self._remote_exposed.add(skill_name)
+        else:
+            self._remote_exposed.discard(skill_name)
 
         return fn
 
@@ -84,6 +90,10 @@ class SkillRegistry:
 
     def get(self, name: str) -> Callable | None:
         return self._skills.get(name)
+
+    def is_remote_exposed(self, name: str) -> bool:
+        """Indique si une compétence peut être invoquée par un pair distant."""
+        return name in self._remote_exposed
 
     def list_names(self) -> list[str]:
         return list(self._skills.keys())

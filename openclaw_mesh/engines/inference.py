@@ -59,6 +59,9 @@ class UniversalInferenceEngine:
         """Génère une réponse complète en utilisant le meilleur matériel disponible."""
         t0 = time.perf_counter()
 
+        if model is not None and model not in set(_settings.allowed_models):
+            raise ValueError("Modèle non autorisé par la liste blanche de configuration")
+
         # 1. Tentative Apple Silicon Metal (MLX)
         if self.backend == "mlx" and model != "test":
             try:
@@ -134,6 +137,9 @@ class UniversalInferenceEngine:
         temperature: float = 0.3,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Génère et émet les tokens en continu (streaming temps réel)."""
+
+        if model is not None and model not in set(_settings.allowed_models):
+            raise ValueError("Modèle non autorisé par la liste blanche de configuration")
 
         # 1. Streaming MLX Apple Silicon
         if self.backend == "mlx" and model != "test":

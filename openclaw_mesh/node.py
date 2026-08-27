@@ -33,6 +33,13 @@ logger = logging.getLogger("openclaw_mesh.node")
 _settings = get_settings()
 
 
+def _bounded_message(message: str) -> str:
+    """Refuse les sorties distantes dépassant la limite de configuration."""
+    if len(message.encode("utf-8")) > _settings.max_output_bytes:
+        raise ValueError("Sortie de compétence trop volumineuse")
+    return message
+
+
 class OpenClawMeshNode:
     """Nœud P2P serveur pour OpenClaw, 100% interopérable avec JarvisMesh."""
 
@@ -64,6 +71,9 @@ class OpenClawMeshNode:
         self._ws_server = None
         self._active_tasks = 0
         self._task_semaphore = asyncio.Semaphore(max(1, _settings.max_active_tasks))
+        self._queue_semaphore = asyncio.Semaphore(
+            max(1, _settings.max_active_tasks + _settings.max_queued_tasks)
+        )
         self._start_time = time.time()
         self._running = False
 
@@ -123,7 +133,12 @@ class OpenClawMeshNode:
         send_lock = asyncio.Lock()
         try:
             async for raw in ws:
-                asyncio.create_task(self._process_message_with_timeout(ws, raw, send_lock))
+                if not self._queue_semaphore.locked():
+                    await self._queue_semaphore.acquire()
+                    asyncio.create_task(self._process_message_with_timeout(ws, raw, send_lock))
+                else:
+                    await ws.close(code=1013, reason="Capacité du nœud atteinte")
+                    break
         except (asyncio.CancelledError, websockets.ConnectionClosed):
             pass
         except Exception as e:
@@ -142,6 +157,8 @@ class OpenClawMeshNode:
             )
         except asyncio.TimeoutError:
             logger.warning("Tâche P2P interrompue après dépassement du délai")
+        finally:
+            self._queue_semaphore.release()
 
     async def _process_message(
         self,
@@ -278,6 +295,11 @@ class OpenClawMeshNode:
 
         # 4. Exécution de la Compétence Demandée
         handler = self.registry.get(req.skill)
+        if handler is not None and not self.registry.is_remote_exposed(req.skill):
+            resp = TaskResponse(request_id=req.request_id, ok=False, error="Compétence non exposée à distance", handled_by=self.name)
+            async with send_lock:
+                await ws.send(resp.to_json())
+            return
         if handler is None:
             resp = TaskResponse(
                 request_id=req.request_id,
@@ -296,14 +318,19 @@ class OpenClawMeshNode:
             return
         await self._task_semaphore.acquire()
         self._active_tasks += 1
+        output_bytes = 0
         try:
             # Gestion des générateurs asynchrones (Streaming)
             if inspect.isasyncgenfunction(handler):
                 index = 0
                 async for chunk in handler(req.payload):
                     chunk_msg = TaskChunk(request_id=req.request_id, index=index, chunk=chunk)
+                    chunk_json = _bounded_message(chunk_msg.to_json())
+                    output_bytes += len(chunk_json.encode("utf-8"))
+                    if output_bytes > _settings.max_output_bytes:
+                        raise ValueError("Flux de sortie trop volumineux")
                     async with send_lock:
-                        await ws.send(chunk_msg.to_json())
+                        await ws.send(chunk_json)
                     index += 1
 
                 resp = TaskResponse(
@@ -314,15 +341,19 @@ class OpenClawMeshNode:
                     streamed=True,
                 )
                 async with send_lock:
-                    await ws.send(resp.to_json())
+                    await ws.send(_bounded_message(resp.to_json()))
 
             # Gestion des générateurs synchrones (Streaming)
             elif inspect.isgeneratorfunction(handler):
                 index = 0
                 for chunk in handler(req.payload):
                     chunk_msg = TaskChunk(request_id=req.request_id, index=index, chunk=chunk)
+                    chunk_json = _bounded_message(chunk_msg.to_json())
+                    output_bytes += len(chunk_json.encode("utf-8"))
+                    if output_bytes > _settings.max_output_bytes:
+                        raise ValueError("Flux de sortie trop volumineux")
                     async with send_lock:
-                        await ws.send(chunk_msg.to_json())
+                        await ws.send(chunk_json)
                     index += 1
 
                 resp = TaskResponse(
@@ -333,7 +364,7 @@ class OpenClawMeshNode:
                     streamed=True,
                 )
                 async with send_lock:
-                    await ws.send(resp.to_json())
+                    await ws.send(_bounded_message(resp.to_json()))
 
             # Gestion des fonctions asynchrones
             elif inspect.iscoroutinefunction(handler):
@@ -345,7 +376,7 @@ class OpenClawMeshNode:
                     handled_by=self.name,
                 )
                 async with send_lock:
-                    await ws.send(resp.to_json())
+                    await ws.send(_bounded_message(resp.to_json()))
 
             # Gestion des fonctions synchrones standard
             else:
@@ -357,7 +388,7 @@ class OpenClawMeshNode:
                     handled_by=self.name,
                 )
                 async with send_lock:
-                    await ws.send(resp.to_json())
+                    await ws.send(_bounded_message(resp.to_json()))
 
         except Exception as exec_err:
             logger.error(f"Erreur lors de l'exécution de '{req.skill}': {exec_err}", exc_info=True)

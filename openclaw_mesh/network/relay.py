@@ -14,6 +14,7 @@ import os
 import re
 import secrets
 import time
+from urllib.parse import urlparse
 from collections.abc import Callable
 from typing import Any
 
@@ -158,6 +159,9 @@ class WANRelayClient:
     async def connect(self) -> bool:
         """Se connecte au serveur relais et enregistre son identifiant."""
         try:
+            parsed = urlparse(self.relay_url)
+            if parsed.scheme != "wss" and parsed.hostname not in {"127.0.0.1", "::1", "localhost"}:
+                raise ValueError("Un relais WAN distant doit utiliser wss://")
             self._ws = await websockets.connect(self.relay_url)
             self._running = True
             # Envoi du message d'enregistrement

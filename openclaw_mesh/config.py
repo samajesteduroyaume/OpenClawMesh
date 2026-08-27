@@ -67,7 +67,9 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------ #
     node_name: str = Field(default="openclaw-node", description="Nom du nœud par défaut")
     max_active_tasks: int = Field(default=100, description="Nombre maximum de tâches actives")
+    max_queued_tasks: int = Field(default=200, description="Nombre maximum de tâches en attente")
     task_timeout: float = Field(default=120.0, description="Timeout par défaut des tâches")
+    max_output_bytes: int = Field(default=2 * 1024 * 1024, description="Taille maximale d'une sortie distante")
 
     # ------------------------------------------------------------------ #
     # Configuration Sécurité
@@ -85,6 +87,10 @@ class Settings(BaseSettings):
 
     # E2EE
     e2ee_enabled: bool = Field(default=True, description="Activer chiffrement E2EE")
+    e2ee_require_identity_binding: bool = Field(
+        default=False,
+        description="Exiger une liaison Ed25519/X25519 authentifiée (recommandé hors localhost)",
+    )
     e2ee_algorithm: str = Field(
         default="ChaCha20-Poly1305", description="Algorithme de chiffrement E2EE"
     )
@@ -145,6 +151,16 @@ class Settings(BaseSettings):
     default_llm_model: str = Field(default="auto", description="Modèle LLM par défaut")
     default_vision_model: str = Field(default="auto", description="Modèle Vision par défaut")
     default_stt_model: str = Field(default="auto", description="Modèle STT par défaut")
+    allowed_models: list[str] = Field(
+        default=[
+            "test",
+            "openclaw-universal-v1",
+            "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit",
+            "Qwen/Qwen2.5-Coder-7B-Instruct",
+            "openvino_model",
+        ],
+        description="Liste blanche des modèles autorisés",
+    )
 
     # Limites
     max_tokens_default: int = Field(default=512, description="Max tokens par défaut")

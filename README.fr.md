@@ -350,7 +350,11 @@ OPENCLAW_NODE_NAME=mon-nœud-prod     # Nom du nœud (mDNS)
 OPENCLAW_DEFAULT_PORT=8770           # Port WebSocket
 OPENCLAW_PSK=votre_psk_secret        # Clé pré-partagée HMAC
 OPENCLAW_E2EE_ENABLED=true           # Chiffrement de bout en bout
+OPENCLAW_E2EE_REQUIRE_IDENTITY_BINDING=true # Identité E2EE obligatoire sur WAN
 OPENCLAW_DHT_ENABLED=true            # Découverte WAN DHT Kademlia
+OPENCLAW_MAX_ACTIVE_TASKS=100        # Limite de tâches simultanées
+OPENCLAW_MAX_QUEUED_TASKS=200        # Limite de tâches en attente
+OPENCLAW_MAX_OUTPUT_BYTES=2097152    # Limite des sorties distantes (2 MiB)
 OPENCLAW_LOG_LEVEL=INFO              # DEBUG / INFO / WARNING
 BTC_WALLET_ADDRESS=bc1q...           # Passerelle : adresse Bitcoin
 GATEWAY_ADMIN_TOKEN=token_admin      # Passerelle : token admin API
@@ -358,6 +362,74 @@ GATEWAY_DB_PATH=/data/clés.db        # Passerelle : chemin SQLite
 ```
 
 Référence complète : [`config.py`](openclaw_mesh/config.py) · [`ARCHITECTURE.md`](ARCHITECTURE.md)
+
+### 🌐 Paramétrer et activer le WAN
+
+#### 1. Préparer l’authentification
+
+Un nœud exposé sur le réseau ne doit pas être anonyme. Configurez au minimum une
+clé PSK partagée entre les pairs :
+
+```bash
+export OPENCLAW_PSK="remplacez-par-un-secret-long-et-aleatoire"
+export OPENCLAW_E2EE_REQUIRE_IDENTITY_BINDING=true
+```
+
+Pour une gestion par identités, utilisez plutôt un TrustStore contenant les clés
+Ed25519 autorisées :
+
+```bash
+export OPENCLAW_TRUST_STORE_PATH="$HOME/.config/openclaw-mesh/truststore.json"
+```
+
+Le mode E2EE strict nécessite alors une identité locale et la clé publique
+attendue de chaque pair. Ne transmettez jamais la PSK dans un dépôt Git.
+
+#### 2. Ouvrir le réseau
+
+Le bouton WAN du portail démarre le nœud sur le port configuré par
+`OPENCLAW_DEFAULT_PORT` (8770 par défaut).
+
+- Sur le même ordinateur : aucune règle réseau n’est nécessaire.
+- Sur un LAN : autorisez le port TCP du nœud dans le pare-feu local.
+- Depuis Internet : redirigez ce port sur le routeur vers la machine OpenClaw,
+    limitez les adresses sources lorsque c’est possible et utilisez WSS/TLS ou un
+    relais WAN sécurisé.
+- Pour la découverte DHT, autorisez également le port UDP configuré par
+    `OPENCLAW_DHT_PORT` (8780 par défaut).
+
+#### 3. Activer depuis le portail
+
+1. Démarrez la passerelle :
+
+     ```bash
+     uvicorn openclaw_mesh.gateway.server:app --host 127.0.0.1 --port 8000
+     ```
+
+2. Ouvrez `http://127.0.0.1:8000/portal`.
+3. Dans **Nœud WAN**, cochez **Autoriser l’accès distant WAN**.
+4. Saisissez le jeton administrateur puis cliquez sur le bouton d’activation.
+
+Le jeton est lu depuis `GATEWAY_ADMIN_TOKEN` ou généré automatiquement dans
+`~/.config/openclaw-mesh/gateway_admin.token`. Le bouton reste local, mais
+l’activation de l’exposition distante exige toujours ce jeton.
+
+Pour désactiver le WAN, décochez l’option et cliquez à nouveau sur le bouton.
+Le nœud est alors arrêté immédiatement.
+
+#### 4. Vérifier la connexion
+
+Depuis une autre machine autorisée, utilisez le nom ou l’adresse du pair avec
+la même PSK :
+
+```bash
+openclaw-mesh call mon-agent echo \
+    --payload '{"message":"connexion WAN OK"}' \
+    --psk "$OPENCLAW_PSK"
+```
+
+Ne publiez pas le port WAN sans authentification. Le bouton refuse l’activation
+si ni `OPENCLAW_PSK` ni `OPENCLAW_TRUST_STORE_PATH` ne sont configurés.
 
 ---
 
