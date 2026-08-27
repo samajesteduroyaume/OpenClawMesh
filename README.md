@@ -202,7 +202,7 @@ async def llm(payload: dict) -> dict:
 
 async def serve():
     node = OpenClawMeshNode(name="my-node", port=8770, psk="secret", registry=registry)
-    await node.start(enable_zeroconf=True)
+    await node.start(enable_zeroconf=False)  # Enable only after reviewing LAN exposure.
     await asyncio.Event().wait()
 
 # ── Call from a client ────────────────────────────────────────────────

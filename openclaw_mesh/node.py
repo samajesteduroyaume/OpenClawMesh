@@ -77,7 +77,7 @@ class OpenClawMeshNode:
         self._start_time = time.time()
         self._running = False
 
-    async def start(self, enable_zeroconf: bool = True) -> None:
+    async def start(self, enable_zeroconf: bool = False) -> None:
         """Démarre le serveur WebSocket et la publication Zeroconf."""
         if self._running:
             return

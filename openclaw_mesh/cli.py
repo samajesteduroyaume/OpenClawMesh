@@ -17,6 +17,7 @@ import argparse
 import asyncio
 import json
 import sys
+import ssl
 import time
 from pathlib import Path
 from typing import Any
@@ -349,9 +350,16 @@ def cmd_hardware(args: argparse.Namespace) -> None:
 async def cmd_relay(args: argparse.Namespace) -> None:
     from .network.relay import WANRelayServer
 
-    server = WANRelayServer(host=args.host, port=args.port, name=args.name)
+    ssl_context = None
+    if args.certfile or args.keyfile:
+        if not args.certfile or not args.keyfile:
+            raise SystemExit("--certfile et --keyfile doivent être fournis ensemble.")
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_context.load_cert_chain(args.certfile, args.keyfile)
+    server = WANRelayServer(host=args.host, port=args.port, name=args.name, ssl_context=ssl_context)
     await server.start()
-    print(f"🌐 Relais WAN OpenClawMesh '{args.name}' actif sur ws://{args.host}:{args.port}")
+    scheme = "wss" if ssl_context else "ws"
+    print(f"🌐 Relais WAN OpenClawMesh '{args.name}' actif sur {scheme}://{args.host}:{args.port}")
     print("Prêt à router les paquets chiffrés E2EE entre pairs. Appuyez sur Ctrl+C pour arrêter...")
     try:
         while True:
@@ -562,7 +570,7 @@ def main() -> None:
     p_serve.add_argument(
         "--port", type=int, default=8770, help="Port d'écoute WebSocket (défaut: 8770)"
     )
-    p_serve.add_argument("--host", default="0.0.0.0", help="Hôte d'écoute (défaut: 0.0.0.0)")
+    p_serve.add_argument("--host", default="127.0.0.1", help="Hôte d'écoute (défaut: localhost)")
     p_serve.add_argument("--psk", help="Clé pré-partagée HMAC-SHA256 requise")
     p_serve.add_argument("--keyfile", help="Chemin vers la clé privée Ed25519 de ce nœud")
     p_serve.add_argument("--trustfile", help="Chemin vers le TrustStore des clés autorisées")
@@ -584,10 +592,12 @@ def main() -> None:
     # 8. relay
     p_relay = subparsers.add_parser("relay", help="Démarre un serveur de relais WAN WebSocket E2EE")
     p_relay.add_argument(
-        "--host", default="0.0.0.0", help="Hôte d'écoute du relais (défaut: 0.0.0.0)"
+        "--host", default="127.0.0.1", help="Hôte d'écoute du relais (défaut: localhost)"
     )
     p_relay.add_argument("--port", type=int, default=8790, help="Port d'écoute (défaut: 8790)")
     p_relay.add_argument("--name", default="openclaw-wan-relay", help="Nom du relais")
+    p_relay.add_argument("--certfile", help="Certificat TLS du relais WAN")
+    p_relay.add_argument("--keyfile", help="Clé privée TLS du relais WAN")
 
     # 9. dht
     p_dht = subparsers.add_parser(

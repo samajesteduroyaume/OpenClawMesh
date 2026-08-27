@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import secrets
+import ssl
 import time
 from urllib.parse import urlparse
 from collections.abc import Callable
@@ -31,11 +32,12 @@ class WANRelayServer:
     """Serveur relais WAN WebSocket qui route les trames chiffrées sans les inspecter."""
 
     def __init__(self, host: str | None = None, port: int | None = None, name: str | None = None,
-                 auth_token: str | None = None):
+                 auth_token: str | None = None, ssl_context: ssl.SSLContext | None = None):
         self.host = host or _settings.relay_host
         self.port = port or _settings.relay_port
         self.name = name or _settings.relay_name
         self.auth_token = auth_token or os.getenv("OPENCLAW_RELAY_AUTH_TOKEN")
+        self.ssl_context = ssl_context
         self._server = None
         self._clients: dict[str, WebSocketServerProtocol] = {}  # node_id -> websocket
         self._client_info: dict[str, dict[str, Any]] = {}
@@ -45,16 +47,21 @@ class WANRelayServer:
 
     async def start(self) -> None:
         """Démarre le serveur relais."""
-        if self.host not in {"127.0.0.1", "::1", "localhost"} and not self.auth_token:
-            raise RuntimeError("Un relais exposé doit définir OPENCLAW_RELAY_AUTH_TOKEN.")
+        if self.host not in {"127.0.0.1", "::1", "localhost"}:
+            if not self.auth_token:
+                raise RuntimeError("Un relais exposé doit définir OPENCLAW_RELAY_AUTH_TOKEN.")
+            if not self.ssl_context:
+                raise RuntimeError("Un relais WAN exposé doit utiliser TLS avec ssl_context.")
         self._running = True
         self._server = await websockets.serve(
             self._handle_client,
             self.host,
             self.port,
             max_size=self._max_message_bytes,
+            ssl=self.ssl_context,
         )
-        logger.info(f"⚡ Serveur Relais WAN actif sur ws://{self.host}:{self.port}")
+        scheme = "wss" if self.ssl_context else "ws"
+        logger.info(f"⚡ Serveur Relais WAN actif sur {scheme}://{self.host}:{self.port}")
 
     async def stop(self) -> None:
         """Arrête le serveur relais."""
