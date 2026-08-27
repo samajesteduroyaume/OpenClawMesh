@@ -13,8 +13,9 @@ from openclaw_mesh import MeshClient
 
 
 async def main():
+    print("⚠️ Ce script sonde le LAN et interroge les pairs détectés.")
     print("🔍 Démarrage du client et écoute mDNS (2 secondes)...")
-    client = MeshClient(name="openclaw-discoverer")
+    client = MeshClient(name="openclaw-discoverer", enable_discovery=True)
     await client.start()
     await asyncio.sleep(2.0)
 

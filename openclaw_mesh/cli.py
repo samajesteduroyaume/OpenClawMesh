@@ -52,7 +52,19 @@ async def cmd_discover(args: argparse.Namespace) -> None:
             f"[bold cyan]🔍 Recherche des pairs JarvisMesh / OpenClawMesh sur le LAN ({timeout}s)...[/bold cyan]"
         )
 
-    client = MeshClient(name="openclaw-scanner")
+    if not args.enable_discovery:
+        message = "Découverte LAN désactivée. Utilisez --enable-discovery après vérification du réseau."
+        if args.json:
+            _print_json({"peers": {}, "warning": message})
+        elif _HAS_RICH:
+            console.print(f"[yellow]⚠️ {message}[/yellow]")
+        else:
+            print(message)
+        return
+
+    if args.inspect and not args.json:
+        print("⚠️ L’introspection interroge les compétences et l’état des pairs détectés.")
+    client = MeshClient(name="openclaw-scanner", enable_discovery=True)
     await client.start()
     await asyncio.sleep(timeout)
     peers = client.list_peers()
@@ -478,6 +490,11 @@ def main() -> None:
         "--inspect",
         action="store_true",
         help="Interroge chaque pair pour son catalogue complet et sa santé",
+    )
+    p_disc.add_argument(
+        "--enable-discovery",
+        action="store_true",
+        help="Autorise explicitement le scan mDNS du réseau local",
     )
     p_disc.add_argument("--json", action="store_true", help="Format de sortie JSON brut")
 
