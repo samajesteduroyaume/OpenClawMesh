@@ -584,7 +584,7 @@ export BTC_AUTO_VERIFY=true
 export BTC_REQUIRED_CONFIRMATIONS=2
 
 # Développement
-uvicorn openclaw_mesh.gateway.server:app --host 0.0.0.0 --port 8000 --reload
+uvicorn openclaw_mesh.gateway.server:app --host 127.0.0.1 --port 8000
 
 # Production (avec gunicorn)
 gunicorn openclaw_mesh.gateway.server:app \
@@ -593,7 +593,7 @@ gunicorn openclaw_mesh.gateway.server:app \
   --access-logfile /var/log/openclaw/access.log
 ```
 
-La confirmation Bitcoin est automatique. L’endpoint d’administration reste disponible comme mécanisme de secours et doit être protégé par un secret fort.
+La confirmation Bitcoin est manuelle par défaut. La vérification automatique n’est activée qu’avec `BTC_AUTO_VERIFY=true`; l’endpoint d’administration reste protégé par un secret fort.
 
 ---
 

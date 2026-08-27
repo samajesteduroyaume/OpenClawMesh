@@ -684,18 +684,15 @@ async def admin_list_keys(token: str = Header(None, alias="X-Admin-Token")):
 
 @app.post("/api/v1/admin/wan/toggle")
 async def admin_toggle_wan_node(
-    request: Request,
     payload: WanTogglePayload | None = None,
     token: str = Header(None, alias="X-Admin-Token"),
 ):
     """Active ou désactive le nœud WAN depuis le portail administrateur."""
     global _wan_node
-    client_host = request.client.host if request.client else ""
-    is_local_request = client_host in {"127.0.0.1", "::1", "localhost"}
     remote_access = payload.remote_access if payload else False
-    # Exposer le port sur le WAN est une opération privilégiée, même depuis localhost.
-    if not is_local_request or remote_access:
-        _require_admin(token)
+    # Toute modification de l’exposition réseau est une opération privilégiée,
+    # y compris lorsqu’elle est demandée depuis localhost.
+    _require_admin(token)
     if _wan_node is not None:
         await _wan_node.stop()
         _wan_node = None
