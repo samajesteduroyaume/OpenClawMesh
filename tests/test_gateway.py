@@ -277,3 +277,26 @@ def test_btc_admin_confirm_flow():
         headers={"X-Admin-Token": "wrong_token"},
     )
     assert bad_token_resp.status_code == 401
+
+
+def test_confirmed_payment_cannot_be_rejected():
+    client = TestClient(app)
+    txid = "beef" * 16
+    submit_resp = client.post(
+        "/api/v1/payment/submit",
+        json={"email": "reject-after-confirm@test.com", "plan": "lifetime", "txid": txid},
+    )
+    assert submit_resp.status_code == 200
+    payment_id = submit_resp.json()["payment_id"]
+    confirm_resp = client.post(
+        "/api/v1/admin/payments/confirm",
+        headers={"X-Admin-Token": ADMIN_TOKEN},
+        json={"payment_id": payment_id},
+    )
+    assert confirm_resp.status_code == 200
+    reject_resp = client.post(
+        "/api/v1/admin/payments/reject",
+        headers={"X-Admin-Token": ADMIN_TOKEN},
+        json={"payment_id": payment_id, "reason": "late"},
+    )
+    assert reject_resp.status_code == 409

@@ -167,7 +167,18 @@ class OpenClawMeshNode:
         if msg_type != "task_request":
             return
 
-        req = TaskRequest.from_dict(data)
+        try:
+            req = TaskRequest.from_dict(data)
+        except (TypeError, ValueError) as exc:
+            err_resp = TaskResponse(
+                request_id=str(data.get("request_id", "unknown")),
+                ok=False,
+                error=f"Requête invalide: {exc}",
+                handled_by=self.name,
+            )
+            async with send_lock:
+                await ws.send(err_resp.to_json())
+            return
 
         # 1. Vérification d'Authentification HMAC-SHA256
         if self.psk:

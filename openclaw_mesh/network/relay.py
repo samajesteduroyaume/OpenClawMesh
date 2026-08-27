@@ -70,6 +70,10 @@ class WANRelayServer:
 
                 msg_type = data.get("type")
 
+                if msg_type != "register" and registered_node_id is None:
+                    await websocket.send(json.dumps({"type": "error", "code": "authentication_required"}))
+                    continue
+
                 # 1. Enregistrement du nœud
                 if msg_type == "register":
                     node_id = data.get("node_id")

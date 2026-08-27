@@ -1,6 +1,4 @@
-"""
-Passerelle de Monétisation OpenClawMesh (Stripe / LemonSqueezy / Revolut).
-"""
+"""Passerelle de monétisation Bitcoin OpenClawMesh."""
 from .db import KeyDatabase, KeyRecord
 from .server import app
 

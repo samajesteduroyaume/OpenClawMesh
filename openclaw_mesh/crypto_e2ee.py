@@ -76,9 +76,10 @@ class ReplayCache:
 
     def has(self, nonce: bytes, now: float | None = None) -> bool:
         """Vrai si le nonce a déjà été vu et n'a pas expiré."""
-        now = now or time.time()
-        self._evict(now)
-        return nonce in self._index
+        with self._lock:
+            now = time.time() if now is None else now
+            self._evict(now)
+            return nonce in self._index
 
     def add(self, nonce: bytes, expiry: float) -> None:
         """Enregistre un nonce avec une date d'expiration donnée."""

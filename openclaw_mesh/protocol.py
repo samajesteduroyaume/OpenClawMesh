@@ -116,6 +116,16 @@ class TaskRequest:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> TaskRequest:
+        if data.get("type") != "task_request":
+            raise ValueError("Type de message TaskRequest invalide")
+        if not isinstance(data.get("skill"), str) or not data["skill"]:
+            raise ValueError("Skill invalide")
+        if not isinstance(data.get("payload", {}), dict):
+            raise ValueError("Payload invalide")
+        if not isinstance(data.get("request_id"), str) or not data["request_id"]:
+            raise ValueError("request_id invalide")
+        if not isinstance(data.get("ts"), (int, float)):
+            raise ValueError("Timestamp invalide")
         return cls(
             skill=data.get("skill", ""),
             payload=data.get("payload", {}),
@@ -184,4 +194,7 @@ class TaskResponse:
 
 def parse_message(raw: str) -> dict[str, Any]:
     """Parse une chaîne JSON en dictionnaire Python."""
-    return json.loads(raw)
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        raise ValueError("Le message JSON doit être un objet")
+    return data

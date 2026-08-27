@@ -708,10 +708,12 @@ async def admin_reject_btc_payment(
 
     with db._get_connection() as conn:
         row = conn.execute(
-            "SELECT raw_payload_json FROM payment_events WHERE event_id = ?", (event_id,)
+            "SELECT event_type, raw_payload_json FROM payment_events WHERE event_id = ?", (event_id,)
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Payment ID introuvable.")
+        if row["event_type"] != "pending_verification":
+            raise HTTPException(status_code=409, detail="Seul un paiement en attente peut être rejeté.")
         raw_data = json.loads(row["raw_payload_json"] or "{}")
         raw_data["rejected_at"] = time.time()
         raw_data["rejection_reason"] = reason

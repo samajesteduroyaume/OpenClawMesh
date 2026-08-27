@@ -1,14 +1,12 @@
 import json
 import time
+
 import pytest
+
 from openclaw_mesh.protocol import (
-    TaskRequest,
     TaskChunk,
+    TaskRequest,
     TaskResponse,
-    sign_request,
-    verify_request,
-    DESCRIBE_SKILL,
-    HEALTH_SKILL,
     parse_message,
 )
 
@@ -88,3 +86,17 @@ def test_hmac_signing_and_verification():
     # Tampered payload should fail verification
     req.payload["msg"] = "tampered"
     assert req.verify(psk) is False
+
+
+def test_protocol_rejects_non_object_and_invalid_task_request():
+    with pytest.raises(ValueError, match="objet"):
+        parse_message("[]")
+    with pytest.raises(ValueError, match="Payload invalide"):
+        TaskRequest.from_dict({
+            "type": "task_request",
+            "skill": "echo",
+            "payload": [],
+            "request_id": "request-1",
+            "origin": "tester",
+            "ts": time.time(),
+        })

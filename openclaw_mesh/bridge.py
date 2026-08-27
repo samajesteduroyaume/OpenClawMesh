@@ -92,7 +92,7 @@ class SkillRegistry:
         """Génère la documentation complète des compétences du nœud."""
         schemas_doc = {}
         for s_name, s_model in self._schemas.items():
-            if _HAS_PYDANTIC and issubclass(s_model, BaseModel):
+            if _HAS_PYDANTIC and isinstance(s_model, type) and issubclass(s_model, BaseModel):
                 schemas_doc[s_name] = s_model.model_json_schema()
             elif hasattr(s_model, "__dict__"):
                 schemas_doc[s_name] = str(s_model)
