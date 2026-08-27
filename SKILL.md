@@ -4,6 +4,11 @@ description: Connect OpenClaw to local and LAN P2P AI agent meshes (JarvisMesh &
 version: 1.1.0
 metadata:
   openclaw:
+    permissions:
+      execution: [python3]
+      network: [mdns_discovery, websocket_outbound, dht_udp, stun_opt_in]
+      filesystem: [configured_identity_and_trust_store_only]
+      inbound_network: disabled_by_default
     requires:
       bins:
         - python3

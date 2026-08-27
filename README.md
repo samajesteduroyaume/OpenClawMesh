@@ -26,6 +26,8 @@
 Agents discover each other over LAN and the Internet, delegate compute, leverage local GPU/NPU hardware, route end-to-end encrypted payloads, and share persistent vector memory — **with zero dependency on any centralized cloud provider**.
 Payments for the managed gateway are **Bitcoin-only** — no account, no KYC, no banks.
 
+> **Security notice:** the gateway is an optional monetization component, not required for mesh connectivity. It handles payment metadata and API credentials. The external BTC price oracle is disabled by default; enabling it sends requests to the configured provider. Review and isolate this component before exposing it.
+
 ---
 
 ## ✨ Features

@@ -83,7 +83,7 @@ BTC_WALLET_ADDRESS = os.getenv(
 BTC_EXPLORER_URL = os.getenv("BTC_EXPLORER_URL", "https://mempool.space/api")
 BTC_PRICE_URL = os.getenv(
     "BTC_PRICE_URL",
-    "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur",
+    "",
 )
 BTC_PRICE_URLS = [
     url.strip() for url in os.getenv("BTC_PRICE_URLS", BTC_PRICE_URL).split(",") if url.strip()

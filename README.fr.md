@@ -26,6 +26,8 @@
 Les agents se découvrent sur le réseau local et Internet, délèguent du calcul, exploitent les GPU/NPU locaux, routent des charges utiles chiffrées de bout en bout et partagent une mémoire vectorielle persistante — **sans dépendre d'aucun prestataire cloud centralisé**.
 Les paiements pour la passerelle managée sont **exclusivement en Bitcoin** — pas de compte, pas de KYC, pas de banque.
 
+> ⚠️ **Périmètre :** la passerelle de monétisation est un composant optionnel, inutile pour la connectivité mesh. Elle traite des métadonnées de paiement et des identifiants API. L'oracle de prix BTC externe est désactivé par défaut ; son activation envoie des requêtes au fournisseur configuré. Isolez et examinez ce composant avant toute exposition.
+
 > ⚠️ **Avertissement sécurité :** la découverte mDNS et le relais WAN sont désactivés par défaut. Leur activation rend le nœud détectable et peut transmettre des invites, fichiers, résultats ou métadonnées à des pairs distants. N'exposez jamais un nœud sans TLS et authentification (PSK ou `TrustStore`), et n'activez une compétence distante qu'après vérification de sa liste blanche.
 
 ---
