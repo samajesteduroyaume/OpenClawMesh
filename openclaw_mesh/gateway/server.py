@@ -80,7 +80,7 @@ DEFAULT_DB_PATH = os.getenv("GATEWAY_DB_PATH", "openclaw_keys.db")
 BTC_WALLET_ADDRESS = os.getenv(
     "BTC_WALLET_ADDRESS", "bc1qwq8sll9vrl83lclyhha2gyncpd5275cdr2wul5"
 )
-BTC_EXPLORER_URL = os.getenv("BTC_EXPLORER_URL", "https://mempool.space/api")
+BTC_EXPLORER_URL = os.getenv("BTC_EXPLORER_URL", "")
 BTC_PRICE_URL = os.getenv(
     "BTC_PRICE_URL",
     "",
@@ -193,6 +193,8 @@ def _minimum_sats(plan: str, btc_eur_price: Decimal) -> int:
 
 def _transaction_is_paid(txid: str, expected_sats: int) -> tuple[bool, str]:
     """Vérifie destinataire, montant minimum configuré et confirmations du txid."""
+    if not BTC_EXPLORER_URL:
+        raise RuntimeError("BTC_EXPLORER_URL doit être configuré pour vérifier un paiement automatiquement.")
     if expected_sats <= 0:
         return False, "Montant BTC minimum invalide."
     base_url = BTC_EXPLORER_URL.rstrip("/")
@@ -222,6 +224,8 @@ def _transaction_is_paid(txid: str, expected_sats: int) -> tuple[bool, str]:
 
 def _transaction_block_hash(txid: str) -> str | None:
     """Retourne le bloc actuellement associé à une transaction confirmée."""
+    if not BTC_EXPLORER_URL:
+        return None
     tx = _fetch_json(f"{BTC_EXPLORER_URL.rstrip('/')}/tx/{txid}")
     if not isinstance(tx, dict) or not tx.get("status", {}).get("confirmed"):
         return None

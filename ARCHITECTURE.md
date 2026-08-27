@@ -662,7 +662,8 @@ GATEWAY_ADMIN_TOKEN=replace-with-a-long-random-secret
 BTC_WALLET_ADDRESS=bc1q...
 BTC_AUTO_VERIFY=true
 BTC_REQUIRED_CONFIRMATIONS=2
-BTC_PRICE_URLS=https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur
+# Optionnel : active une requête sortante vers un oracle de prix configuré.
+# BTC_PRICE_URLS=https://provider.example/api/price
 
 OPENCLAW_LOG_LEVEL=INFO
 OPENCLAW_LOG_FILE=/var/log/openclaw/node.log
