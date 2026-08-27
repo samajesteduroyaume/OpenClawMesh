@@ -13,6 +13,8 @@ def test_system_diagnostics_are_not_exposed_remotely():
     assert registry.get("system_info") is not None
     assert registry.is_remote_exposed("system_info") is False
     assert registry.is_remote_exposed("echo") is True
+    assert registry.is_remote_exposed("openclaw_info") is False
+    assert "openclaw_info" not in registry.describe()["skills"]
 
 
 def test_dht_rejects_invalid_storage_keys():

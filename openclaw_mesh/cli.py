@@ -256,7 +256,7 @@ async def cmd_serve(args: argparse.Namespace) -> None:
 
     await node.start(enable_zeroconf=not args.no_zeroconf)
     print(f"🌐 Nœud OpenClawMesh '{args.name}' actif sur ws://{get_local_ip()}:{args.port}")
-    print(f"📡 Compétences publiées : {', '.join(registry.list_names())}")
+    print(f"📡 Compétences publiées : {', '.join(registry.list_remote_names())}")
     print("Appuyez sur Ctrl+C pour arrêter le serveur...")
 
     try:

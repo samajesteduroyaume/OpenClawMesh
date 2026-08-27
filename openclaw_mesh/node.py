@@ -98,7 +98,7 @@ class OpenClawMeshNode:
         self._running = True
 
         if enable_zeroconf:
-            skills_list = self.registry.list_names()
+            skills_list = self.registry.list_remote_names()
             self.discovery = MeshDiscovery(
                 node_name=self.name,
                 port=self.port,

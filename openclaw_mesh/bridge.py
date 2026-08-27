@@ -56,7 +56,7 @@ class SkillRegistry:
     def _register_builtins(self) -> None:
         """Enregistre les compétences utilitaires intégrées par défaut."""
         self.register(self._echo, name="echo", description="Renvoie le payload reçu tel quel.", expose_remote=True)
-        self.register(self._openclaw_info, name="openclaw_info", description="Retourne les informations du nœud OpenClaw.", expose_remote=True)
+        self.register(self._openclaw_info, name="openclaw_info", description="Retourne les informations du nœud OpenClaw.", expose_remote=False)
         self.register(self._system_info, name="system_info", description="Retourne les métriques système (OS, CPU, Python).", expose_remote=False)
 
     def register(
@@ -98,18 +98,27 @@ class SkillRegistry:
     def list_names(self) -> list[str]:
         return list(self._skills.keys())
 
+    def list_remote_names(self) -> list[str]:
+        """Retourne uniquement les compétences explicitement autorisées à distance."""
+        return [name for name in self._skills if name in self._remote_exposed]
+
     def describe(self) -> dict[str, Any]:
         """Génère la documentation complète des compétences du nœud."""
         schemas_doc = {}
         for s_name, s_model in self._schemas.items():
+            if s_name not in self._remote_exposed:
+                continue
             if _HAS_PYDANTIC and isinstance(s_model, type) and issubclass(s_model, BaseModel):
                 schemas_doc[s_name] = s_model.model_json_schema()
             elif hasattr(s_model, "__dict__"):
                 schemas_doc[s_name] = str(s_model)
 
         return {
-            "skills": self.list_names(),
-            "descriptions": self._descriptions,
+            "skills": self.list_remote_names(),
+            "descriptions": {
+                name: desc for name, desc in self._descriptions.items()
+                if name in self._remote_exposed
+            },
             "schemas": schemas_doc,
         }
 
