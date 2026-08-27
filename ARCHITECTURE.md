@@ -692,7 +692,7 @@ async def main():
         psk="mon_psk_secret",
         registry=registry,
     )
-    await node.start(enable_zeroconf=True)
+    await node.start(enable_zeroconf=False)  # Publication LAN à activer explicitement.
     print(f"Nœud démarré sur {node.advertise_ip}:{node.port}")
     await asyncio.Event().wait()  # tourne indéfiniment
 

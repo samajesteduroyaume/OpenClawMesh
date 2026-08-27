@@ -7,7 +7,7 @@ Fonctionne en mode local (stockage/lookup en mémoire) ou en mode réseau réel
 
 Exemples :
   # Nœud en écoute UDP (démon réseau réel, jusqu'à Ctrl+C)
-  python3 scripts/mesh_dht.py --host 0.0.0.0 --port 8780
+    python3 scripts/mesh_dht.py --host 127.0.0.1 --port 8780
 
   # Publier/lire localement (mémoire)
   python3 scripts/mesh_dht.py --advertise llm
