@@ -91,7 +91,7 @@ BTC_PRICE_URLS = [
 BTC_PRICE_FALLBACK_EUR = Decimal(os.getenv("BTC_PRICE_FALLBACK_EUR", "67642"))
 BTC_PRICE_CACHE_SECONDS = max(30, int(os.getenv("BTC_PRICE_CACHE_SECONDS", "300")))
 BTC_REQUIRED_CONFIRMATIONS = max(1, int(os.getenv("BTC_REQUIRED_CONFIRMATIONS", "1")))
-BTC_AUTO_VERIFY = os.getenv("BTC_AUTO_VERIFY", "true").lower() in {"1", "true", "yes", "on"}
+BTC_AUTO_VERIFY = os.getenv("BTC_AUTO_VERIFY", "false").lower() in {"1", "true", "yes", "on"}
 BTC_VERIFY_INTERVAL = max(10, int(os.getenv("BTC_VERIFY_INTERVAL_SECONDS", "30")))
 try:
     BTC_PLAN_MIN_SATS: dict[str, int] = {
@@ -280,9 +280,9 @@ async def _verify_pending_payments() -> None:
                 except (OSError, URLError, ValueError, KeyError):
                     continue
                 if current_block != expected_block:
-                    key = raw_data.get("confirmed_key")
-                    if key:
-                        db.revoke_key(key)
+                    key_hash = raw_data.get("confirmed_key_hash")
+                    if key_hash:
+                        db.revoke_key_hash(key_hash)
                     raw_data["reorg_detected_at"] = time.time()
                     with db._get_connection() as conn:
                         conn.execute(
@@ -527,7 +527,6 @@ async def check_payment_status(
     }
 
     if is_confirmed:
-        result["api_key"] = payload_data.get("confirmed_key")
         result["confirmed_at"] = payload_data.get("confirmed_at")
     elif is_rejected:
         result["rejection_reason"] = payload_data.get("rejection_reason", "Non spécifié.")
@@ -800,7 +799,12 @@ async def admin_confirm_btc_payment(
     if not key_rec:
         raise HTTPException(status_code=409, detail="Ce paiement ne peut plus être confirmé.")
 
-    logger.info("✅ Paiement BTC confirmé — Email: %s | Plan: %s | Clé: %s", email, plan, key_rec.key)
+    logger.info(
+        "✅ Paiement BTC confirmé — Email: %s | Plan: %s | Clé: %s...",
+        email,
+        plan,
+        key_rec.key[:12],
+    )
 
     return {
         "ok": True,

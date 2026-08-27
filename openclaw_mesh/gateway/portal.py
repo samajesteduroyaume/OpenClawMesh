@@ -7,17 +7,38 @@ Interface dark mode, responsive, avec paiement Bitcoin natif :
 - Suivi du statut de paiement par payment_id
 - Playground de test de compétences en temps réel
 """
+from __future__ import annotations
+
+import base64
+from io import BytesIO
+
+import qrcode
+from qrcode.image.svg import SvgPathImage
+
+
+def _bitcoin_qr_data_uri(address: str) -> str:
+    """Génère le QR Bitcoin localement afin de ne transmettre aucune donnée à un tiers."""
+    qr = qrcode.QRCode(version=None, box_size=4, border=2)
+    qr.add_data(f"bitcoin:{address}")
+    qr.make(fit=True)
+    image = qr.make_image(image_factory=SvgPathImage)
+    buffer = BytesIO()
+    image.save(buffer)
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
 
 
 def render_portal_html(
     portal_title: str = "OpenClawMesh — API Store & Gateway",
     btc_address: str = "bc1qwq8sll9vrl83lclyhha2gyncpd5275cdr2wul5",
 ) -> str:
+    btc_qr_data_uri = _bitcoin_qr_data_uri(btc_address)
     return f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self';">
     <title>{portal_title}</title>
     <meta name="description" content="Accédez à l'inférence IA décentralisée OpenClawMesh par paiement Bitcoin — pas de compte, pas de tracking.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -611,7 +632,7 @@ def render_portal_html(
 
             <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
                 <div style="background:white; padding:0.75rem; border-radius:0.75rem;">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=bitcoin:{btc_address}" alt="QR Code Bitcoin" width="150" height="150" style="display:block; border-radius:0.35rem;">
+                    <img src="{btc_qr_data_uri}" alt="QR Code Bitcoin généré localement" width="150" height="150" style="display:block; border-radius:0.35rem;">
                 </div>
                 <div style="flex:1; min-width:200px;">
                     <p style="color:var(--text-muted); font-size:0.9rem; line-height:1.7;">

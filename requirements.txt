@@ -1,3 +1,4 @@
+qrcode>=8.0
 websockets==17.1
 zeroconf==0.150.0
 cryptography==50.0.1

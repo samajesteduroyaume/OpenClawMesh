@@ -26,6 +26,8 @@
 Les agents se découvrent sur le réseau local et Internet, délèguent du calcul, exploitent les GPU/NPU locaux, routent des charges utiles chiffrées de bout en bout et partagent une mémoire vectorielle persistante — **sans dépendre d'aucun prestataire cloud centralisé**.
 Les paiements pour la passerelle managée sont **exclusivement en Bitcoin** — pas de compte, pas de KYC, pas de banque.
 
+> ⚠️ **Avertissement sécurité :** la découverte mDNS et le relais WAN sont désactivés par défaut. Leur activation rend le nœud détectable et peut transmettre des invites, fichiers, résultats ou métadonnées à des pairs distants. N'exposez jamais un nœud sans TLS et authentification (PSK ou `TrustStore`), et n'activez une compétence distante qu'après vérification de sa liste blanche.
+
 ---
 
 ## ✨ Fonctionnalités
@@ -65,7 +67,7 @@ Les paiements pour la passerelle managée sont **exclusivement en Bitcoin** — 
 
 **₿ Passerelle de Paiement Bitcoin**
 - Sans Stripe, sans PayPal — **BTC on-chain** pur
-- Vérification on-chain automatique → clé API activée après confirmation
+- Vérification automatique désactivée par défaut ; activation explicite possible après confirmation on-chain
 - Oracle BTC/EUR avec médiane multi-source en cache et taux fixé par paiement
 
 </td>
@@ -116,6 +118,8 @@ graph TD
 ---
 
 ## 🚀 Installation Rapide
+
+Avant de lancer un nœud, vérifiez les permissions réseau et les compétences exposées. L'installation ne déclenche pas de découverte LAN, et l'accès WAN doit être configuré explicitement avec TLS et authentification.
 
 ```bash
 # Cloner & installer

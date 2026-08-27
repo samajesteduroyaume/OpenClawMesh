@@ -63,7 +63,9 @@ class MeshClient:
         self.identity = identity
         self.ssl_context = ssl_context
 
-        self.discovery = discovery or (MeshDiscovery(node_name=self.name) if (enable_discovery is not None and enable_discovery) or _settings.mdns_enabled else None)
+        # Une option explicitement fournie doit primer sur la configuration globale.
+        discovery_enabled = enable_discovery if enable_discovery is not None else _settings.mdns_enabled
+        self.discovery = discovery or (MeshDiscovery(node_name=self.name) if discovery_enabled else None)
         self.static_peers: dict[str, PeerInfo] = {}
 
         # Pool de connexions WebSockets persistantes {endpoint_key: WebSocketClientProtocol}

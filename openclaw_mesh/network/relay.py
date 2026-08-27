@@ -40,13 +40,20 @@ class WANRelayServer:
         self._clients: dict[str, WebSocketServerProtocol] = {}  # node_id -> websocket
         self._client_info: dict[str, dict[str, Any]] = {}
         self._running = False
+        self._max_clients = max(1, _settings.relay_max_clients)
+        self._max_message_bytes = max(1024, _settings.relay_max_message_bytes)
 
     async def start(self) -> None:
         """Démarre le serveur relais."""
         if self.host not in {"127.0.0.1", "::1", "localhost"} and not self.auth_token:
             raise RuntimeError("Un relais exposé doit définir OPENCLAW_RELAY_AUTH_TOKEN.")
         self._running = True
-        self._server = await websockets.serve(self._handle_client, self.host, self.port)
+        self._server = await websockets.serve(
+            self._handle_client,
+            self.host,
+            self.port,
+            max_size=self._max_message_bytes,
+        )
         logger.info(f"⚡ Serveur Relais WAN actif sur ws://{self.host}:{self.port}")
 
     async def stop(self) -> None:
@@ -64,6 +71,11 @@ class WANRelayServer:
         registered_node_id: str | None = None
         try:
             async for raw_msg in websocket:
+                message_size = len(raw_msg) if isinstance(raw_msg, bytes) else len(raw_msg.encode("utf-8"))
+                if message_size > self._max_message_bytes:
+                    await websocket.send(json.dumps({"type": "error", "code": "message_too_large"}))
+                    await websocket.close(code=1009, reason="message too large")
+                    return
                 try:
                     data = json.loads(raw_msg)
                 except Exception:
@@ -85,6 +97,9 @@ class WANRelayServer:
                                 isinstance(supplied_token, str)
                                 and secrets.compare_digest(supplied_token, self.auth_token)
                             ))):
+                        if registered_node_id is None and len(self._clients) >= self._max_clients:
+                            await websocket.send(json.dumps({"type": "error", "code": "relay_capacity_reached"}))
+                            continue
                         if node_id in self._clients and self._clients[node_id] is not websocket:
                             await websocket.send(json.dumps({"type": "error", "code": "node_id_in_use"}))
                             continue

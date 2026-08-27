@@ -1,12 +1,5 @@
 import asyncio
-import sys
 import pytest
-from pathlib import Path
-
-# Importer jarvismesh depuis le bureau
-JARVISMESH_PATH = Path("/Users/selim/Desktop/jarvismesh")
-if str(JARVISMESH_PATH) not in sys.path:
-    sys.path.insert(0, str(JARVISMESH_PATH))
 
 try:
     import jarvismesh.core.protocol as jm_proto

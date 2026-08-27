@@ -21,8 +21,8 @@ def test_client_server_basic_exchange():
                 yield {"text": w + " "}
                 await asyncio.sleep(0.01)
 
-        registry.register(add_numbers)
-        registry.register(stream_text)
+        registry.register(add_numbers, expose_remote=True)
+        registry.register(stream_text, expose_remote=True)
 
         node = OpenClawMeshNode(
             name="test-node-1",

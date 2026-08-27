@@ -81,10 +81,11 @@ class OpenClawMeshNode:
         """Démarre le serveur WebSocket et la publication Zeroconf."""
         if self._running:
             return
-        if self.host not in {"127.0.0.1", "::1", "localhost"} and not (
-            self.psk or self.trust_store or self.ssl_context
-        ):
-            raise RuntimeError("Un nœud exposé doit utiliser PSK, TrustStore ou TLS.")
+        if self.host not in {"127.0.0.1", "::1", "localhost"}:
+            if not self.ssl_context:
+                raise RuntimeError("Un nœud exposé doit utiliser TLS.")
+            if not (self.psk or self.trust_store):
+                raise RuntimeError("Un nœud exposé doit utiliser PSK ou TrustStore avec TLS.")
 
         self._start_time = time.time()
         self._ws_server = await websockets.serve(

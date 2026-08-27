@@ -55,8 +55,8 @@ class SkillRegistry:
 
     def _register_builtins(self) -> None:
         """Enregistre les compétences utilitaires intégrées par défaut."""
-        self.register(self._echo, name="echo", description="Renvoie le payload reçu tel quel.")
-        self.register(self._openclaw_info, name="openclaw_info", description="Retourne les informations du nœud OpenClaw.")
+        self.register(self._echo, name="echo", description="Renvoie le payload reçu tel quel.", expose_remote=True)
+        self.register(self._openclaw_info, name="openclaw_info", description="Retourne les informations du nœud OpenClaw.", expose_remote=True)
         self.register(self._system_info, name="system_info", description="Retourne les métriques système (OS, CPU, Python).", expose_remote=False)
 
     def register(
@@ -65,7 +65,7 @@ class SkillRegistry:
         name: str | None = None,
         description: str | None = None,
         schema: Any | None = None,
-        expose_remote: bool = True,
+        expose_remote: bool = False,
     ) -> Callable:
         """Enregistre une fonction Python comme compétence du nœud."""
         skill_name = name or getattr(fn, "__skill_name__", fn.__name__)

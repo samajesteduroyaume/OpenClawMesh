@@ -6,6 +6,8 @@ les transactions de paiement et les logs d'utilisation.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import secrets
 import sqlite3
 import time
@@ -16,6 +18,16 @@ from typing import Any
 from ..config import get_settings
 
 _settings = get_settings()
+
+
+def _key_audit_id(key_str: str) -> str:
+    """Identifiant non réversible utilisé dans les journaux d'utilisation."""
+    return hashlib.sha256(key_str.encode("utf-8")).hexdigest()[:16]
+
+
+def _key_hash(key_str: str) -> str:
+    """Empreinte stable utilisée pour valider une clé sans la stocker en clair."""
+    return hashlib.sha256(key_str.encode("utf-8")).hexdigest()
 
 
 @dataclass
@@ -67,6 +79,7 @@ class KeyDatabase:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS api_keys (
                     key TEXT PRIMARY KEY,
+                    key_hash TEXT,
                     email TEXT NOT NULL,
                     plan TEXT NOT NULL,
                     active INTEGER NOT NULL DEFAULT 1,
@@ -79,6 +92,27 @@ class KeyDatabase:
                     subscription_id TEXT
                 )
             """)
+            columns = {row["name"] for row in conn.execute("PRAGMA table_info(api_keys)")}
+            if "key_hash" not in columns:
+                conn.execute("ALTER TABLE api_keys ADD COLUMN key_hash TEXT")
+            # Migration des anciennes installations : l'empreinte est conservée,
+            # la valeur secrète n'est plus persistée.
+            conn.execute(
+                "UPDATE api_keys SET key_hash = ? WHERE (key_hash IS NULL OR key_hash = '') AND key IS NOT NULL AND key != ''",
+                (_key_hash(""),),
+            )
+            legacy_rows = conn.execute(
+                "SELECT rowid, key FROM api_keys WHERE key IS NOT NULL AND key != '' AND (key_hash IS NULL OR key_hash = ?)",
+                (_key_hash(""),),
+            ).fetchall()
+            for legacy_row in legacy_rows:
+                conn.execute(
+                    "UPDATE api_keys SET key_hash = ?, key = NULL WHERE rowid = ?",
+                    (_key_hash(legacy_row["key"]), legacy_row["rowid"]),
+                )
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash)"
+            )
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS payment_events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,6 +144,21 @@ class KeyDatabase:
                     status TEXT NOT NULL
                 )
             """)
+            payment_rows = conn.execute(
+                "SELECT event_id, raw_payload_json FROM payment_events"
+            ).fetchall()
+            for payment_row in payment_rows:
+                try:
+                    payment_data = json.loads(payment_row["raw_payload_json"] or "{}")
+                except (TypeError, ValueError):
+                    continue
+                legacy_key = payment_data.pop("confirmed_key", None)
+                if legacy_key and "confirmed_key_hash" not in payment_data:
+                    payment_data["confirmed_key_hash"] = _key_hash(legacy_key)
+                    conn.execute(
+                        "UPDATE payment_events SET raw_payload_json = ? WHERE event_id = ?",
+                        (json.dumps(payment_data), payment_row["event_id"]),
+                    )
 
     # ------------------------------------------------------------------ #
     # Gestion des Clés
@@ -137,11 +186,11 @@ class KeyDatabase:
             conn.execute(
                 """
                 INSERT INTO api_keys (
-                    key, email, plan, active, created_at, expires_at,
+                    key, key_hash, email, plan, active, created_at, expires_at,
                     quota_limit, quota_used, metadata_json, customer_id, subscription_id
-                ) VALUES (?, ?, ?, 1, ?, ?, ?, 0, ?, ?, ?)
+                ) VALUES (NULL, ?, ?, ?, 1, ?, ?, ?, 0, ?, ?, ?)
                 """,
-                (key, email, plan, now, expires_at, quota_limit, meta_json, customer_id, subscription_id),
+                (_key_hash(key), email, plan, now, expires_at, quota_limit, meta_json, customer_id, subscription_id),
             )
 
         return KeyRecord(
@@ -162,12 +211,13 @@ class KeyDatabase:
         """Récupère une clé par sa valeur."""
         import json
         with self._get_connection() as conn:
-            row = conn.execute("SELECT * FROM api_keys WHERE key = ?", (key_str.strip(),)).fetchone()
+            normalized_key = key_str.strip()
+            row = conn.execute("SELECT * FROM api_keys WHERE key_hash = ?", (_key_hash(normalized_key),)).fetchone()
             if not row:
                 return None
 
             return KeyRecord(
-                key=row["key"],
+                key=normalized_key,
                 email=row["email"],
                 plan=row["plan"],
                 active=bool(row["active"]),
@@ -188,7 +238,7 @@ class KeyDatabase:
             keys = []
             for r in rows:
                 keys.append(KeyRecord(
-                    key=r["key"],
+                    key="",
                     email=r["email"],
                     plan=r["plan"],
                     active=bool(r["active"]),
@@ -206,10 +256,10 @@ class KeyDatabase:
         """Incrémente le compteur d'utilisation et enregistre un log."""
         now = time.time()
         with self._get_connection() as conn:
-            conn.execute("UPDATE api_keys SET quota_used = quota_used + 1 WHERE key = ?", (key_str,))
+            conn.execute("UPDATE api_keys SET quota_used = quota_used + 1 WHERE key_hash = ?", (_key_hash(key_str),))
             conn.execute(
                 "INSERT INTO usage_logs (key, skill, ts, duration_ms, status) VALUES (?, ?, ?, ?, ?)",
-                (key_str, skill_name, now, duration_ms, status),
+                (_key_audit_id(key_str), skill_name, now, duration_ms, status),
             )
         return True
 
@@ -218,22 +268,28 @@ class KeyDatabase:
         now = time.time()
         with self._get_connection() as conn:
             result = conn.execute(
-                "UPDATE api_keys SET quota_used = quota_used + 1 WHERE key = ? "
+                "UPDATE api_keys SET quota_used = quota_used + 1 WHERE key_hash = ? "
                 "AND active = 1 AND (quota_limit = -1 OR quota_used < quota_limit)",
-                (key_str,),
+                (_key_hash(key_str),),
             )
             if result.rowcount != 1:
                 return False
             conn.execute(
                 "INSERT INTO usage_logs (key, skill, ts, duration_ms, status) VALUES (?, ?, ?, ?, ?)",
-                (key_str, skill_name, now, 0.0, "reserved"),
+                (_key_audit_id(key_str), skill_name, now, 0.0, "reserved"),
             )
             return True
 
     def revoke_key(self, key_str: str) -> bool:
         """Désactive une clé."""
         with self._get_connection() as conn:
-            res = conn.execute("UPDATE api_keys SET active = 0 WHERE key = ?", (key_str,))
+            res = conn.execute("UPDATE api_keys SET active = 0 WHERE key_hash = ?", (_key_hash(key_str),))
+            return res.rowcount > 0
+
+    def revoke_key_hash(self, key_hash: str) -> bool:
+        """Désactive une clé à partir de son empreinte persistée."""
+        with self._get_connection() as conn:
+            res = conn.execute("UPDATE api_keys SET active = 0 WHERE key_hash = ?", (key_hash,))
             return res.rowcount > 0
 
     def renew_subscription(self, subscription_id: str, days_extension: int = 30) -> bool:
@@ -255,7 +311,7 @@ class KeyDatabase:
             rows = conn.execute("SELECT * FROM api_keys ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
             return [
                 KeyRecord(
-                    key=r["key"],
+                    key="",
                     email=r["email"],
                     plan=r["plan"],
                     active=bool(r["active"]),
@@ -326,10 +382,10 @@ class KeyDatabase:
                 return None
 
             raw_data = json.loads(row["raw_payload_json"] or "{}")
-            existing_key = raw_data.get("confirmed_key")
-            if row["event_type"] == "confirmed" and existing_key:
+            existing_key_hash = raw_data.get("confirmed_key_hash")
+            if row["event_type"] == "confirmed" and existing_key_hash:
                 key_row = conn.execute(
-                    "SELECT * FROM api_keys WHERE key = ?", (existing_key,)
+                    "SELECT * FROM api_keys WHERE key_hash = ?", (existing_key_hash,)
                 ).fetchone()
                 if key_row:
                     return self._key_from_row(key_row)
@@ -348,11 +404,11 @@ class KeyDatabase:
                 "confirmed_at": now,
             }
             conn.execute(
-                "INSERT INTO api_keys (key, email, plan, active, created_at, expires_at, "
-                "quota_limit, quota_used, metadata_json) VALUES (?, ?, ?, 1, ?, ?, ?, 0, ?)",
-                (key, email, plan, now, expires_at, quota_limit, json.dumps(metadata)),
+                "INSERT INTO api_keys (key, key_hash, email, plan, active, created_at, expires_at, "
+                "quota_limit, quota_used, metadata_json) VALUES (?, ?, ?, ?, 1, ?, ?, ?, 0, ?)",
+                (None, _key_hash(key), email, plan, now, expires_at, quota_limit, json.dumps(metadata)),
             )
-            raw_data.update({"confirmed_at": now, "confirmed_key": key})
+            raw_data.update({"confirmed_at": now, "confirmed_key_hash": _key_hash(key)})
             if confirmation_metadata:
                 raw_data.update(confirmation_metadata)
             conn.execute(
@@ -369,7 +425,7 @@ class KeyDatabase:
     def _key_from_row(row: sqlite3.Row) -> KeyRecord:
         import json
         return KeyRecord(
-            key=row["key"], email=row["email"], plan=row["plan"],
+            key="", email=row["email"], plan=row["plan"],
             active=bool(row["active"]), created_at=row["created_at"],
             expires_at=row["expires_at"], quota_limit=row["quota_limit"],
             quota_used=row["quota_used"], metadata=json.loads(row["metadata_json"] or "{}"),

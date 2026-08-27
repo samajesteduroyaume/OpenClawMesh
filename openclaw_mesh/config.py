@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     ping_timeout: float = Field(default=3.0, description="Timeout ping")
 
     # Configuration mDNS
-    mdns_enabled: bool = Field(default=True, description="Activer découverte mDNS")
+    mdns_enabled: bool = Field(default=False, description="Activer découverte mDNS (opt-in)")
     mdns_service_types: list[str] = Field(
         default=["_jarvismesh._tcp.local.", "_openclawmesh._tcp.local."],
         description="Types de services mDNS",
@@ -132,9 +132,11 @@ class Settings(BaseSettings):
     # Configuration Relais WAN
     # ------------------------------------------------------------------ #
     relay_enabled: bool = Field(default=False, description="Activer relais WAN")
-    relay_host: str = Field(default="0.0.0.0", description="Hôte du relais")
+    relay_host: str = Field(default="127.0.0.1", description="Hôte du relais (WAN explicitement configuré)")
     relay_port: int = Field(default=8790, description="Port du relais")
     relay_name: str = Field(default="openclaw-wan-relay", description="Nom du relais")
+    relay_max_clients: int = Field(default=100, description="Nombre maximum de pairs connectés au relais")
+    relay_max_message_bytes: int = Field(default=2 * 1024 * 1024, description="Taille maximale d'une trame relais")
 
     # ------------------------------------------------------------------ #
     # Configuration Moteurs IA

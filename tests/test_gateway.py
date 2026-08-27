@@ -5,6 +5,7 @@ Couvre : KeyDatabase CRUD, quotas & expiration,
          endpoints API (portail, démo, auth, execute),
          flux de paiement BTC (soumission, statut, confirmation admin).
 """
+import hashlib
 import time
 
 import pytest
@@ -63,8 +64,8 @@ def test_key_quota_and_expiration(temp_db):
     )
     with temp_db._get_connection() as conn:
         conn.execute(
-            "UPDATE api_keys SET expires_at = ? WHERE key = ?",
-            (time.time() - 100, expired_key.key),
+            "UPDATE api_keys SET expires_at = ? WHERE key_hash = ?",
+            (time.time() - 100, hashlib.sha256(expired_key.key.encode()).hexdigest()),
         )
     fetched_expired = temp_db.get_key(expired_key.key)
     valid, reason = fetched_expired.is_valid()
@@ -257,7 +258,7 @@ def test_btc_admin_confirm_flow():
     )
     assert status_resp.status_code == 200
     assert status_resp.json()["status"] == "confirmed"
-    assert status_resp.json()["api_key"] == api_key
+    assert "api_key" not in status_resp.json()
 
     # 6. Confirmation en double → 409
     double_confirm_resp = client.post(

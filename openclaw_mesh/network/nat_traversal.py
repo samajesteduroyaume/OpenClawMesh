@@ -7,6 +7,7 @@ pour établir des liaisons directes P2P à travers les pare-feux et routeurs (NA
 from __future__ import annotations
 
 import logging
+import secrets
 import socket
 import struct
 from dataclasses import dataclass
@@ -35,11 +36,21 @@ async def discover_nat_and_public_ip(
     local_port: int = 8770,
     stun_servers: list[tuple[str, int]] = DEFAULT_STUN_SERVERS,
     timeout: float = 2.0,
+    enabled: bool = False,
 ) -> NATProfile:
     """
     Envoie une requête STUN Binding (RFC 5389) pour déterminer l'IP publique et le port mappé.
     """
     local_ip = "127.0.0.1"
+    if not enabled:
+        return NATProfile(
+            public_ip=None,
+            public_port=None,
+            local_ip=local_ip,
+            local_port=local_port,
+            nat_type="Disabled (explicit opt-in required)",
+            is_direct_connectable=False,
+        )
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -52,7 +63,7 @@ async def discover_nat_and_public_ip(
         try:
             # Construction d'un paquet STUN Binding Request standard (20 octets)
             # Type: 0x0001 (Binding Request), Length: 0x0000, Magic Cookie: 0x2112A442, Transaction ID: 12 bytes
-            trans_id = b"\x12\x34\x56\x78\x9a\xbc\xde\xf0\x11\x22\x33\x44"
+            trans_id = secrets.token_bytes(12)
             magic_cookie = b"\x21\x12\xa4\x42"
             stun_header = struct.pack("!HHI", 0x0001, 0, 0x2112A442) + trans_id
 
