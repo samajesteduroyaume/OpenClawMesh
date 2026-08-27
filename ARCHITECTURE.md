@@ -1,5 +1,7 @@
 # OpenClawMesh v1.1.0 — Documentation Technique
 
+> **Périmètre et sécurité :** la passerelle FastAPI/Bitcoin est un composant optionnel, séparé de la connectivité mesh. Elle manipule des métadonnées de paiement et des identifiants API ; ne la déployez pas si vous avez uniquement besoin du réseau P2P, et conservez son écoute sur localhost sauf configuration WAN explicitement sécurisée.
+
 > **Protocole P2P & Skill Décentralisé pour Agents IA**  
 > Compatible JarvisMesh 1.0 · Python 3.10+ · WebSocket · Kademlia DHT · E2EE ChaCha20-Poly1305
 
