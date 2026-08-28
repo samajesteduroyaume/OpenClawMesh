@@ -311,3 +311,33 @@ def test_confirmed_payment_cannot_be_rejected():
         json={"payment_id": payment_id, "reason": "late"},
     )
     assert reject_resp.status_code == 409
+
+
+def test_admin_wan_toggle_100_percent_confidence():
+    client = TestClient(app)
+
+    # 1. Activer le nœud WAN en 100% Confiance sans PSK préexistante
+    activate_resp = client.post(
+        "/api/v1/admin/wan/toggle",
+        headers={"X-Admin-Token": ADMIN_TOKEN},
+        json={"remote_access": True},
+    )
+    assert activate_resp.status_code == 200
+    act_data = activate_resp.json()
+    assert act_data["ok"] is True
+    assert act_data["active"] is True
+    assert act_data["host"] == "0.0.0.0"
+    assert "psk" in act_data
+    assert "connect_url" in act_data
+    assert "cli_command" in act_data
+
+    # 2. Désactiver le nœud WAN (retour en local)
+    deactivate_resp = client.post(
+        "/api/v1/admin/wan/toggle",
+        headers={"X-Admin-Token": ADMIN_TOKEN},
+        json={"remote_access": False},
+    )
+    assert deactivate_resp.status_code == 200
+    deact_data = deactivate_resp.json()
+    assert deact_data["ok"] is True
+    assert deact_data["active"] is False

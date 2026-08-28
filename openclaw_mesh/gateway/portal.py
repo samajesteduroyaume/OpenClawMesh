@@ -689,19 +689,52 @@ def render_portal_html(
             </div>
         </div>
 
-        <!-- Playground -->
+        <!-- Nœud WAN 100% Confiance -->
         <div class="form-section">
-            <h2>🌐 Nœud WAN</h2>
-            <p style="color:var(--text-muted); margin-bottom:1rem;">Contrôle réservé à l’administrateur. Un PSK ou un TrustStore doit être configuré.</p>
-            <div class="form-group">
-                <label>Jeton administrateur</label>
-                <input type="password" id="wanAdminToken" placeholder="X-Admin-Token">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+                <h2 style="margin:0;">🌐 Passerelle & Nœud WAN</h2>
+                <span id="wanBadge" class="badge badge-info">100% Confiance</span>
             </div>
-            <label style="display:flex; align-items:center; gap:0.6rem; color:var(--text-muted); margin-bottom:1rem;">
-                <input type="checkbox" id="wanRemoteAccess">
-                Autoriser l’accès distant WAN (requiert le jeton administrateur)
+            <p style="color:var(--text-muted); margin-bottom:1.2rem;">
+                Basculez votre nœud OpenClaw d’une écoute locale (<code style="color:var(--accent);">127.0.0.1</code>) à une exposition réseau mondiale (<code style="color:var(--accent);">0.0.0.0</code>) en 1 clic. Le chiffrement TLS et l'authentification PSK sont configurés automatiquement.
+            </p>
+            <div class="form-group">
+                <label>Jeton Administrateur (Optionnel si exécuté localement)</label>
+                <input type="password" id="wanAdminToken" placeholder="X-Admin-Token (automatiquement mémorisé)">
+            </div>
+            <label style="display:flex; align-items:center; gap:0.6rem; color:var(--text-muted); margin-bottom:1.2rem; cursor:pointer;">
+                <input type="checkbox" id="wanRemoteAccess" checked>
+                <strong>Exposer sur toutes les interfaces réseau (0.0.0.0 / WAN)</strong>
             </label>
-            <button class="btn-outline" onclick="toggleWanNode()">🌐 Activer / désactiver le nœud WAN</button>
+            <button id="wanToggleBtn" class="btn" style="width:100%; font-size:1rem; padding:0.85rem;" onclick="toggleWanNode()">
+                🌐 Activer le Nœud WAN (100% Confiance & Auto-Sécurisé)
+            </button>
+
+            <!-- Dashboard de connexion active (affiché après activation) -->
+            <div id="wanActiveCard" style="display:none; margin-top:1.5rem; background:rgba(0,255,136,0.05); border:1px solid rgba(0,255,136,0.3); border-radius:12px; padding:1.2rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.8rem;">
+                    <span style="color:#00ff88; font-size:1.2rem;">●</span>
+                    <strong style="color:#00ff88;">Nœud WAN Actif & Opérationnel</strong>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr; gap:0.8rem; font-size:0.9rem;">
+                    <div>
+                        <span style="color:var(--text-muted);">URL Endpoint :</span>
+                        <code id="wanEndpointVal" style="display:block; padding:0.4rem 0.6rem; background:rgba(0,0,0,0.4); border-radius:6px; margin-top:0.2rem; color:var(--accent); word-break:break-all;"></code>
+                    </div>
+                    <div>
+                        <span style="color:var(--text-muted);">Clé PSK Générée :</span>
+                        <code id="wanPskVal" style="display:block; padding:0.4rem 0.6rem; background:rgba(0,0,0,0.4); border-radius:6px; margin-top:0.2rem; color:#f7931a; word-break:break-all;"></code>
+                    </div>
+                    <div>
+                        <span style="color:var(--text-muted);">Commande d'appel pour Agents OpenClaw :</span>
+                        <div style="display:flex; gap:0.5rem; margin-top:0.2rem;">
+                            <code id="wanCliVal" style="flex:1; padding:0.4rem 0.6rem; background:rgba(0,0,0,0.4); border-radius:6px; color:#fff; word-break:break-all;"></code>
+                            <button class="btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="copyWanCli()">Copier</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="wanAlert" style="margin-top:1rem;"></div>
         </div>
 
@@ -816,20 +849,61 @@ def render_portal_html(
 
         let paymentStatusToken = '';
 
+        document.addEventListener('DOMContentLoaded', () => {{
+            const savedToken = localStorage.getItem('openclaw_admin_token');
+            if (savedToken) {{
+                const input = document.getElementById('wanAdminToken');
+                if (input) input.value = savedToken;
+            }}
+        }});
+
         async function toggleWanNode() {{
-            const token = document.getElementById('wanAdminToken').value.trim();
+            const tokenInput = document.getElementById('wanAdminToken');
+            const token = tokenInput ? tokenInput.value.trim() : '';
+            if (token) localStorage.setItem('openclaw_admin_token', token);
             const remoteAccess = document.getElementById('wanRemoteAccess').checked;
-            if (remoteAccess && !token) {{ showAlert('wanAlert', '⚠️ Le jeton administrateur est requis pour l’accès distant.', 'error'); return; }}
-            showAlert('wanAlert', '⌛ Modification de l’état du nœud WAN...', 'success');
+
+            const btn = document.getElementById('wanToggleBtn');
+            const card = document.getElementById('wanActiveCard');
+            const badge = document.getElementById('wanBadge');
+
+            showAlert('wanAlert', '⌛ Bascule de l’état du nœud...', 'success');
             try {{
-                if (remoteAccess && !confirm('Activer l’accès WAN exposera un port réseau entrant. Continuer ?')) return;
                 const headers = {{ 'Content-Type': 'application/json', ...(token ? {{ 'X-Admin-Token': token }} : {{}}) }};
                 const res = await fetch('/api/v1/admin/wan/toggle', {{
                     method: 'POST', headers, body: JSON.stringify({{ remote_access: remoteAccess }})
                 }});
                 const data = await res.json();
-                showAlert('wanAlert', (res.ok ? '✅ ' : '❌ ') + (data.message || data.detail || 'Erreur.'), res.ok ? 'success' : 'error');
+                if (res.ok && data.ok) {{
+                    showAlert('wanAlert', (data.active ? '🟢 ' : '⚪ ') + (data.message || 'Succès.'), 'success');
+                    if (data.active) {{
+                        btn.innerHTML = '🔴 Désactiver le Nœud WAN (Mode Local 127.0.0.1)';
+                        btn.style.background = '#e74c3c';
+                        badge.className = 'badge badge-confirmed';
+                        badge.textContent = 'En Ligne (0.0.0.0:' + data.port + ')';
+                        document.getElementById('wanEndpointVal').textContent = data.connect_url || '';
+                        document.getElementById('wanPskVal').textContent = data.psk || '';
+                        document.getElementById('wanCliVal').textContent = data.cli_command || '';
+                        card.style.display = 'block';
+                    }} else {{
+                        btn.innerHTML = '🌐 Activer le Nœud WAN (100% Confiance & Auto-Sécurisé)';
+                        btn.style.background = '';
+                        badge.className = 'badge badge-info';
+                        badge.textContent = '100% Confiance';
+                        card.style.display = 'none';
+                    }}
+                }} else {{
+                    showAlert('wanAlert', '❌ ' + (data.detail || data.message || 'Erreur lors de la bascule.'), 'error');
+                }}
             }} catch (err) {{ showAlert('wanAlert', '❌ Erreur réseau : ' + err, 'error'); }}
+        }}
+
+        function copyWanCli() {{
+            const val = document.getElementById('wanCliVal').textContent;
+            if (val) {{
+                navigator.clipboard.writeText(val);
+                showAlert('wanAlert', '📋 Commande d’appel pour agents OpenClaw copiée dans le presse-papiers !', 'success');
+            }}
         }}
 
         // ── Soumettre paiement BTC ─────────────────────────────────────

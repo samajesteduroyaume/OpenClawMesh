@@ -85,9 +85,18 @@ class OpenClawMeshNode:
             return
         if self.host not in {"127.0.0.1", "::1", "localhost"}:
             if not self.ssl_context:
-                raise RuntimeError("Un nœud exposé doit utiliser TLS.")
-            if not (self.psk or self.trust_store):
-                raise RuntimeError("Un nœud exposé doit utiliser PSK ou TrustStore avec TLS.")
+                try:
+                    from .crypto import create_ephemeral_ssl_context
+
+                    self.ssl_context = create_ephemeral_ssl_context()
+                    logger.info("Certificat TLS éphémère auto-généré pour le nœud WAN.")
+                except Exception as exc:
+                    raise RuntimeError(f"Un nœud exposé doit utiliser TLS : {exc}") from exc
+            if not (self.psk or self.trust_store or self.identity):
+                import secrets
+
+                self.psk = secrets.token_urlsafe(32)
+                logger.warning(f"Clé PSK de sécurité auto-générée pour le nœud WAN: {self.psk}")
 
         self._start_time = time.time()
         self._ws_server = await websockets.serve(
@@ -122,9 +131,13 @@ class OpenClawMeshNode:
             self.discovery = None
 
         if self._ws_server:
-            self._ws_server.close()
-            await self._ws_server.wait_closed()
-            self._ws_server = None
+            try:
+                self._ws_server.close()
+                await self._ws_server.wait_closed()
+            except Exception as e:
+                logger.debug(f"Fermeture du serveur WebSocket: {e}")
+            finally:
+                self._ws_server = None
 
         logger.info(f"Nœud OpenClawMesh '{self.name}' arrêté.")
 
