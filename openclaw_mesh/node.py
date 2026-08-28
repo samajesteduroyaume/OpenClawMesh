@@ -70,6 +70,9 @@ class OpenClawMeshNode:
         self.health_extra = health_extra
 
         self.discovery: MeshDiscovery | None = None
+        self.dht: Any | None = None
+        self._dht_task: asyncio.Task | None = None
+        self._nat_profile: Any | None = None
         self._ws_server = None
         self._active_tasks = 0
         self._task_semaphore = asyncio.Semaphore(max(1, _settings.max_active_tasks))
@@ -79,8 +82,15 @@ class OpenClawMeshNode:
         self._start_time = time.time()
         self._running = False
 
-    async def start(self, enable_zeroconf: bool = False) -> None:
-        """Démarre le serveur WebSocket et la publication Zeroconf."""
+    async def start(
+        self,
+        enable_zeroconf: bool = False,
+        enable_wan: bool = False,
+        enable_dht: bool = False,
+        dht_port: int = 8780,
+        relay_url: str | None = None,
+    ) -> None:
+        """Démarre le serveur WebSocket, Zeroconf, DHT Kademlia et la traversée NAT."""
         if self._running:
             return
         if self.host not in {"127.0.0.1", "::1", "localhost"}:
@@ -108,6 +118,7 @@ class OpenClawMeshNode:
         )
         self._running = True
 
+        # 1. Découverte locale mDNS Zeroconf
         if enable_zeroconf:
             skills_list = self.registry.list_remote_names()
             self.discovery = MeshDiscovery(
@@ -118,6 +129,43 @@ class OpenClawMeshNode:
             )
             await self.discovery.start(advertise=True)
 
+        # 2. Découverte & Connexion WAN Universelle
+        if enable_wan or enable_dht:
+            try:
+                from .network.nat_traversal import discover_nat_and_public_ip
+                self._nat_profile = await discover_nat_and_public_ip(local_port=self.port, enabled=True, try_upnp=True)
+                public_host = self._nat_profile.public_ip or self.advertise_ip
+            except Exception as e:
+                logger.debug(f"Découverte NAT: {e}")
+                public_host = self.advertise_ip
+
+            try:
+                from .network.dht import KademliaDHT
+                self.dht = KademliaDHT(
+                    host="0.0.0.0",
+                    port=dht_port,
+                    name=self.name,
+                    psk=self.psk,
+                )
+                await self.dht.start_network()
+                await self.dht.bootstrap_global()
+                self._dht_task = self.dht.start_auto_refresh(45.0)
+
+                # Publier nos compétences sur la toile mondiale DHT
+                for skill_name in self.registry.list_remote_names():
+                    await self.dht.advertise_skill_distributed(
+                        skill_name,
+                        {
+                            "name": self.name,
+                            "host": public_host,
+                            "port": self.port,
+                            "skills": self.registry.list_remote_names(),
+                        },
+                    )
+                logger.info(f"✓ Nœud '{self.name}' raccordé à la DHT Kademlia mondiale (UDP:{dht_port})")
+            except Exception as e:
+                logger.warning(f"Avertissement DHT Kademlia WAN: {e}")
+
         logger.info(f"Nœud OpenClawMesh '{self.name}' démarré sur {self.host}:{self.port}")
 
     async def stop(self) -> None:
@@ -126,6 +174,14 @@ class OpenClawMeshNode:
             return
         self._running = False
 
+        if self._dht_task:
+            self._dht_task.cancel()
+            self._dht_task = None
+
+        if self.dht:
+            await self.dht.stop_network()
+            self.dht = None
+
         if self.discovery:
             await self.discovery.stop()
             self.discovery = None
@@ -133,7 +189,10 @@ class OpenClawMeshNode:
         if self._ws_server:
             try:
                 self._ws_server.close()
-                await self._ws_server.wait_closed()
+                if hasattr(self._ws_server, "wait_closed"):
+                    res_wait = self._ws_server.wait_closed()
+                    if inspect.isawaitable(res_wait):
+                        await res_wait
             except Exception as e:
                 logger.debug(f"Fermeture du serveur WebSocket: {e}")
             finally:

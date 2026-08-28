@@ -25,3 +25,22 @@ def test_distributed_moe_pipeline_execution():
         assert res["total_duration_ms"] > 0
 
     asyncio.run(_run())
+
+
+def test_quantized_tensor_buffer_serialization():
+    from openclaw_mesh.engines.distributed_moe import QuantizedTensorBuffer
+
+    # 1. Test float16 serialization
+    values = [0.125, -0.5, 1.75, -2.0, 0.0]
+    buf_f16 = QuantizedTensorBuffer.from_floats(values, shape=[1, 5], dtype="float16")
+    assert buf_f16.data_b64 != ""
+    recovered_f16 = buf_f16.to_floats()
+    assert len(recovered_f16) == 5
+    assert abs(recovered_f16[0] - 0.125) < 1e-3
+
+    # 2. Test int8 quantization
+    buf_int8 = QuantizedTensorBuffer.from_floats(values, shape=[1, 5], dtype="int8")
+    assert buf_int8.dtype == "int8"
+    recovered_int8 = buf_int8.to_floats()
+    assert len(recovered_int8) == 5
+    assert abs(recovered_int8[3] - (-2.0)) < 0.1

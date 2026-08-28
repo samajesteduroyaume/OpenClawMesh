@@ -32,7 +32,6 @@ dependencies = [
     "cryptography==50.0.1",
     "pydantic==2.13.4",
     "pydantic-settings==2.15.0",
-    "qrcode==8.2",
     "fastapi==0.141.1",
     "uvicorn[standard]>=0.27.0",
 ]
@@ -81,7 +80,6 @@ ignore_missing_imports = true
 module = [
     "websockets.*",
     "zeroconf.*",
-    "qrcode.*",
     "rich.*",
     "torch.*",
     "transformers.*",

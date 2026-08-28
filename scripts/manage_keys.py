@@ -116,12 +116,12 @@ def main():
             print("❌ Clé non trouvée.")
 
     elif args.action == "info":
-        key_rec = db.get_key(args.key)
-        if not key_rec:
+        found_key = db.get_key(args.key)
+        if not found_key:
             print("❌ Clé non trouvée.")
             sys.exit(1)
-        valid, reason = key_rec.is_valid()
-        print(json.dumps(key_rec.to_dict(include_key=False), indent=2))
+        valid, reason = found_key.is_valid()
+        print(json.dumps(found_key.to_dict(include_key=False), indent=2))
         print(f"\nStatut actuel : {'VALIDE' if valid else 'INVALIDE (' + reason + ')'}")
 
 

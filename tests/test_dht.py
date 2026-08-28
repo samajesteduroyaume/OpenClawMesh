@@ -157,3 +157,51 @@ def test_dht_network_multihop_lookup():
         await node_c.stop_network()
 
     asyncio.run(_run())
+
+
+def test_dht_bootstrap_global_and_auto_refresh():
+    """Vérifie le démarrage de bootstrap_global et la tâche d'auto-refresh."""
+
+    async def _run():
+        node_seed = _make_node("dht-seed", 8788)
+        node_worker = _make_node("dht-worker", 8789)
+        _, port_seed = await node_seed.start_network()
+        _, port_worker = await node_worker.start_network()
+
+        # Bootstrap global vers le seed
+        contacts_count = await node_worker.bootstrap_global(seeds=[("127.0.0.1", port_seed)])
+        assert contacts_count >= 1
+
+        # Lancer auto-refresh
+        task = node_worker.start_auto_refresh(interval_seconds=0.1)
+        await asyncio.sleep(0.25)
+        task.cancel()
+
+        await node_seed.stop_network()
+        await node_worker.stop_network()
+
+    asyncio.run(_run())
+
+
+def test_dht_save_and_load_state(tmp_path):
+    """Vérifie la sauvegarde et le rechargement persistant de la table de routage DHT."""
+    state_file = tmp_path / "dht_state.json"
+    dht1 = KademliaDHT(name="dht-saver")
+
+    for i in range(5):
+        dht1.routing_table.add_contact(
+            Contact(node_id=hash_key(f"peer_saved_{i}"), host="192.168.1.50", port=8770 + i, name=f"p{i}")
+        )
+    assert dht1.routing_table.count_contacts() == 5
+
+    # Sauvegarde sur disque
+    dht1.save_state(state_file)
+    assert state_file.is_file()
+
+    # Restauration dans un nouveau nœud DHT
+    dht2 = KademliaDHT(name="dht-loader")
+    assert dht2.routing_table.count_contacts() == 0
+    restored = dht2.load_state(state_file)
+    assert restored == 5
+    assert dht2.routing_table.count_contacts() == 5
+

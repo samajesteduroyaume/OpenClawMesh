@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Lanceur du Serveur Passerelle de Monétisation OpenClawMesh.
+Lanceur de la Passerelle Universelle & Portail OpenClawMesh (100% Free & Open-Access).
 Usage:
     python3 scripts/gateway_server.py [--port 8000] [--host 127.0.0.1]
 """
@@ -17,16 +17,18 @@ import uvicorn
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Serveur de Monétisation OpenClawMesh")
+    parser = argparse.ArgumentParser(
+        description="Passerelle Universelle & Portail OpenClawMesh (100% Free & Open-Access)"
+    )
     parser.add_argument("--host", default="127.0.0.1", help="Hôte d'écoute (défaut: localhost)")
     parser.add_argument("--port", type=int, default=8000, help="Port d'écoute HTTP (défaut: 8000)")
     parser.add_argument("--reload", action="store_true", help="Rechargement à chaud automatique")
     args = parser.parse_args()
 
     print(f"\n🚀 Démarrage de la Passerelle OpenClawMesh sur http://{args.host}:{args.port}")
-    print(f"🌐 Portail Client : http://localhost:{args.port}/portal")
-    print(f"💳 Webhook Stripe : http://localhost:{args.port}/api/webhooks/stripe")
-    print(f"🍋 Webhook Lemon Squeezy : http://localhost:{args.port}/api/webhooks/lemonsqueezy")
+    print(f"🌐 Portail Libre & Gratuit : http://localhost:{args.port}/portal")
+    print(f"🔑 Génération Clé Instantanée : http://localhost:{args.port}/api/v1/checkout/free-key")
+    print(f"⚡ Endpoints OpenAI : http://localhost:{args.port}/v1/chat/completions")
     print(f"🛡️  Endpoint Exécution : http://localhost:{args.port}/api/v1/execute\n")
 
     uvicorn.run(

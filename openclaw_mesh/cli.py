@@ -257,8 +257,16 @@ async def cmd_serve(args: argparse.Namespace) -> None:
         trust_store=trust_store,
     )
 
-    await node.start(enable_zeroconf=not args.no_zeroconf)
+    await node.start(
+        enable_zeroconf=not args.no_zeroconf,
+        enable_wan=getattr(args, "wan", False),
+        enable_dht=getattr(args, "dht", False) or getattr(args, "wan", False),
+        dht_port=getattr(args, "dht_port", 8780),
+        relay_url=getattr(args, "relay", None),
+    )
     print(f"🌐 Nœud OpenClawMesh '{args.name}' actif sur ws://{get_local_ip()}:{args.port}")
+    if getattr(args, "wan", False) or getattr(args, "dht", False):
+        print(f"🌍 Raccordé à la DHT Kademlia mondiale sur UDP:{getattr(args, 'dht_port', 8780)}")
     print(f"📡 Compétences publiées : {', '.join(registry.list_remote_names())}")
     print("Appuyez sur Ctrl+C pour arrêter le serveur...")
 
@@ -577,6 +585,18 @@ def main() -> None:
     p_serve.add_argument("--keyfile", help="Chemin vers la clé privée Ed25519 de ce nœud")
     p_serve.add_argument("--trustfile", help="Chemin vers le TrustStore des clés autorisées")
     p_serve.add_argument("--no-zeroconf", action="store_true", help="Désactive l'annonce mDNS")
+    p_serve.add_argument(
+        "--wan", action="store_true", help="Active la découverte WAN globale (DHT 160-bit, STUN, UPnP)"
+    )
+    p_serve.add_argument(
+        "--dht", action="store_true", help="Active le nœud d'indexation Kademlia DHT 160-bit"
+    )
+    p_serve.add_argument(
+        "--dht-port", type=int, default=8780, help="Port d'écoute UDP Kademlia (défaut: 8780)"
+    )
+    p_serve.add_argument(
+        "--relay", help="URL du serveur relais WAN WebSocket (ex: ws://hub.domaine.com:8790)"
+    )
 
     # 6. keygen
     p_keygen = subparsers.add_parser("keygen", help="Génère une paire de clés asymétriques Ed25519")

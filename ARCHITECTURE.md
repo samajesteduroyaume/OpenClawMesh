@@ -1,6 +1,6 @@
 # OpenClawMesh v1.1.0 — Documentation Technique
 
-> **Périmètre et sécurité :** la passerelle FastAPI/Bitcoin est un composant optionnel, séparé de la connectivité mesh. Elle manipule des métadonnées de paiement et des identifiants API ; ne la déployez pas si vous avez uniquement besoin du réseau P2P, et conservez son écoute sur localhost sauf configuration WAN explicitement sécurisée.
+> **Périmètre et sécurité :** la passerelle FastAPI est un composant de commande optionnel, séparé de la connectivité mesh. Elle permet la génération de clés d'accès gratuites, l'inférence locale/WAN et le pilotage sécurisé du nœud en 100% Confiance.
 
 > **Protocole P2P & Skill Décentralisé pour Agents IA**  
 > Compatible JarvisMesh 1.0 · Python 3.10+ · WebSocket · Kademlia DHT · E2EE ChaCha20-Poly1305
@@ -15,7 +15,7 @@
 4. [Modèle de Sécurité](#4-modèle-de-sécurité)
 5. [Découverte Réseau (mDNS & DHT Kademlia)](#5-découverte-réseau-mdns--dht-kademlia)
 6. [Moteurs d'Inférence IA](#6-moteurs-dinférence-ia)
-7. [Passerelle de Monétisation](#7-passerelle-de-monétisation)
+7. [Passerelle d'Accès Libre & Command Center](#7-passerelle-daccès-libre--command-center)
 8. [Installation & Configuration](#8-installation--configuration)
 9. [Guide de Déploiement](#9-guide-de-déploiement)
 10. [Référence API Publique](#10-référence-api-publique)
@@ -226,8 +226,6 @@ reset_settings()  # remet à None (utile en tests)
   "sig": "9f4a...",
   "pubkey": "4c8e..."
 }
-```
-
 | Champ | Type | Requis | Description |
 |-------|------|--------|-------------|
 | `type` | string | ✓ | Toujours `"task_request"` |
@@ -284,82 +282,7 @@ reset_settings()  # remet à None (utile en tests)
 ├────────────────────────────────────────────────────────────────┤
 │  Couche 0 — Transport TLS (optionnel)                         │
 │  WSS via ssl.SSLContext injecté dans Node et Client            │
-└────────────────────────────────────────────────────────────────┘
-```
-
-> **Note** : Les couches sont **indépendantes et cumulables**. Exemple : PSK (Couche 1) + Ed25519 (Couche 2) + WSS (Couche 0) pour une sécurité maximale.
-
-### 4.1 Authentification HMAC-SHA256
-
-Compatible JarvisMesh. La clé pré-partagée (PSK) est configurée via `OPENCLAW_PSK`.
-
-```
-base = f"{request_id}|{origin}|{skill}|{repr(ts)}|{json_payload_sorted}"
-sig  = hmac.HMAC(psk_bytes, base_bytes, digestmod=sha256).hexdigest()
-```
-
-La comparaison utilise `hmac.compare_digest()` — résistant aux timing attacks.
-
-**Vérification** : Si `psk` configuré ET `req.sig` absent ou invalide → `TaskResponse(ok=False)`.
-
-### 4.2 Authentification Ed25519
-
-Extension OpenClawMesh (champs `pubkey`/`sig` optionnels dans le format wire).
-
-**Flux** :
-```
-Génération (une fois)  : identity = NodeIdentity.generate()
-                         identity.save("~/.openclaw/identity.key")  # chmod 0600
-
-Enregistrement pair    : trust_store.trust(identity.public_key_hex)
-
-Signature (client)     : req.sign_ed25519(identity)
-
-Vérification (serveur) :
-  1. trust_store.is_trusted(req.pubkey)?      → 403 si non
-  2. |now - req.ts| <= drift_limit (300s)?    → 403 si non
-  3. public_key.verify(sig_bytes, base_bytes)? → 403 si non
-```
-
-**Anti-rejeu** : Tolérance configurable via `OPENCLAW_SIGNATURE_MAX_DRIFT_SECONDS` (défaut 300s).
-
-### 4.3 Chiffrement E2EE (End-to-End Encryption)
-
-**Algorithmes** : X25519 (ECDH key exchange) + HKDF-SHA256 (key derivation) + ChaCha20-Poly1305 (AEAD encryption).
-
-**Format du paquet chiffré** :
-```json
-{
-  "version": "1.0",
-  "algorithm": "ChaCha20-Poly1305",
-  "ephemeral_pubkey": "a1b2c3... (32 octets hex)",
-  "nonce": "f7e3a1...             (12 octets hex, unique par session)",
-  "ciphertext": "9f4a...          (payload + tag AEAD 16 octets)",
-  "data_type": "json|text|bytes",
-  "timestamp": 1724695234.567
-}
-```
-
-**Double protection anti-rejeu** :
-1. **Horodatage** : `|now - ts| > drift_limit` → `ReplayError`
-2. **Cache de nonces** (`ReplayCache`, FIFO borné à 4096 entrées) : nonce déjà vu → `ReplayError`
-
-```python
-# Session persistante (échanges multiples)
-session_a = E2EESession()
-session_b = E2EESession()
-session_b.establish_with_peer(session_a.public_key_bytes)
-session_a.establish_with_peer(session_b.public_key_bytes)
-
-packet = session_a.encrypt({"secret": "data"})
-data = session_b.decrypt(packet)
-
-# One-shot (sans état)
-packet = encrypt_message_for_peer(peer_pubkey_hex, {"msg": "hello"})
-data = decrypt_message_with_key(my_private_bytes, packet)
-```
-
----
+└────────────────────────────────────�---
 
 ## 5. Découverte Réseau (mDNS & DHT Kademlia)
 
@@ -439,11 +362,6 @@ Pair A ──WS──► Relais WAN ──WS──► Pair B
                (opaque routing)
 ```
 
-**Messages gérés par le relais** :
-- `register` : Enregistre le pair avec son `node_id`
-- `forward` : Route vers `target_node_id` (paquet `relayed_message`)
-- `list_peers` : Retourne la liste des pairs connectés
-
 ---
 
 ## 6. Moteurs d'Inférence IA
@@ -469,15 +387,6 @@ Pair A ──WS──► Relais WAN ──WS──► Pair B
 | 16–32 Go | Qwen2.5-Coder-14B-Instruct | 8bit / fp16 | 64K tokens |
 | > 32 Go | Qwen2.5-Coder-32B-Instruct | 4bit / fp16 | 128K tokens |
 
-**Format par backend** :
-
-| Backend | Format de modèle |
-|---------|-----------------|
-| `mlx` | MLX 4-bit/8-bit (`.mlx`) |
-| `cuda` | SafeTensors FP16 |
-| `openvino*` | OpenVINO IR |
-| `cpu` / autres | GGUF (Q4_K_M, Q8_0) |
-
 ### 6.3 `UniversalInferenceEngine`
 
 ```python
@@ -490,18 +399,7 @@ result = await engine.generate(
     temperature=0.1,
     system_prompt="Tu es un expert Python.",
 )
-# → {"text": "...", "model": "...", "backend": "apple_metal_mlx", "duration_ms": 234.5}
-
-# Streaming token-par-token
-async for token in engine.generate_stream(prompt="Explique les closures Python"):
-    print(token["text"], end="", flush=True)
 ```
-
-**Backends tentés dans l'ordre** :
-1. MLX (Apple Silicon) : `mlx_lm.generate` / `mlx_lm.stream_generate`
-2. CUDA PyTorch : `transformers.pipeline`
-3. Intel OpenVINO : `openvino_genai.LLMPipeline`
-4. Fallback universel (simulation / Ollama local)
 
 ### 6.4 Distributed MoE (Mixture of Experts)
 
@@ -531,41 +429,105 @@ audio_path = engine.synthesize_speech(text="Bonjour le monde")
 
 ---
 
-## 7. Passerelle de Monétisation
+## 7. Passerelle d'Accès Libre & Command Center
+
+La passerelle FastAPI (`openclaw_mesh/gateway/`) fournit un portail web moderne et des endpoints REST permettant à des applications ou agents externes d'accéder aux capacités d'inférence et de piloter leur nœud en 100% Confiance.
 
 ### 7.1 Architecture de la Passerelle
 
 ```
-Client Web/App
+Browser / Client HTTP
       │
       ▼
-FastAPI (gateway/server.py) — uvicorn/gunicorn
-      │
-      ├── GET  /                        → Portail HTML (portal.py)
-    ├── GET  /api/v1/payment/info     → Cours BTC/EUR et montant en satoshis
-    ├── POST /api/v1/payment/submit   → Soumission TXID + jeton privé de statut
-    ├── GET  /api/v1/payment/status   → Statut protégé par X-Payment-Token
-    ├── POST /api/v1/admin/payments/confirm → Secours admin authentifié
-      ├── POST /api/v1/auth/verify      → Valider une clé API
-      ├── POST /api/v1/execute          → Exécuter compétence (auth requise)
-      ├── POST /api/v1/checkout/demo-key → Clé démo (3 req, 7j)
+FastAPI Gateway (gateway/server.py)
+      ├── GET  /                        → Portail Web interactif (Free Community UI)
+      ├── POST /api/v1/checkout/free-key → Génération de clé gratuite instantanée
+      ├── POST /api/v1/auth/verify      → Validation de clé d'API
+      ├── POST /api/v1/execute          → Exécuter compétence (LLM, RAG, Echo)
+      ├── POST /api/v1/admin/wan/toggle → Bascule Nœud WAN 100% Confiance (TLS + PSK)
       ├── GET  /api/v1/admin/keys       → Liste clés (token admin)
       └── POST /api/v1/admin/keys/create → Création manuelle (admin)
             │
             ▼
       SQLite (KeyDatabase — gateway/db.py)
-      ├── api_keys       (clés, quotas, expiration, abonnement)
-    ├── payment_events (TXID, idempotence, statut blockchain)
-      └── usage_logs     (métriques par clé et compétence)
+      ├── api_keys       (clés hachées SHA-256, profils, quotas, expiration)
+      └── usage_logs     (métriques d'audit par clé et compétence)
 ```
 
-### 7.2 Plans d'Accès
+### 7.2 Profils d'Accès
 
-| Plan | Durée | Quota | Prix |
-|------|-------|-------|------|
-| `demo_free` | 7 jours | 3 requêtes | Gratuit |
-| `pro_monthly` | 30 jours renouvelable | Illimité | 10€/mois |
-| `lifetime` | Illimité (pas d'expiration) | Illimité | 200€ paiement unique |
+| Profil | Durée | Quota | Accès |
+|--------|-------|-------|-------|
+| `free_community` | Permanent (illimité) | Illimité | Gratuit & Libre |
+| `demo_free` | 30 jours | Illimité | Gratuit & Évaluation |
+| `custom` | Configurable par admin | Configurable | Gratuit / Dédié |
+
+### 7.3 Déploiement de la Passerelle
+
+```bash
+# Variables de configuration
+export GATEWAY_ADMIN_TOKEN="mon_token_admin_secret_long"
+export GATEWAY_DB_PATH="/data/openclaw_keys.db"
+
+# Développement
+uvicorn openclaw_mesh.gateway.server:app --host 127.0.0.1 --port 8000
+
+# Production (avec gunicorn)
+gunicorn openclaw_mesh.gateway.server:app \
+  -w 4 -k uvicorn.workers.UvicornWorker \
+  --bind 127.0.0.1:8000 \
+  --access-logfile /var/log/openclaw/access.log
+```
+
+---
+
+## 8. Installation & Configurationg
+```
+
+---re |
+| `demo_free` | 30 jours | Illimité | Gratuit & Évaluation |
+| `custom` | Configurable par admin | Configurable | Gratuit / Dédié |
+
+gunicorn openclaw_mesh.gateway.server:app \
+  -w 4 -k uvicorn.workers.UvicornWorker \
+  --bind 127.0.0.1:8000 \
+  --access-logfile /var/log/openclaw/access.log
+```
+
+      ├── POST /api/v1/admin/wan/toggle → Bascule Nœud WAN 100% Confiance (TLS + PSK)
+      ├── GET  /api/v1/admin/keys       → Liste clés (token admin)
+      └── POST /api/v1/admin/keys/create → Création manuelle (admin)
+            │
+            ▼
+      SQLite (KeyDatabase — gateway/db.py)
+      ├── api_keys       (clés hachées SHA-256, profils, quotas, expiration)
+      └── usage_logs     (métriques d'audit par clé et compétence)
+```
+
+### 7.2 Profils d'Accès
+
+| Profil | Durée | Quota | Accès |
+|--------|-------|-------|-------|
+| `free_community` | Permanent (illimité) | Illimité | Gratuit & Libre |
+| `demo_free` | 30 jours | Illimité | Gratuit & Évaluation |
+| `custom` | Configurable par admin | Configurable | Gratuit / Dédié |
+
+### 7.3 Déploiement de la Passerelle
+
+```bash
+# Variables de configuration
+export GATEWAY_ADMIN_TOKEN="mon_token_admin_secret_long"
+export GATEWAY_DB_PATH="/data/openclaw_keys.db"
+
+# Développement
+uvicorn openclaw_mesh.gateway.server:app --host 127.0.0.1 --port 8000
+
+# Production (avec gunicorn)
+gunicorn openclaw_mesh.gateway.server:app \
+  -w 4 -k uvicorn.workers.UvicornWorker \
+  --bind 127.0.0.1:8000 \
+  --access-logfile /var/log/openclaw/access.log
+```
 
 ### 7.3 Cycle de Vie d'une Clé
 
@@ -665,11 +627,8 @@ OPENCLAW_DHT_PORT=8780
 GATEWAY_DB_PATH=/data/openclaw/keys.db
 GATEWAY_CORS_ORIGINS=https://app.example.com
 GATEWAY_ADMIN_TOKEN=replace-with-a-long-random-secret
-BTC_WALLET_ADDRESS=bc1q...
-BTC_AUTO_VERIFY=true
-BTC_REQUIRED_CONFIRMATIONS=2
-# Optionnel : active une requête sortante vers un oracle de prix configuré.
-# BTC_PRICE_URLS=https://provider.example/api/price
+OPENCLAW_RATE_LIMIT_ENABLED=true
+OPENCLAW_RATE_LIMIT_REQUESTS_PER_MINUTE=120
 
 OPENCLAW_LOG_LEVEL=INFO
 OPENCLAW_LOG_FILE=/var/log/openclaw/node.log

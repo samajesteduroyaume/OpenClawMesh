@@ -21,6 +21,7 @@ import secrets
 import time
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from ..config import get_settings
@@ -35,10 +36,18 @@ RPC_TIMEOUT = _settings.dht_transport_timeout
 DEFAULT_TTL = _settings.dht_default_ttl_seconds
 MAX_DHT_TTL = 7 * 24 * 3600
 MAX_DHT_VALUE_BYTES = 256 * 1024
-_DHT_SIGNATURE_FIELD = "signature"
-
 # Limites de recherche itérative
 MAX_DHT_HOPS = 20
+_DHT_SIGNATURE_FIELD = "_sig"
+
+# Nœuds d'amorçage publics WAN mondiaux
+DEFAULT_DHT_BOOTSTRAP_SEEDS: list[tuple[str, int]] = [
+    ("router.bittorrent.com", 6881),
+    ("dht.transmissionbt.com", 6881),
+    ("router.utorrent.com", 6881),
+    ("dht.aelitis.com", 6881),
+    ("boot.openclawmesh.org", 8780),
+]
 
 
 def hash_key(key: str) -> str:
@@ -202,6 +211,13 @@ class RoutingTable:
         all_contacts.sort(key=lambda c: xor_distance(c.node_id, target_id))
         return all_contacts[:count]
 
+    def get_all_contacts(self) -> list[Contact]:
+        """Retourne tous les contacts présents dans l'ensemble des k-buckets."""
+        contacts: list[Contact] = []
+        for b in self.buckets:
+            contacts.extend(b.get_contacts())
+        return contacts
+
     def count_contacts(self) -> int:
         return sum(len(b.get_contacts()) for b in self.buckets)
 
@@ -307,6 +323,41 @@ class KademliaDHT:
             else:
                 del self.storage[h_key]
         return None
+
+    def save_state(self, filepath: str | Path) -> None:
+        """Sauvegarde les contacts et l'état de la table de routage sur disque."""
+        path = Path(filepath).resolve()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        contacts = [c.to_dict() for c in self.routing_table.get_all_contacts()]
+        data = {
+            "node_id": self.node_id,
+            "saved_at": time.time(),
+            "contacts": contacts,
+        }
+        path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    def load_state(self, filepath: str | Path) -> int:
+        """Charge et restaure les contacts depuis un fichier sur disque."""
+        path = Path(filepath).resolve()
+        if not path.is_file():
+            return 0
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            contacts_data = data.get("contacts", [])
+            restored = 0
+            for item in contacts_data:
+                try:
+                    c = Contact.from_dict(item)
+                    if c.node_id and c.node_id != self.node_id:
+                        if self.routing_table.add_contact(c):
+                            restored += 1
+                except Exception:
+                    continue
+            logger.info(f"{restored} contact(s) DHT restauré(s) depuis {path}")
+            return restored
+        except Exception as exc:
+            logger.warning(f"Erreur lors du chargement de l'état DHT depuis {path}: {exc}")
+            return 0
 
     # ------------------------------------------------------------------ #
     # Transport UDP Réseau Réel
@@ -737,3 +788,67 @@ class KademliaDHT:
         """Publie une compétence dans le réseau DHT décentralisé (k nœuds les plus proches)."""
         k = f"skill:{skill_name}"
         return await self.store_distributed(k, endpoint_info)
+
+    # ------------------------------------------------------------------ #
+    # Amorçage Global & Découverte WAN Automatisée
+    # ------------------------------------------------------------------ #
+    async def bootstrap_global(
+        self, seeds: list[tuple[str, int]] | None = None
+    ) -> int:
+        """
+        Amorce automatiquement le nœud sur la toile mondiale DHT en contactant les serveurs seeds
+        et en effectuant un lookup itératif pour peupler les k-buckets.
+        Retourne le nombre de contacts actifs découverts.
+        """
+        seed_list = seeds or DEFAULT_DHT_BOOTSTRAP_SEEDS
+        added_count = 0
+
+        for host, port in seed_list:
+            try:
+                c = Contact(
+                    node_id=hash_key(f"{host}:{port}"),
+                    host=host,
+                    port=port,
+                    name=f"WAN-Seed-{host}",
+                )
+                res = await self.ping(c, timeout=1.5)
+                if res:
+                    self.routing_table.add_contact(c)
+                    added_count += 1
+            except Exception as exc:
+                logger.debug(f"Tentative bootstrap seed {host}:{port} : {exc}")
+
+        # Lancer un lookup itératif pour notre propre node_id pour découvrir nos pairs les plus proches
+        try:
+            closest = await self.find_node_distributed(self.node_id)
+            for item in closest:
+                if isinstance(item, dict) and "host" in item and "port" in item:
+                    try:
+                        c_id = item.get("node_id") or hash_key(f"{item['host']}:{item['port']}")
+                        contact = Contact(
+                            node_id=c_id,
+                            host=item["host"],
+                            port=int(item["port"]),
+                            name=item.get("name", ""),
+                        )
+                        self.routing_table.add_contact(contact)
+                        added_count += 1
+                    except Exception:
+                        pass
+        except Exception as exc:
+            logger.debug(f"Lookup itératif auto-bootstrap: {exc}")
+
+        return self.routing_table.count_contacts()
+
+    def start_auto_refresh(self, interval_seconds: float = 45.0) -> asyncio.Task:
+        """Démarre une tâche de fond périodique pour rafraîchir en continu la table de routage DHT."""
+        async def _loop():
+            while self._transport is not None:
+                try:
+                    await self.bootstrap_global()
+                except Exception as exc:
+                    logger.debug(f"Erreur auto-refresh DHT: {exc}")
+                await asyncio.sleep(interval_seconds)
+
+        return asyncio.create_task(_loop())
+

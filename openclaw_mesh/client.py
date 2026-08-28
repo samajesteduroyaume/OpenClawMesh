@@ -58,11 +58,15 @@ class MeshClient:
         ssl_context: ssl_module.SSLContext | None = None,
         discovery: MeshDiscovery | None = None,
         enable_discovery: bool | None = None,
+        dht: Any | None = None,
+        relay_url: str | None = None,
     ):
         self.name = name or _settings.client_name
         self.psk = psk or _settings.psk
         self.identity = identity
         self.ssl_context = ssl_context
+        self.dht = dht
+        self.relay_url = relay_url
 
         # Une option explicitement fournie doit primer sur la configuration globale.
         discovery_enabled = (
@@ -101,22 +105,19 @@ class MeshClient:
             task.cancel()
         self._reader_tasks.clear()
 
-        for pending in self._pending.values():
-            for fut in pending.values():
-                if not fut.done():
-                    fut.cancel()
-        self._pending.clear()
-        self._stream_cbs.clear()
-
         for ws in list(self._pool.values()):
             try:
-                await ws.close()
+                if not _is_ws_closed(ws):
+                    await ws.close()
             except Exception:
                 pass
         self._pool.clear()
+        self._send_locks.clear()
+        self._pending.clear()
+        self._stream_cbs.clear()
 
     # ------------------------------------------------------------------ #
-    # Gestion des Pairs et Résolution
+    # Gestion des Pairs & Découverte
     # ------------------------------------------------------------------ #
     def add_peer(
         self, name: str, address: str, port: int, skills: list[str] | None = None
@@ -199,6 +200,10 @@ class MeshClient:
         if ":" in target and not target.startswith("http"):
             parts = target.split(":")
             return target, f"ws://{parts[0]}:{parts[1]}"
+
+        # Si un relais WAN est configuré, l'utiliser comme fallback
+        if self.relay_url:
+            return target, self.relay_url
 
         raise ValueError(
             f"Pair ou endpoint inconnu : '{target}'. Pairs disponibles : {list(all_peers.keys())}"

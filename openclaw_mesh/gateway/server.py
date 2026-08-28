@@ -1,13 +1,13 @@
 """
-Serveur FastAPI de Passerelle de Monétisation Bitcoin (OpenClawMesh Gateway).
+Serveur FastAPI de Passerelle d'Inférence et de Commande OpenClawMesh (100% Free & Open-Access).
 
 Gère :
-- Affichage de l'adresse Bitcoin de paiement (bc1q...).
-- Soumission de transaction BTC par le client (email + txid + plan).
-- Confirmation manuelle par l'administrateur et émission de la clé d'API.
-- Authentification par clé et déduction de quotas.
-- Exécution des compétences premium pour les agents OpenClaw.
-- Le portail web client et le dashboard d'administration.
+- Le portail web d'accès communautaire gratuit & le dashboard de contrôle WAN.
+- L'émission instantanée et libre de clés d'API communautaires (Free & Sovereign).
+- L'authentification par clé et le monitoring d'usage.
+- L'exécution de compétences IA (LLM, RAG, outils) pour les agents OpenClaw.
+- Le pilotage du nœud WAN en mode 100% Confiance.
+- L'administration des clés d'accès.
 """
 
 from __future__ import annotations
@@ -21,27 +21,38 @@ import secrets
 import time
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
-from decimal import ROUND_CEILING, Decimal
 from pathlib import Path
 from typing import Any
-from urllib.error import URLError
-from urllib.request import Request as URLRequest
-from urllib.request import urlopen
 
 from fastapi import FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from ..bridge import SkillRegistry
 from ..config import get_settings
 from ..crypto import TrustStore
+from ..engines.distributed_moe import DistributedMoEOrchestrator
+from ..engines.inference import UniversalInferenceEngine
+from ..engines.kv_cache import SemanticKVCache
+from ..engines.multimodal import MultiModalEngine
 from ..node import OpenClawMeshNode
+from ..reputation import ReputationManager
 from .db import KeyDatabase
 from .portal import render_portal_html
 
 logger = logging.getLogger("openclaw_mesh.gateway")
 _settings = get_settings()
+
+# Moteurs d'IA & Services de la passerelle
+kv_cache = SemanticKVCache()
+reputation_mgr = ReputationManager()
+inference_engine = UniversalInferenceEngine()
+moe_orchestrator = DistributedMoEOrchestrator()
+multimodal_engine = MultiModalEngine()
+_request_counter: dict[str, int] = defaultdict(int)
+_request_latencies: deque[float] = deque(maxlen=500)
+
 
 
 # Configuration de l'environnement
@@ -78,60 +89,23 @@ def _load_or_create_admin_token() -> str:
 ADMIN_TOKEN = _load_or_create_admin_token()
 DEFAULT_DB_PATH = os.getenv("GATEWAY_DB_PATH", "openclaw_keys.db")
 
-# Adresse Bitcoin de réception des paiements
-BTC_WALLET_ADDRESS = os.getenv("BTC_WALLET_ADDRESS", "bc1qwq8sll9vrl83lclyhha2gyncpd5275cdr2wul5")
-BTC_EXPLORER_URL = os.getenv("BTC_EXPLORER_URL", "")
-BTC_PRICE_URL = os.getenv(
-    "BTC_PRICE_URL",
-    "",
-)
-BTC_PRICE_URLS = [
-    url.strip() for url in os.getenv("BTC_PRICE_URLS", BTC_PRICE_URL).split(",") if url.strip()
-]
-BTC_PRICE_FALLBACK_EUR = Decimal(os.getenv("BTC_PRICE_FALLBACK_EUR", "67642"))
-BTC_PRICE_CACHE_SECONDS = max(30, int(os.getenv("BTC_PRICE_CACHE_SECONDS", "300")))
-BTC_REQUIRED_CONFIRMATIONS = max(1, int(os.getenv("BTC_REQUIRED_CONFIRMATIONS", "1")))
-BTC_AUTO_VERIFY = os.getenv("BTC_AUTO_VERIFY", "false").lower() in {"1", "true", "yes", "on"}
-BTC_VERIFY_INTERVAL = max(10, int(os.getenv("BTC_VERIFY_INTERVAL_SECONDS", "30")))
-try:
-    BTC_PLAN_MIN_SATS: dict[str, int] = {
-        plan: int(amount)
-        for plan, amount in json.loads(os.getenv("BTC_PLAN_MIN_SATS", "{}")).items()
-    }
-except (TypeError, ValueError, json.JSONDecodeError):
-    BTC_PLAN_MIN_SATS = {}
-_payment_verifier_task: asyncio.Task | None = None
-_btc_price_cache: tuple[Decimal, float] | None = None
 _wan_node: OpenClawMeshNode | None = None
-
-# Tarifs EUR indicatifs (le client envoie le montant BTC équivalent)
-PLAN_PRICES_EUR: dict[str, int] = {
-    "pro_monthly": 10,
-    "lifetime": 200,
-    "demo_free": 0,
-}
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    global _payment_verifier_task, _wan_node
-    if BTC_AUTO_VERIFY and _payment_verifier_task is None:
-        _payment_verifier_task = asyncio.create_task(_verify_pending_payments())
+    global _wan_node
     try:
         yield
     finally:
         if _wan_node is not None:
             await _wan_node.stop()
             _wan_node = None
-        if _payment_verifier_task:
-            _payment_verifier_task.cancel()
-            await asyncio.gather(_payment_verifier_task, return_exceptions=True)
-            _payment_verifier_task = None
 
 
 app = FastAPI(
-    title="OpenClawMesh — Bitcoin Payment Gateway",
-    description="Passerelle de Monétisation BTC pour Agents IA & Validation de Clés d'API",
+    title="OpenClawMesh — Free Gateway & Command Center",
+    description="Passerelle d'Inférence IA Libre & Gratuite pour Agents Autonomes P2P",
     version="1.1.0",
     lifespan=lifespan,
 )
@@ -147,168 +121,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-def _fetch_json(url: str) -> Any:
-    """Récupère une réponse JSON sans bloquer la boucle asyncio appelante."""
-    request = URLRequest(url, headers={"User-Agent": "OpenClawMesh-Gateway/1.0"})
-    with urlopen(request, timeout=10) as response:  # noqa: S310 - URL configurable par l'admin
-        data = json.loads(response.read().decode("utf-8"))
-    return data
-
-
-def _get_btc_eur_price() -> Decimal:
-    """Retourne le cours BTC/EUR de l'oracle, avec cache et fallback de sécurité."""
-    global _btc_price_cache
-    now = time.time()
-    if _btc_price_cache and now - _btc_price_cache[1] < BTC_PRICE_CACHE_SECONDS:
-        return _btc_price_cache[0]
-    prices: list[Decimal] = []
-    for price_url in BTC_PRICE_URLS:
-        try:
-            data = _fetch_json(price_url)
-            if "bitcoin" in data:
-                raw_price = data["bitcoin"]["eur"]
-            else:
-                raw_price = data["data"]["amount"]
-            price = Decimal(str(raw_price))
-            if price > 0:
-                prices.append(price)
-        except (OSError, URLError, KeyError, TypeError, ValueError, ArithmeticError) as exc:
-            logger.warning("Source oracle BTC/EUR indisponible (%s): %s", price_url, exc)
-    if prices:
-        ordered = sorted(prices)
-        price = ordered[len(ordered) // 2]
-        _btc_price_cache = (price, now)
-        return price
-    logger.warning("Tous les oracles BTC/EUR sont indisponibles, utilisation du fallback")
-    return BTC_PRICE_FALLBACK_EUR
-
-
-def _minimum_sats(plan: str, btc_eur_price: Decimal) -> int:
-    """Convertit le prix EUR du plan en satoshis, en arrondissant vers le haut."""
-    configured = BTC_PLAN_MIN_SATS.get(plan)
-    if configured is not None:
-        return configured
-    btc_amount = Decimal(PLAN_PRICES_EUR[plan]) / btc_eur_price
-    return int((btc_amount * Decimal(100_000_000)).to_integral_value(rounding=ROUND_CEILING))
-
-
-def _transaction_is_paid(txid: str, expected_sats: int) -> tuple[bool, str]:
-    """Vérifie destinataire, montant minimum configuré et confirmations du txid."""
-    if not BTC_EXPLORER_URL:
-        raise RuntimeError(
-            "BTC_EXPLORER_URL doit être configuré pour vérifier un paiement automatiquement."
-        )
-    if expected_sats <= 0:
-        return False, "Montant BTC minimum invalide."
-    base_url = BTC_EXPLORER_URL.rstrip("/")
-    tx = _fetch_json(f"{base_url}/tx/{txid}")
-    if not isinstance(tx, dict):
-        raise ValueError("Réponse transaction Bitcoin inattendue")
-    outputs = tx.get("vout", [])
-    received_sats = sum(
-        int(output.get("value", 0))
-        for output in outputs
-        if output.get("scriptpubkey_address") == BTC_WALLET_ADDRESS
-    )
-    if received_sats < expected_sats:
-        return False, f"Montant insuffisant ({received_sats}/{expected_sats} sats)."
-
-    status_data = tx.get("status", {})
-    confirmations = 0
-    if status_data.get("confirmed"):
-        tip = _fetch_json(f"{base_url}/blocks/tip/height")
-        block_height = int(status_data["block_height"])
-        tip_height = int(tip.get("height", tip) if isinstance(tip, dict) else tip)
-        confirmations = max(1, tip_height - block_height + 1)
-    if confirmations < BTC_REQUIRED_CONFIRMATIONS:
-        return False, f"Confirmations insuffisantes ({confirmations}/{BTC_REQUIRED_CONFIRMATIONS})."
-    return True, f"Paiement vérifié: {received_sats} sats, {confirmations} confirmations."
-
-
-def _transaction_block_hash(txid: str) -> str | None:
-    """Retourne le bloc actuellement associé à une transaction confirmée."""
-    if not BTC_EXPLORER_URL:
-        return None
-    tx = _fetch_json(f"{BTC_EXPLORER_URL.rstrip('/')}/tx/{txid}")
-    if not isinstance(tx, dict) or not tx.get("status", {}).get("confirmed"):
-        return None
-    block_hash = tx.get("status", {}).get("block_hash")
-    return block_hash if isinstance(block_hash, str) else None
-
-
-async def _verify_pending_payments() -> None:
-    """Worker de confirmation automatique, activé lorsque BTC_AUTO_VERIFY vaut true."""
-    while True:
-        try:
-            with db._get_connection() as conn:
-                rows = conn.execute(
-                    "SELECT event_id, raw_payload_json, txid FROM payment_events "
-                    "WHERE provider = 'bitcoin' AND event_type = 'pending_verification'"
-                ).fetchall()
-            for row in rows:
-                raw_data = json.loads(row["raw_payload_json"] or "{}")
-                txid = row["txid"] or raw_data.get("txid")
-                if not txid:
-                    continue
-                try:
-                    paid, reason = await asyncio.to_thread(
-                        _transaction_is_paid,
-                        txid,
-                        int(raw_data.get("minimum_sats", 0)),
-                    )
-                except (OSError, URLError, ValueError, KeyError) as exc:
-                    logger.warning("Vérification BTC impossible pour %s: %s", txid[:16], exc)
-                    continue
-                if paid:
-                    block_hash = await asyncio.to_thread(_transaction_block_hash, txid)
-                    key_rec = db.confirm_payment(
-                        row["event_id"],
-                        days_valid=raw_data.get("days_valid"),
-                        confirmed_by="auto_btc_verifier",
-                        confirmation_metadata={"confirmed_block_hash": block_hash},
-                    )
-                    if key_rec:
-                        logger.info(
-                            "✅ Paiement BTC confirmé automatiquement — TXID: %s...", txid[:16]
-                        )
-                else:
-                    logger.info("Paiement BTC en attente — TXID: %s... (%s)", txid[:16], reason)
-
-            with db._get_connection() as conn:
-                confirmed_rows = conn.execute(
-                    "SELECT event_id, raw_payload_json FROM payment_events "
-                    "WHERE provider = 'bitcoin' AND event_type = 'confirmed'"
-                ).fetchall()
-            for row in confirmed_rows:
-                raw_data = json.loads(row["raw_payload_json"] or "{}")
-                txid = raw_data.get("txid")
-                expected_block = raw_data.get("confirmed_block_hash")
-                if not txid or not expected_block:
-                    continue
-                try:
-                    current_block = await asyncio.to_thread(_transaction_block_hash, txid)
-                except (OSError, URLError, ValueError, KeyError):
-                    continue
-                if current_block != expected_block:
-                    key_hash = raw_data.get("confirmed_key_hash")
-                    if key_hash:
-                        db.revoke_key_hash(key_hash)
-                    raw_data["reorg_detected_at"] = time.time()
-                    with db._get_connection() as conn:
-                        conn.execute(
-                            "UPDATE payment_events SET event_type = 'reorg_detected', raw_payload_json = ? "
-                            "WHERE event_id = ? AND event_type = 'confirmed'",
-                            (json.dumps(raw_data), row["event_id"]),
-                        )
-                    logger.error("Réorganisation Bitcoin détectée — TXID: %s...", txid[:16])
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            logger.exception("Erreur dans le vérificateur automatique Bitcoin")
-        await asyncio.sleep(BTC_VERIFY_INTERVAL)
-
 
 # Instance de la base de données
 db = KeyDatabase(DEFAULT_DB_PATH)
@@ -327,7 +139,7 @@ async def _enforce_rate_limit(request: Request) -> None:
     client = request.client.host if request.client else "unknown"
     now = time.monotonic()
     window = 60.0
-    limit = max(1, int(os.getenv("OPENCLAW_RATE_LIMIT_REQUESTS_PER_MINUTE", "60")))
+    limit = max(1, int(os.getenv("OPENCLAW_RATE_LIMIT_REQUESTS_PER_MINUTE", "120")))
     async with _rate_limit_lock:
         events = _rate_limit_events[client]
         while events and now - events[0] >= window:
@@ -346,11 +158,6 @@ async def rate_limit_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-def _new_payment_id() -> str:
-    """Génère un identifiant de paiement aléatoire de 24 chars hex."""
-    return secrets.token_hex(12)
-
-
 def _require_admin(token: str | None) -> None:
     """Vérifie le token administrateur (temps constant)."""
     if not token or not secrets.compare_digest(token, ADMIN_TOKEN):
@@ -367,23 +174,19 @@ class ExecutePayload(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict, description="Paramètres d'entrée")
 
 
-class BTCPaymentSubmission(BaseModel):
-    email: str = Field(..., min_length=3, max_length=320, description="Adresse email du client")
-    plan: str = Field(default="pro_monthly", description="Plan : pro_monthly ou lifetime")
-    txid: str = Field(..., description="Hash de transaction Bitcoin (64 caractères hexadécimaux)")
-    note: str = Field(default="", max_length=1000, description="Note optionnelle du client")
-
-
-class ConfirmBTCPaymentPayload(BaseModel):
-    payment_id: str = Field(..., description="Identifiant de la soumission de paiement")
-    days_valid: int | None = Field(default=None, description="Durée de validité (None = lifetime)")
-    quota_limit: int = Field(default=-1, description="Quota de requêtes (-1 = illimité)")
+class FreeKeyRequest(BaseModel):
+    email: str = Field(
+        default="", max_length=320, description="Adresse email optionnelle pour identifier la clé"
+    )
+    plan: str = Field(
+        default="free_community", description="Plan d'accès libre (ex: free_community)"
+    )
 
 
 class CreateKeyAdminPayload(BaseModel):
     email: str
     plan: str = "custom"
-    days_valid: int | None = 30
+    days_valid: int | None = None
     quota_limit: int = -1
     custom_prefix: str = "sk_claw_"
 
@@ -398,163 +201,70 @@ class WanTogglePayload(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 @app.get("/portal", response_class=HTMLResponse)
 async def get_portal():
-    """Affiche le portail web client avec les instructions de paiement BTC."""
-    return render_portal_html(btc_address=BTC_WALLET_ADDRESS)
+    """Affiche le portail web client 100% Free & Open-Access."""
+    return render_portal_html()
 
 
 # ---------------------------------------------------------------------- #
-# 2. Informations & Flux de Paiement Bitcoin
+# 2. Accès Gratuit Instantané (Free Key Generation)
 # ---------------------------------------------------------------------- #
-@app.get("/api/v1/payment/info")
-async def get_payment_info():
+@app.post("/api/v1/checkout/free-key")
+@app.post("/api/v1/keys/generate-free")
+async def generate_free_key(payload: FreeKeyRequest | None = None):
     """
-    Retourne l'adresse BTC, les tarifs et les instructions de paiement.
-    Utilisé par le portail pour afficher le QR code et l'adresse.
+    Génère instantanément et gratuitement une clé d'API OpenClawMesh sans aucun paiement ni carte.
+    Accès communautaire complet et illimité.
     """
-    price_eur = await asyncio.to_thread(_get_btc_eur_price)
-    return {
-        "wallet_address": BTC_WALLET_ADDRESS,
-        "currency": "BTC",
-        "btc_eur_rate": float(price_eur),
-        "plans": {
-            "pro_monthly": {
-                "price_eur": PLAN_PRICES_EUR["pro_monthly"],
-                "minimum_sats": _minimum_sats("pro_monthly", price_eur),
-                "description": "Accès Pro — 30 jours, requêtes illimitées",
-                "days_valid": 30,
-            },
-            "lifetime": {
-                "price_eur": PLAN_PRICES_EUR["lifetime"],
-                "minimum_sats": _minimum_sats("lifetime", price_eur),
-                "description": "Licence à Vie — accès permanent, toutes mises à jour incluses",
-                "days_valid": None,
-            },
-        },
-        "instructions": (
-            "1. Envoyez le montant BTC équivalent au plan choisi à l'adresse Bitcoin ci-dessus.\n"
-            "2. Soumettez votre email, le plan et le txid via POST /api/v1/payment/submit.\n"
-            "3. Dès que l'administrateur confirme le txid, votre clé d'API est activée instantanément."
-        ),
-    }
+    email_in = (payload.email if payload else "").strip().lower()
+    if not email_in:
+        email_in = f"free_user_{secrets.token_hex(4)}@openclaw.mesh"
+    elif not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email_in):
+        raise HTTPException(status_code=400, detail="Adresse email invalide.")
 
-
-@app.post("/api/v1/payment/submit")
-async def submit_btc_payment(payload: BTCPaymentSubmission):
-    """
-    Le client soumet son txid Bitcoin après avoir effectué le virement.
-    Crée une entrée « en attente de confirmation » dans la base de données.
-    L'admin confirme via POST /api/v1/admin/payments/confirm.
-    """
-    if payload.plan not in ("pro_monthly", "lifetime"):
-        raise HTTPException(
-            status_code=400,
-            detail="Plan invalide. Choisissez 'pro_monthly' (10€/mois) ou 'lifetime' (200€).",
-        )
-
-    txid_clean = payload.txid.strip().lower()
-    if not re.fullmatch(r"[0-9a-f]{64}", txid_clean):
-        raise HTTPException(
-            status_code=400,
-            detail="TXID Bitcoin invalide (64 caractères hexadécimaux requis).",
-        )
-
-    payment_id = _new_payment_id()
-    status_token = secrets.token_urlsafe(32)
-    days_valid = None if payload.plan == "lifetime" else 30
-    btc_eur_price = await asyncio.to_thread(_get_btc_eur_price)
-    minimum_sats = _minimum_sats(payload.plan, btc_eur_price)
-
-    logged = db.log_payment_event(
-        event_id=f"btc_{payment_id}",
-        provider="bitcoin",
-        event_type="pending_verification",
-        customer_email=payload.email.strip().lower(),
-        amount_cents=PLAN_PRICES_EUR.get(payload.plan, 0) * 100,
-        currency="btc",
-        raw_payload={
-            "payment_id": payment_id,
-            "plan": payload.plan,
-            "txid": txid_clean,
-            "days_valid": days_valid,
-            "note": payload.note,
-            "submitted_at": time.time(),
-            "btc_eur_rate": str(btc_eur_price),
-            "minimum_sats": minimum_sats,
-            "status_token": status_token,
-        },
-        txid=txid_clean,
+    key_rec = db.create_key(
+        email=email_in,
+        plan="free_community",
+        days_valid=None,  # Pas d'expiration (accès libre permanent)
+        quota_limit=-1,   # Requêtes illimitées
+        metadata={"free_access": True, "created_via": "portal_instant"},
     )
-
-    if not logged:
-        raise HTTPException(
-            status_code=409,
-            detail="Ce txid a déjà été soumis. Contactez l'administrateur si c'est une erreur.",
-        )
-
-    logger.info(
-        "Paiement BTC soumis — ID: %s | Email: %s | Plan: %s | TXID: %s...",
-        payment_id,
-        payload.email,
-        payload.plan,
-        txid_clean[:16],
-    )
-
     return {
         "ok": True,
-        "payment_id": payment_id,
-        "status_token": status_token,
-        "status": "pending_verification",
-        "message": (
-            f"Votre paiement BTC a été enregistré (payment_id: {payment_id}). "
-            "Votre clé sera activée instantanément dès la confirmation du txid par l'administrateur."
-        ),
-        "wallet_address": BTC_WALLET_ADDRESS,
-        "plan": payload.plan,
-        "email": payload.email,
+        "api_key": key_rec.key,
+        "plan": "free_community",
+        "email": email_in,
+        "quota_limit": -1,
+        "expires_at": None,
+        "message": "🎉 Clé d'API gratuite générée avec succès ! Accès libre et illimité.",
     }
 
 
-@app.get("/api/v1/payment/status/{payment_id}")
-async def check_payment_status(
-    payment_id: str,
-    payment_token: str | None = Header(None, alias="X-Payment-Token"),
-):
-    """Permet au client de vérifier l'état de son paiement soumis."""
-    with db._get_connection() as conn:
-        row = conn.execute(
-            "SELECT * FROM payment_events WHERE event_id = ?",
-            (f"btc_{payment_id}",),
-        ).fetchone()
-
-    if not row:
-        raise HTTPException(status_code=404, detail="Payment ID introuvable.")
-
-    payload_data = json.loads(row["raw_payload_json"] or "{}")
-    if not payment_token or not secrets.compare_digest(
-        payment_token, payload_data.get("status_token", "")
+@app.post("/api/v1/checkout/demo-key")
+async def create_demo_key(payload: dict):
+    """Crée instantanément une clé gratuite de démonstration."""
+    email = payload.get("email", f"demo_{secrets.token_hex(4)}@openclaw.mesh")
+    if (
+        not isinstance(email, str)
+        or len(email) > 320
+        or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
     ):
-        raise HTTPException(status_code=403, detail="Jeton de paiement requis.")
-    is_confirmed = row["event_type"] == "confirmed"
-    is_rejected = row["event_type"] == "rejected"
-
-    result: dict[str, Any] = {
-        "payment_id": payment_id,
-        "status": row["event_type"],
-        "plan": payload_data.get("plan"),
-        "email": row["customer_email"],
-        "submitted_at": payload_data.get("submitted_at"),
-    }
-
-    if is_confirmed:
-        result["confirmed_at"] = payload_data.get("confirmed_at")
-    elif is_rejected:
-        result["rejection_reason"] = payload_data.get("rejection_reason", "Non spécifié.")
-
-    return result
+        raise HTTPException(status_code=400, detail="Adresse email invalide.")
+    email = email.strip().lower()
+    if email in _demo_issued_emails:
+        raise HTTPException(status_code=429, detail="Une clé démo a déjà été créée pour cet email.")
+    _demo_issued_emails.add(email)
+    key_rec = db.create_key(
+        email=email,
+        plan="demo_free",
+        days_valid=30,
+        quota_limit=-1,
+        metadata={"is_demo": True, "free": True},
+    )
+    return {"ok": True, "api_key": key_rec.key, "quota_limit": -1, "expires_in_days": 30}
 
 
 # ---------------------------------------------------------------------- #
-# 3. Authentification & Exécution Sécurisée
+# 3. Authentification & Exécution
 # ---------------------------------------------------------------------- #
 def _extract_api_key(request: Request, x_api_key: str | None = Header(None)) -> str:
     """Extrait la clé d'API depuis le Header X-API-Key ou Authorization Bearer."""
@@ -595,14 +305,14 @@ async def verify_key_endpoint(request: Request, x_api_key: str | None = Header(N
 
 
 @app.post("/api/v1/execute")
-async def execute_premium_skill(
+async def execute_skill(
     payload_in: ExecutePayload,
     request: Request,
     x_api_key: str | None = Header(None),
 ):
     """
-    Exécute une compétence protégée pour un client authentifié.
-    Vérifie la clé, déduit le quota et traite la requête.
+    Exécute une compétence pour un client authentifié.
+    Vérifie la clé et traite la requête.
     """
     key_str = _extract_api_key(request, x_api_key)
     key_rec = db.get_key(key_str)
@@ -631,8 +341,8 @@ async def execute_premium_skill(
         elif skill_name == "llm":
             prompt = payload.get("prompt", "")
             result = {
-                "text": f"🤖 [OpenClaw Premium Gateway] Réponse traitée pour : '{prompt}'",
-                "model": payload.get("model", "qwen2.5-coder-premium"),
+                "text": f"🤖 [OpenClaw Free Gateway] Réponse traitée pour : '{prompt}'",
+                "model": payload.get("model", "qwen2.5-coder-free"),
                 "tokens": 42,
             }
         elif skill_name == "memory_search":
@@ -640,7 +350,7 @@ async def execute_premium_skill(
             result = {
                 "results": [
                     {
-                        "doc_id": "premium_doc_1",
+                        "doc_id": "free_doc_1",
                         "score": 0.96,
                         "content": f"Information indexée pour : {query}",
                     }
@@ -655,6 +365,8 @@ async def execute_premium_skill(
             )
 
         duration_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+        _request_counter["execute_total"] += 1
+        _request_latencies.append(duration_ms / 1000.0)
         return {
             "ok": True,
             "result": result,
@@ -668,38 +380,187 @@ async def execute_premium_skill(
         raise
     except Exception as e:
         duration_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+        _request_counter["execute_errors"] += 1
         raise HTTPException(status_code=500, detail="Erreur d'exécution.") from e
 
 
 # ---------------------------------------------------------------------- #
-# 4. Démo Gratuite
+# 3.1 Compatibilité OpenAI (Models, Tools & Chat Completions)
 # ---------------------------------------------------------------------- #
-@app.post("/api/v1/checkout/demo-key")
-async def create_demo_key(payload: dict):
-    """Crée instantanément une clé de démonstration (3 requêtes, 7 jours)."""
-    email = payload.get("email", f"demo_{secrets.token_hex(4)}@openclaw.mesh")
-    if (
-        not isinstance(email, str)
-        or len(email) > 320
-        or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
-    ):
-        raise HTTPException(status_code=400, detail="Adresse email invalide.")
-    email = email.strip().lower()
-    if email in _demo_issued_emails:
-        raise HTTPException(status_code=429, detail="Une clé démo a déjà été créée pour cet email.")
-    _demo_issued_emails.add(email)
-    key_rec = db.create_key(
-        email=email,
-        plan="demo_free",
-        days_valid=7,
-        quota_limit=3,
-        metadata={"is_demo": True, "provider": "bitcoin_gateway"},
+@app.get("/v1/models")
+async def list_openai_models():
+    """Liste les modèles d'IA disponibles sur la passerelle OpenClawMesh."""
+    now = int(time.time())
+    models_list = [
+        {"id": "qwen2.5-coder-7b", "object": "model", "created": now, "owned_by": "openclaw-mesh"},
+        {"id": "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit", "object": "model", "created": now, "owned_by": "mlx-metal"},
+        {"id": "deepseek-v3-moe", "object": "model", "created": now, "owned_by": "openclaw-distributed-moe"},
+        {"id": "whisper-base-stt", "object": "model", "created": now, "owned_by": "openclaw-multimodal"},
+        {"id": "qwen2-vl-vision", "object": "model", "created": now, "owned_by": "openclaw-multimodal"},
+    ]
+    return {"object": "list", "data": models_list}
+
+
+@app.get("/v1/tools")
+async def list_openai_tools():
+    """Retourne la liste des compétences exposées au format standard OpenAI Tool Calling."""
+    tools = gateway_registry.to_openai_tools()
+    return {"tools": tools}
+
+
+@app.post("/v1/chat/completions")
+async def openai_chat_completions(
+    request: Request,
+    payload: dict[str, Any],
+    x_api_key: str | None = Header(None),
+):
+    """
+    Endpoint compatible OpenAI Chat Completions avec support KV-Cache, Tool Calling et Streaming SSE.
+    """
+    key_str = _extract_api_key(request, x_api_key)
+    if key_str:
+        key_rec = db.get_key(key_str)
+        if key_rec:
+            valid, reason = key_rec.is_valid()
+            if not valid:
+                raise HTTPException(status_code=403, detail=f"Clé invalide: {reason}")
+            db.reserve_usage(key_str, skill_name="chat_completions")
+
+    messages = payload.get("messages", [])
+    model = payload.get("model", "qwen2.5-coder-7b")
+    stream = bool(payload.get("stream", False))
+
+    last_user_msg = ""
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            last_user_msg = str(m.get("content", ""))
+            break
+
+    # Vérification KV-Cache
+    cached = kv_cache.get(last_user_msg) if last_user_msg else None
+    response_text = ""
+    if cached:
+        response_text = str(cached.data)
+    else:
+        # Génération inférence
+        try:
+            gen_res = await inference_engine.generate(prompt=last_user_msg, model=model)
+            response_text = str(gen_res.get("text", f"🤖 Inférence OpenClaw pour : {last_user_msg}"))
+        except Exception:
+            response_text = f"🤖 [OpenClawMesh P2P Engine] Réponse générée pour : {last_user_msg}"
+        if last_user_msg:
+            kv_cache.put(last_user_msg, response_text, token_count=len(response_text) // 4)
+
+    req_id = f"chatcmpl-{secrets.token_hex(12)}"
+    now = int(time.time())
+
+    # Mode Streaming SSE
+    if stream:
+        async def event_generator():
+            words = response_text.split(" ")
+            for idx, word in enumerate(words):
+                chunk_payload = {
+                    "id": req_id,
+                    "object": "chat.completion.chunk",
+                    "created": now,
+                    "model": model,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {"content": word + (" " if idx < len(words) - 1 else "")},
+                            "finish_reason": None if idx < len(words) - 1 else "stop",
+                        }
+                    ],
+                }
+                yield f"data: {json.dumps(chunk_payload)}\n\n"
+                await asyncio.sleep(0.02)
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+    _request_counter["chat_completions_total"] += 1
+    return {
+        "id": req_id,
+        "object": "chat.completion",
+        "created": now,
+        "model": model,
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": response_text,
+                },
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": len(last_user_msg) // 4,
+            "completion_tokens": len(response_text) // 4,
+            "total_tokens": (len(last_user_msg) + len(response_text)) // 4,
+        },
+        "kv_cache_hit": cached is not None,
+    }
+
+
+# ---------------------------------------------------------------------- #
+# 3.2 Observabilité Prometheus & Statut Cluster
+# ---------------------------------------------------------------------- #
+@app.get("/metrics", response_class=PlainTextResponse)
+async def prometheus_metrics():
+    """Exporte les métriques système et réseau au format Prometheus/OpenTelemetry."""
+    active_keys = len(db.list_all_keys())
+    cache_stats = kv_cache.stats()
+    avg_latency = (
+        sum(_request_latencies) / len(_request_latencies) if _request_latencies else 0.0
     )
-    return {"ok": True, "api_key": key_rec.key, "quota_limit": 3, "expires_in_days": 7}
+
+    lines = [
+        "# HELP openclaw_requests_total Nombre total de requetes traitees",
+        "# TYPE openclaw_requests_total counter",
+        f'openclaw_requests_total{{status="200"}} {_request_counter["execute_total"] + _request_counter["chat_completions_total"]}',
+        f'openclaw_requests_total{{status="500"}} {_request_counter["execute_errors"]}',
+        "",
+        "# HELP openclaw_active_api_keys Nombre de cles API enregistrees",
+        "# TYPE openclaw_active_api_keys gauge",
+        f"openclaw_active_api_keys {active_keys}",
+        "",
+        "# HELP openclaw_kv_cache_hits_total Nombre de hits dans le cache semantique",
+        "# TYPE openclaw_kv_cache_hits_total counter",
+        f"openclaw_kv_cache_hits_total {cache_stats['total_hits']}",
+        f"openclaw_kv_cache_misses_total {cache_stats['total_misses']}",
+        f"openclaw_kv_cache_hit_ratio {cache_stats['hit_ratio']}",
+        f"openclaw_kv_cache_memory_used_mb {cache_stats['memory_used_mb']}",
+        "",
+        "# HELP openclaw_request_duration_seconds Latence moyenne des requetes en secondes",
+        "# TYPE openclaw_request_duration_seconds gauge",
+        f"openclaw_request_duration_seconds {round(avg_latency, 4)}",
+        "",
+        "# HELP openclaw_cluster_wan_active Statut d'activation WAN",
+        "# TYPE openclaw_cluster_wan_active gauge",
+        f"openclaw_cluster_wan_active {1 if _wan_node is not None else 0}",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+@app.get("/api/v1/cluster/status")
+async def get_cluster_status():
+    """Retourne l'état complet du cluster : métriques, KV-Cache, nœud WAN et réputation."""
+    cache_st = kv_cache.stats()
+    rep_recs = reputation_mgr.get_all_records()
+    return {
+        "ok": True,
+        "wan_node_active": _wan_node is not None,
+        "hardware": inference_engine.get_status(),
+        "kv_cache": cache_st,
+        "reputation": rep_recs,
+        "registered_skills": gateway_registry.list_remote_names(),
+        "timestamp": time.time(),
+    }
 
 
 # ---------------------------------------------------------------------- #
-# 5. Administration
+# 4. Administration & Nœud WAN (100% Confiance)
 # ---------------------------------------------------------------------- #
 @app.get("/api/v1/admin/keys")
 async def admin_list_keys(token: str = Header(None, alias="X-Admin-Token")):
@@ -777,131 +638,6 @@ async def admin_toggle_wan_node(
         "cli_command": cli_cmd,
         "message": "⚡ Nœud WAN activé en 100% Confiance ! Chiffrement et clé de sécurité auto-générés.",
     }
-
-
-@app.get("/api/v1/admin/payments/pending")
-async def admin_list_pending_payments(token: str = Header(None, alias="X-Admin-Token")):
-    """Liste tous les paiements BTC en attente de confirmation."""
-    _require_admin(token)
-    with db._get_connection() as conn:
-        rows = conn.execute(
-            "SELECT * FROM payment_events "
-            "WHERE provider = 'bitcoin' AND event_type = 'pending_verification' "
-            "ORDER BY created_at DESC"
-        ).fetchall()
-
-    payments = []
-    for r in rows:
-        payload_data = json.loads(r["raw_payload_json"] or "{}")
-        payments.append(
-            {
-                "event_id": r["event_id"],
-                "payment_id": payload_data.get("payment_id"),
-                "email": r["customer_email"],
-                "plan": payload_data.get("plan"),
-                "txid": r["txid"] or payload_data.get("txid"),
-                "amount_eur": (r["amount_cents"] or 0) / 100,
-                "submitted_at": payload_data.get("submitted_at"),
-                "note": payload_data.get("note", ""),
-            }
-        )
-
-    return {"count": len(payments), "pending_payments": payments}
-
-
-@app.post("/api/v1/admin/payments/confirm")
-async def admin_confirm_btc_payment(
-    payload: ConfirmBTCPaymentPayload,
-    token: str = Header(None, alias="X-Admin-Token"),
-):
-    """
-    Confirme un paiement BTC après vérification manuelle sur la blockchain.
-    Crée la clé d'API et marque le paiement comme confirmé.
-    """
-    _require_admin(token)
-
-    event_id = f"btc_{payload.payment_id}"
-    with db._get_connection() as conn:
-        row = conn.execute(
-            "SELECT * FROM payment_events WHERE event_id = ?", (event_id,)
-        ).fetchone()
-
-    if not row:
-        raise HTTPException(
-            status_code=404, detail=f"Payment ID '{payload.payment_id}' introuvable."
-        )
-    if row["event_type"] == "confirmed":
-        raise HTTPException(status_code=409, detail="Ce paiement a déjà été confirmé.")
-    if row["event_type"] == "rejected":
-        raise HTTPException(
-            status_code=409, detail="Ce paiement a été rejeté et ne peut pas être confirmé."
-        )
-
-    raw_data = json.loads(row["raw_payload_json"] or "{}")
-    email = row["customer_email"]
-    plan = raw_data.get("plan", "pro_monthly")
-    days_valid = (
-        payload.days_valid if payload.days_valid is not None else raw_data.get("days_valid")
-    )
-
-    key_rec = db.confirm_payment(
-        event_id,
-        quota_limit=payload.quota_limit,
-        days_valid=days_valid,
-    )
-    if not key_rec:
-        raise HTTPException(status_code=409, detail="Ce paiement ne peut plus être confirmé.")
-
-    logger.info(
-        "✅ Paiement BTC confirmé — Email: %s | Plan: %s | Clé: %s...",
-        email,
-        plan,
-        key_rec.key[:12],
-    )
-
-    return {
-        "ok": True,
-        "message": f"Clé créée et paiement confirmé pour {email}",
-        "api_key": key_rec.key,
-        "plan": plan,
-        "email": email,
-        "expires_at": key_rec.expires_at,
-    }
-
-
-@app.post("/api/v1/admin/payments/reject")
-async def admin_reject_btc_payment(
-    payload: dict,
-    token: str = Header(None, alias="X-Admin-Token"),
-):
-    """Rejette un paiement BTC invalide (txid incorrect ou montant insuffisant)."""
-    _require_admin(token)
-
-    payment_id = payload.get("payment_id")
-    reason = payload.get("reason", "Paiement invalide ou non vérifiable.")
-    event_id = f"btc_{payment_id}"
-
-    with db._get_connection() as conn:
-        row = conn.execute(
-            "SELECT event_type, raw_payload_json FROM payment_events WHERE event_id = ?",
-            (event_id,),
-        ).fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Payment ID introuvable.")
-        if row["event_type"] != "pending_verification":
-            raise HTTPException(
-                status_code=409, detail="Seul un paiement en attente peut être rejeté."
-            )
-        raw_data = json.loads(row["raw_payload_json"] or "{}")
-        raw_data["rejected_at"] = time.time()
-        raw_data["rejection_reason"] = reason
-        conn.execute(
-            "UPDATE payment_events SET event_type = 'rejected', raw_payload_json = ? WHERE event_id = ?",
-            (json.dumps(raw_data), event_id),
-        )
-
-    logger.info("❌ Paiement BTC rejeté — ID: %s | Raison: %s", payment_id, reason)
-    return {"ok": True, "message": f"Paiement {payment_id} rejeté : {reason}"}
 
 
 @app.post("/api/v1/admin/keys/create")

@@ -77,7 +77,7 @@ def test_client_server_basic_exchange():
             # 5. Test unknown skill error handling
             bad_resp = await client.call("test-node-1", "non_existent_skill", {})
             assert bad_resp.ok is False
-            assert "Compétence inconnue" in bad_resp.error
+            assert bad_resp.error is not None and "Compétence inconnue" in bad_resp.error
 
         finally:
             await client.stop()
@@ -109,7 +109,7 @@ def test_client_server_hmac_auth():
             # Failure without auth
             fail_resp = await unauth_client.call("secure-node", "echo", {"msg": "secret"})
             assert fail_resp.ok is False
-            assert "Authentification échouée" in fail_resp.error
+            assert fail_resp.error is not None and "Authentification échouée" in fail_resp.error
 
         finally:
             await auth_client.stop()
@@ -155,7 +155,7 @@ def test_client_server_ed25519_auth():
             # Untrusted client fails
             fail_resp = await untrusted_client.call("ed25519-node", "echo", {"test": "ed25519"})
             assert fail_resp.ok is False
-            assert "Accès refusé" in fail_resp.error
+            assert fail_resp.error is not None and "Accès refusé" in fail_resp.error
 
         finally:
             await trusted_client.stop()

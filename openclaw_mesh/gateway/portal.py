@@ -1,39 +1,19 @@
 """
-Portail Web Client & Playground Interactif pour OpenClawMesh Gateway.
+Portail Web Universel & Command Center pour OpenClawMesh (100% Free & Open-Access).
 
-Interface dark mode, responsive, avec paiement Bitcoin natif :
-- Présentation des offres & plans tarifaires
-- Adresse BTC + QR code + formulaire de soumission de paiement
-- Suivi du statut de paiement par payment_id
-- Playground de test de compétences en temps réel
+Interface dark mode, responsive, moderne et libre :
+- Génération instantanée de clés d'accès gratuites (Free Community Tier)
+- Activation et pilotage du Nœud WAN en 100% Confiance
+- Playground interactif de test de compétences IA en temps réel
+- Documentation d'intégration pour agents OpenClaw
 """
 
 from __future__ import annotations
 
-import base64
-from io import BytesIO
-
-import qrcode
-from qrcode.image.svg import SvgPathImage
-
-
-def _bitcoin_qr_data_uri(address: str) -> str:
-    """Génère le QR Bitcoin localement afin de ne transmettre aucune donnée à un tiers."""
-    qr = qrcode.QRCode(version=None, box_size=4, border=2)
-    qr.add_data(f"bitcoin:{address}")
-    qr.make(fit=True)
-    image = qr.make_image(image_factory=SvgPathImage)
-    buffer = BytesIO()
-    image.save(buffer)
-    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
-    return f"data:image/svg+xml;base64,{encoded}"
-
 
 def render_portal_html(
-    portal_title: str = "OpenClawMesh — API Store & Gateway",
-    btc_address: str = "bc1qwq8sll9vrl83lclyhha2gyncpd5275cdr2wul5",
+    portal_title: str = "OpenClawMesh — Portail Universel & Command Center",
 ) -> str:
-    btc_qr_data_uri = _bitcoin_qr_data_uri(btc_address)
     return f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -41,28 +21,28 @@ def render_portal_html(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self';">
     <title>{portal_title}</title>
-    <meta name="description" content="Accédez à l'inférence IA décentralisée OpenClawMesh par paiement Bitcoin — pas de compte, pas de tracking.">
+    <meta name="description" content="Portail Universel OpenClawMesh — Accédez gratuitement à l'inférence IA décentralisée et au réseau P2P d'agents autonomes.">
     <style>
         :root {{
             --bg: #080c14;
             --card-bg: rgba(18, 24, 40, 0.75);
-            --card-border: rgba(255, 255, 255, 0.07);
-            --primary: #f7931a;
-            --primary-gradient: linear-gradient(135deg, #f7931a 0%, #fbbf24 100%);
-            --accent: #10b981;
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary: #00ff88;
+            --primary-gradient: linear-gradient(135deg, #00ff88 0%, #00b4d8 100%);
+            --accent: #00e5ff;
             --text: #f3f4f6;
             --text-muted: #9ca3af;
             --code-bg: #030712;
-            --btc: #f7931a;
-            --btc-dim: rgba(247, 147, 26, 0.12);
-            --btc-border: rgba(247, 147, 26, 0.35);
+            --brand-green: #00ff88;
+            --brand-green-dim: rgba(0, 255, 136, 0.12);
+            --brand-green-border: rgba(0, 255, 136, 0.35);
         }}
 
         * {{
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Outfit', -apple-system, sans-serif;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }}
 
         body {{
@@ -72,8 +52,8 @@ def render_portal_html(
             display: flex;
             flex-direction: column;
             background-image:
-                radial-gradient(at 15% 0%, rgba(247, 147, 26, 0.10) 0px, transparent 55%),
-                radial-gradient(at 85% 100%, rgba(251, 191, 36, 0.07) 0px, transparent 55%);
+                radial-gradient(at 15% 0%, rgba(0, 255, 136, 0.08) 0px, transparent 55%),
+                radial-gradient(at 85% 100%, rgba(0, 180, 216, 0.08) 0px, transparent 55%);
             background-attachment: fixed;
         }}
 
@@ -102,15 +82,27 @@ def render_portal_html(
         }}
 
         .badge {{
-            background: var(--btc-dim);
-            color: var(--btc);
+            background: var(--brand-green-dim);
+            color: var(--brand-green);
             font-size: 0.72rem;
             font-weight: 700;
             padding: 0.25rem 0.65rem;
             border-radius: 999px;
-            border: 1px solid var(--btc-border);
+            border: 1px solid var(--brand-green-border);
             text-transform: uppercase;
             letter-spacing: 0.05em;
+        }}
+
+        .badge-info {{
+            background: rgba(0, 180, 216, 0.15);
+            color: #00e5ff;
+            border-color: rgba(0, 180, 216, 0.4);
+        }}
+
+        .badge-confirmed {{
+            background: rgba(0, 255, 136, 0.15);
+            color: #00ff88;
+            border-color: rgba(0, 255, 136, 0.4);
         }}
 
         main {{
@@ -139,28 +131,29 @@ def render_portal_html(
         .hero p {{
             color: var(--text-muted);
             font-size: 1.1rem;
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
             line-height: 1.7;
         }}
 
-        .hero .btc-pill {{
+        .hero .free-pill {{
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            margin-top: 1.25rem;
-            background: var(--btc-dim);
-            border: 1px solid var(--btc-border);
-            color: var(--btc);
-            padding: 0.5rem 1.2rem;
+            margin-top: 1.5rem;
+            padding: 0.45rem 1.2rem;
             border-radius: 999px;
-            font-size: 0.9rem;
+            background: var(--brand-green-dim);
+            border: 1px solid var(--brand-green-border);
+            color: var(--brand-green);
+            font-size: 0.85rem;
             font-weight: 600;
         }}
 
-        .pricing-grid {{
+        /* ── Cards Grid ── */
+        .features-grid {{
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 1.5rem;
             margin: 2.5rem 0;
         }}
@@ -169,286 +162,161 @@ def render_portal_html(
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 1.25rem;
-            padding: 1.75rem;
+            padding: 2rem;
             display: flex;
             flex-direction: column;
-            gap: 1.25rem;
+            justify-content: space-between;
+            position: relative;
             backdrop-filter: blur(12px);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.2s, box-shadow 0.2s;
         }}
 
         .card:hover {{
-            transform: translateY(-3px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
         }}
 
         .card.featured {{
-            border-color: var(--btc-border);
-            background: radial-gradient(at top left, rgba(247, 147, 26, 0.10), transparent 70%), var(--card-bg);
-            box-shadow: 0 0 0 1px var(--btc-border), 0 4px 24px rgba(247, 147, 26, 0.15);
+            border-color: var(--brand-green-border);
+            background: radial-gradient(at top right, rgba(0, 255, 136, 0.08), transparent 70%), var(--card-bg);
+            box-shadow: 0 0 0 1px var(--brand-green-border), 0 4px 24px rgba(0, 255, 136, 0.12);
         }}
 
         .card-title {{
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: 700;
+            margin-bottom: 0.5rem;
         }}
 
-        .card-price {{
-            font-size: 2.2rem;
+        .card-tag {{
+            font-size: 1.7rem;
             font-weight: 800;
-            color: var(--btc);
+            color: var(--brand-green);
+            margin: 0.8rem 0 1.2rem;
         }}
 
-        .card-price span {{
-            font-size: 1rem;
+        .card-tag span {{
+            font-size: 0.95rem;
             font-weight: 400;
             color: var(--text-muted);
         }}
 
         .features-list {{
             list-style: none;
+            margin-bottom: 1.8rem;
             display: flex;
             flex-direction: column;
-            gap: 0.6rem;
-            flex: 1;
+            gap: 0.65rem;
+            font-size: 0.92rem;
+            color: var(--text-muted);
         }}
 
         .features-list li {{
-            color: var(--text-muted);
-            font-size: 0.95rem;
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             gap: 0.5rem;
         }}
 
         .features-list li::before {{
             content: "✓";
-            color: var(--accent);
-            font-weight: 700;
-            flex-shrink: 0;
-            margin-top: 1px;
+            color: var(--brand-green);
+            font-weight: 800;
         }}
 
+        /* ── Boutons ── */
         .btn {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
             background: var(--primary-gradient);
-            color: #0a0a0a;
+            color: #030712;
             font-weight: 700;
             font-size: 0.95rem;
-            border: none;
-            padding: 0.85rem 1.5rem;
             border-radius: 0.75rem;
+            border: none;
             cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.15s, transform 0.1s;
             width: 100%;
-            transition: opacity 0.2s ease, transform 0.15s ease;
-            letter-spacing: 0.02em;
         }}
 
         .btn:hover {{
             opacity: 0.92;
-            transform: translateY(-1px);
-        }}
-
-        .btn:active {{
-            transform: scale(0.98);
+            transform: scale(0.99);
         }}
 
         .btn-outline {{
             background: transparent;
-            color: var(--btc);
-            border: 1px solid var(--btc-border);
+            color: var(--text);
+            border: 1px solid var(--card-border);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
             font-weight: 600;
-            padding: 0.8rem 1.5rem;
+            font-size: 0.95rem;
             border-radius: 0.75rem;
             cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
             width: 100%;
-            font-size: 0.95rem;
-            transition: background 0.2s;
         }}
 
         .btn-outline:hover {{
-            background: var(--btc-dim);
+            border-color: var(--brand-green-border);
+            background: var(--brand-green-dim);
+            color: var(--brand-green);
         }}
 
-        /* ── BTC Payment Section ── */
-        .btc-section {{
-            background: var(--card-bg);
-            border: 1px solid var(--btc-border);
-            border-radius: 1.25rem;
-            padding: 2rem;
-            margin: 1rem 0 2.5rem;
-            backdrop-filter: blur(12px);
-        }}
-
-        .btc-section h2 {{
-            font-size: 1.4rem;
-            font-weight: 800;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-        }}
-
-        .btc-steps {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.25rem;
-            margin-bottom: 2rem;
-        }}
-
-        .step {{
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--card-border);
-            border-radius: 1rem;
-            padding: 1.25rem;
-        }}
-
-        .step-num {{
-            width: 2rem;
-            height: 2rem;
-            background: var(--primary-gradient);
-            color: #000;
-            font-weight: 800;
-            font-size: 0.9rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 0.75rem;
-        }}
-
-        .step h3 {{
-            font-size: 0.95rem;
-            font-weight: 700;
-            margin-bottom: 0.35rem;
-        }}
-
-        .step p {{
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }}
-
-        .address-box {{
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            background: rgba(247, 147, 26, 0.07);
-            border: 1px solid var(--btc-border);
-            border-radius: 0.75rem;
-            padding: 1rem 1.25rem;
-            margin-bottom: 1.5rem;
-            word-break: break-all;
-        }}
-
-        .address-box code {{
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-            color: var(--btc);
-            flex: 1;
-            letter-spacing: 0.02em;
-        }}
-
-        .btn-copy-addr {{
-            background: var(--btc-dim);
-            color: var(--btc);
-            border: 1px solid var(--btc-border);
-            padding: 0.45rem 0.9rem;
-            border-radius: 0.5rem;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: background 0.2s;
-            flex-shrink: 0;
-        }}
-
-        .btn-copy-addr:hover {{
-            background: rgba(247, 147, 26, 0.2);
-        }}
-
-        /* ── Formulaires ── */
+        /* ── Sections ── */
         .form-section {{
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 1.25rem;
             padding: 2rem;
-            margin-bottom: 2rem;
+            margin: 2rem 0;
             backdrop-filter: blur(12px);
         }}
 
         .form-section h2 {{
-            font-size: 1.3rem;
-            font-weight: 800;
-            margin-bottom: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }}
 
         .form-group {{
-            margin-bottom: 1.1rem;
+            margin-bottom: 1.25rem;
         }}
 
-        label {{
+        .form-group label {{
             display: block;
             font-size: 0.85rem;
             font-weight: 600;
             color: var(--text-muted);
             margin-bottom: 0.4rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
         }}
 
-        input, select, textarea {{
+        .form-group input,
+        .form-group select,
+        .form-group textarea {{
             width: 100%;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--card-border);
-            color: var(--text);
-            padding: 0.8rem 1rem;
-            border-radius: 0.6rem;
-            font-family: inherit;
-            font-size: 0.95rem;
-        }}
-
-        input:focus, textarea:focus, select:focus {{
-            outline: none;
-            border-color: var(--btc);
-        }}
-
-        .tab-group {{
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-        }}
-
-        .tab {{
-            flex: 1;
-            padding: 0.65rem;
-            border-radius: 0.65rem;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            border: 1px solid var(--card-border);
-            background: transparent;
-            color: var(--text-muted);
-            text-align: center;
-            transition: all 0.2s;
-        }}
-
-        .tab.active {{
-            background: var(--btc-dim);
-            border-color: var(--btc-border);
-            color: var(--btc);
-        }}
-
-        pre {{
             background: var(--code-bg);
             border: 1px solid var(--card-border);
-            border-radius: 0.75rem;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.88rem;
-            color: #a7f3d0;
-            overflow-x: auto;
-            min-height: 80px;
-            white-space: pre-wrap;
+            border-radius: 0.65rem;
+            padding: 0.7rem 0.9rem;
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.15s;
+        }}
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {{
+            border-color: var(--brand-green);
         }}
 
         .alert {{
@@ -456,40 +324,67 @@ def render_portal_html(
             border-radius: 0.75rem;
             font-size: 0.9rem;
             margin-top: 1rem;
-            display: none;
+            line-height: 1.6;
         }}
 
         .alert.success {{
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            color: #6ee7b7;
-            display: block;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: #00ff88;
         }}
 
         .alert.error {{
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #fca5a5;
-            display: block;
+            color: #f87171;
         }}
 
         .key-display {{
-            background: rgba(247, 147, 26, 0.07);
-            border: 1px solid var(--btc-border);
-            border-radius: 0.75rem;
-            padding: 1rem 1.25rem;
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            margin-top: 1rem;
+            background: var(--code-bg);
+            border: 1px solid var(--brand-green-border);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            margin: 1rem 0;
         }}
 
         .key-display code {{
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.88rem;
-            color: var(--btc);
             flex: 1;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            color: var(--brand-green);
             word-break: break-all;
+        }}
+
+        .btn-copy-addr {{
+            background: var(--brand-green-dim);
+            color: var(--brand-green);
+            border: 1px solid var(--brand-green-border);
+            padding: 0.4rem 0.85rem;
+            border-radius: 0.45rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }}
+
+        .btn-copy-addr:hover {{
+            background: var(--brand-green);
+            color: #030712;
+        }}
+
+        pre {{
+            background: var(--code-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #93c5fd;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
         }}
 
         /* ── Modal ── */
@@ -497,22 +392,22 @@ def render_portal_html(
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.75);
+            background: rgba(0, 0, 0, 0.75);
             z-index: 100;
             align-items: center;
             justify-content: center;
             padding: 1rem;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(6px);
         }}
 
         .modal-content {{
             background: #111827;
-            border: 1px solid var(--btc-border);
+            border: 1px solid var(--brand-green-border);
             border-radius: 1.5rem;
             padding: 2.5rem;
-            max-width: 520px;
+            max-width: 540px;
             width: 100%;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(247,147,26,0.2);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 255, 136, 0.2);
         }}
 
         footer {{
@@ -529,168 +424,59 @@ def render_portal_html(
 
     <header>
         <div class="logo">
-            ⚡ OpenClawMesh <span class="badge">BTC Payments</span>
+            ⚡ OpenClawMesh <span class="badge">100% Free & Open-Access</span>
         </div>
         <div>
-            <span style="font-size: 0.85rem; color: var(--text-muted);">₿ Paiement Bitcoin uniquement — Sans compte, sans KYC</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Accès Libre & Gratuit — Sans paiement, sans carte, sans KYC</span>
         </div>
     </header>
 
     <main>
         <section class="hero">
-            <h1>Inférence IA Décentralisée<br>Payée en Bitcoin</h1>
-            <p>Accédez à l'inférence multi-matériels haute performance et au réseau P2P d'agents IA autonomes — sans intermédiaire bancaire.</p>
-            <div class="btc-pill">
-                ₿ Paiement direct · Confidentialité totale · Pas de compte requis
+            <h1>Inférence IA Décentralisée<br>100% Gratuite & Souveraine</h1>
+            <p>Accédez à l'inférence multi-matériels haute performance (Apple Silicon MLX, NVIDIA CUDA, CPU) et au réseau P2P d'agents IA autonomes sans barrière financière.</p>
+            <div class="free-pill">
+                ✨ Gratuit & Open-Source · Inférence Locale & P2P · Confidentialité Totale
             </div>
         </section>
 
-        <!-- Plans tarifaires -->
-        <section class="pricing-grid">
-            <!-- Démo gratuite -->
-            <div class="card">
-                <div>
-                    <div class="card-title">Découverte</div>
-                    <div class="card-price">0€ <span>/ gratuit</span></div>
-                </div>
-                <ul class="features-list">
-                    <li>3 requêtes de test</li>
-                    <li>Validité 7 jours</li>
-                    <li>Modèles IA standards</li>
-                    <li>Support communautaire</li>
-                </ul>
-                <button class="btn-outline" onclick="generateDemoKey()">Obtenir une clé démo</button>
-            </div>
-
-            <!-- Pro Mensuel -->
+        <!-- Grille des Offres Gratuites -->
+        <section class="features-grid">
+            <!-- Accès Communautaire Illimité -->
             <div class="card featured">
                 <div>
                     <span class="badge" style="display:inline-block; margin-bottom:0.5rem;">Recommandé</span>
-                    <div class="card-title">Pro Mensuel</div>
-                    <div class="card-price">10€ <span>/ mois en BTC</span></div>
+                    <div class="card-title">Accès Libre & Gratuit</div>
+                    <div class="card-tag">0€ <span>/ permanent</span></div>
                 </div>
                 <ul class="features-list">
-                    <li>Sans quota numérique (débit et capacité applicables)</li>
-                    <li>Inférence GPU NVIDIA / AMD / Apple Silicon</li>
-                    <li>Recherche Vectorielle RAG</li>
-                    <li>Renouvellement simple en BTC</li>
+                    <li>Requêtes et inférence illimitées</li>
+                    <li>Accélération matérielle Apple Silicon / CUDA</li>
+                    <li>RAG Sémantique SQLite & MoE Distribué</li>
+                    <li>Accès direct au protocole P2P Mesh</li>
                 </ul>
-                <button class="btn" onclick="selectPlan('pro_monthly')">Payer en Bitcoin (10€)</button>
+                <button class="btn" onclick="generateFreeKey()">✨ Obtenir ma Clé Gratuite Instantanément</button>
             </div>
 
-            <!-- Lifetime -->
-            <div class="card" style="border-color:rgba(251,191,36,0.4); background: radial-gradient(at top right, rgba(251,191,36,0.08), transparent 70%), var(--card-bg);">
+            <!-- Nœud Souverain Local & WAN -->
+            <div class="card">
                 <div>
-                    <span class="badge" style="background:rgba(251,191,36,0.15); color:#fbbf24; border-color:rgba(251,191,36,0.4); display:inline-block; margin-bottom:0.5rem;">Paiement Unique</span>
-                    <div class="card-title">Licence à Vie</div>
-                    <div class="card-price" style="color:#fbbf24;">200€ <span>/ à vie en BTC</span></div>
+                    <span class="badge badge-info" style="display:inline-block; margin-bottom:0.5rem;">Auto-Hébergé</span>
+                    <div class="card-title">Nœud Souverain (P2P)</div>
+                    <div class="card-tag">100% <span>Libre & Décentralisé</span></div>
                 </div>
                 <ul class="features-list">
-                    <li>Accès illimité à vie sans abonnement</li>
-                    <li>Tous moteurs GPU & CPU accélérés</li>
-                    <li>Toutes les futures mises à jour incluses</li>
-                    <li>Clé Ed25519 & Support VIP</li>
+                    <li>Zéro dépendance serveur tiers</li>
+                    <li>Chiffrement E2EE & Découverte mDNS / DHT</li>
+                    <li>Mode WAN 100% Confiance en 1 clic</li>
+                    <li>Contrôle total sur vos modèles et données</li>
                 </ul>
-                <button class="btn" style="background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%);" onclick="selectPlan('lifetime')">Acheter à Vie (200€ en BTC)</button>
+                <a href="#wanSection" class="btn-outline">🌐 Configurer le Nœud WAN</a>
             </div>
         </section>
-
-        <!-- Section Paiement BTC -->
-        <section class="btc-section" id="btcSection">
-            <h2>₿ Comment Payer en Bitcoin</h2>
-
-            <div class="btc-steps">
-                <div class="step">
-                    <div class="step-num">1</div>
-                    <h3>Choisissez votre plan</h3>
-                    <p>Cliquez sur « Payer en Bitcoin » ci-dessus pour sélectionner votre plan.</p>
-                </div>
-                <div class="step">
-                    <div class="step-num">2</div>
-                    <h3>Envoyez le montant BTC</h3>
-                    <p>Scannez l'adresse ou copiez-la dans votre wallet. Envoyez l'équivalent exact du plan.</p>
-                </div>
-                <div class="step">
-                    <div class="step-num">3</div>
-                    <h3>Soumettez votre txid</h3>
-                    <p>Renseignez votre email, le txid de la transaction et votre plan dans le formulaire.</p>
-                </div>
-                <div class="step">
-                    <div class="step-num">4</div>
-                    <h3>Clé activée instantanément après confirmation</h3>
-                    <p>Après vérification sur la blockchain, votre clé d'API sera activée et retournée.</p>
-                </div>
-            </div>
-
-            <label>Adresse Bitcoin de paiement :</label>
-            <div class="address-box">
-                <code id="btcAddressDisplay">{btc_address}</code>
-                <button class="btn-copy-addr" onclick="copyAddress()">Copier</button>
-            </div>
-
-            <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
-                <div style="background:white; padding:0.75rem; border-radius:0.75rem;">
-                    <img src="{btc_qr_data_uri}" alt="QR Code Bitcoin généré localement" width="150" height="150" style="display:block; border-radius:0.35rem;">
-                </div>
-                <div style="flex:1; min-width:200px;">
-                    <p style="color:var(--text-muted); font-size:0.9rem; line-height:1.7;">
-                        ₿ Scannez le QR code avec votre wallet (Electrum, BlueWallet, Phoenix, Muun…)<br>
-                        ou copiez l'adresse manuellement.<br><br>
-                        <strong style="color:var(--text);">Taux de change :</strong>
-                        consultez votre portefeuille ou exchange habituel dans un autre onglet.
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Tabs : Soumettre paiement / Vérifier statut -->
-        <div class="form-section">
-            <h2>Gestion de Paiement</h2>
-
-            <div class="tab-group">
-                <button class="tab active" id="tab-submit" onclick="switchTab('submit')">📤 Soumettre un paiement</button>
-                <button class="tab" id="tab-status" onclick="switchTab('status')">🔍 Vérifier le statut</button>
-            </div>
-
-            <!-- Formulaire soumission -->
-            <div id="panel-submit">
-                <div class="form-group">
-                    <label>Plan sélectionné</label>
-                    <select id="submitPlan" onchange="updatePriceHint()">
-                        <option value="pro_monthly">Pro Mensuel — 10€/mois</option>
-                        <option value="lifetime">Licence à Vie — 200€ paiement unique</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Votre adresse email</label>
-                    <input type="email" id="submitEmail" placeholder="vous@exemple.com">
-                </div>
-                <div class="form-group">
-                    <label>Transaction ID (txid Bitcoin)</label>
-                    <input type="text" id="submitTxid" placeholder="a1b2c3d4e5f6... (64 caractères hex)" style="font-family:'JetBrains Mono',monospace; font-size:0.85rem;">
-                </div>
-                <div class="form-group">
-                    <label>Note (optionnel)</label>
-                    <input type="text" id="submitNote" placeholder="Ex: depuis Bisq, wallet Electrum...">
-                </div>
-                <p style="color:var(--text-muted); font-size:0.85rem;">Vos email, txid et note sont transmis à cette passerelle et conservés avec le statut du paiement pour la vérification. N’envoyez pas de données personnelles inutiles.</p>
-                <button class="btn" style="width:auto; padding:0.85rem 2.5rem;" onclick="submitPayment()">₿ Soumettre mon paiement</button>
-                <div id="submitAlert"></div>
-            </div>
-
-            <!-- Vérification statut -->
-            <div id="panel-status" style="display:none;">
-                <div class="form-group">
-                    <label>Payment ID (reçu lors de votre soumission)</label>
-                    <input type="text" id="statusPaymentId" placeholder="ex: 3a7f9c1e2b4d...">
-                </div>
-                <button class="btn" style="width:auto; padding:0.85rem 2.5rem;" onclick="checkStatus()">🔍 Vérifier le statut</button>
-                <div id="statusResult" style="margin-top:1rem;"></div>
-            </div>
-        </div>
 
         <!-- Nœud WAN 100% Confiance -->
-        <div class="form-section">
+        <div class="form-section" id="wanSection">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
                 <h2 style="margin:0;">🌐 Passerelle & Nœud WAN</h2>
                 <span id="wanBadge" class="badge badge-info">100% Confiance</span>
@@ -710,7 +496,7 @@ def render_portal_html(
                 🌐 Activer le Nœud WAN (100% Confiance & Auto-Sécurisé)
             </button>
 
-            <!-- Dashboard de connexion active (affiché après activation) -->
+            <!-- Dashboard de connexion active -->
             <div id="wanActiveCard" style="display:none; margin-top:1.5rem; background:rgba(0,255,136,0.05); border:1px solid rgba(0,255,136,0.3); border-radius:12px; padding:1.2rem;">
                 <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.8rem;">
                     <span style="color:#00ff88; font-size:1.2rem;">●</span>
@@ -723,7 +509,7 @@ def render_portal_html(
                     </div>
                     <div>
                         <span style="color:var(--text-muted);">Clé PSK Générée :</span>
-                        <code id="wanPskVal" style="display:block; padding:0.4rem 0.6rem; background:rgba(0,0,0,0.4); border-radius:6px; margin-top:0.2rem; color:#f7931a; word-break:break-all;"></code>
+                        <code id="wanPskVal" style="display:block; padding:0.4rem 0.6rem; background:rgba(0,0,0,0.4); border-radius:6px; margin-top:0.2rem; color:#00ff88; word-break:break-all;"></code>
                     </div>
                     <div>
                         <span style="color:var(--text-muted);">Commande d'appel pour Agents OpenClaw :</span>
@@ -738,9 +524,66 @@ def render_portal_html(
             <div id="wanAlert" style="margin-top:1rem;"></div>
         </div>
 
-        <!-- Playground -->
+        <!-- Visualisation Dynamique du Maillage P2P (Graphe 2D/3D Interactif) -->
+        <div class="form-section" id="meshTopologySection">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+                <h2 style="margin:0;">🕸️ Topologie & Flux d'Inférence du Maillage (Live Graph)</h2>
+                <span class="badge" id="clusterActiveBadge">Cluster Actif · Découverte DHT/Gossip</span>
+            </div>
+            <p style="color:var(--text-muted); margin-bottom:1rem; font-size:0.9rem;">
+                Visualisation temps réel des nœuds pairs, liaisons chiffrées E2EE, relais WAN et routage d'inférence MoE.
+            </p>
+            <div style="position:relative; background:#070d19; border:1px solid var(--card-border); border-radius:1rem; overflow:hidden; display:flex; justify-content:center;">
+                <canvas id="meshCanvas" width="900" height="320" style="width:100%; max-height:340px; display:block;"></canvas>
+            </div>
+        </div>
+
+        <!-- Chat Playground Interactif en Direct -->
+        <div class="form-section" id="chatSection">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+                <h2 style="margin:0;">💬 Playground de Chat & Inférence Distribuée</h2>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <span id="kvCacheBadge" class="badge badge-info" style="display:none;">⚡ KV-Cache HIT</span>
+                    <span id="latencyBadge" class="badge" style="background:rgba(255,255,255,0.05); color:var(--text-muted);">0 ms</span>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                <div>
+                    <label style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">Modèle d'IA :</label>
+                    <select id="chatModel" style="margin-top:0.3rem; width:100%; background:var(--code-bg); border:1px solid var(--card-border); border-radius:0.5rem; padding:0.6rem; color:#fff;">
+                        <option value="qwen2.5-coder-7b">Qwen 2.5 Coder 7B (Inférence Rapide)</option>
+                        <option value="deepseek-v3-moe">DeepSeek-V3 MoE (Pipeline Distribué)</option>
+                        <option value="mlx-community/Qwen2.5-Coder-7B-Instruct-4bit">Apple Silicon Metal MLX (Local)</option>
+                        <option value="whisper-base-stt">Whisper Base (Audio STT)</option>
+                        <option value="qwen2-vl-vision">Qwen2-VL (Vision Multimodale)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">Clé d'API (Optionnelle si local) :</label>
+                    <input type="text" id="chatApiKey" placeholder="sk_claw_... (auto-rempli)" style="margin-top:0.3rem; width:100%; background:var(--code-bg); border:1px solid var(--card-border); border-radius:0.5rem; padding:0.6rem; color:#fff;">
+                </div>
+            </div>
+
+            <!-- Boîte de dialogue de Chat -->
+            <div id="chatBox" style="background:#090d16; border:1px solid var(--card-border); border-radius:0.75rem; padding:1rem; min-height:180px; max-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1rem;">
+                <div style="display:flex; gap:0.6rem; align-items:flex-start;">
+                    <div style="background:var(--brand-green-dim); border:1px solid var(--brand-green-border); color:var(--brand-green); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.85rem; flex-shrink:0;">⚡</div>
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:0.75rem; padding:0.75rem 1rem; color:var(--text); font-size:0.9rem; line-height:1.5;">
+                        Bienvenue sur le maillage OpenClawMesh ! Posez une question ou demandez du code pour tester l'inférence distribuée multi-matériels.
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:0.6rem;">
+                <input type="text" id="chatInput" placeholder="Tapez votre message ici (ex: Écris une fonction Python asynchrone)..." style="flex:1; background:var(--code-bg); border:1px solid var(--card-border); border-radius:0.65rem; padding:0.75rem 1rem; color:#fff; font-size:0.92rem;" onkeydown="if(event.key==='Enter') sendChatMessage()">
+                <button class="btn" style="width:auto; padding:0.75rem 1.8rem;" onclick="sendChatMessage()">Envoyer 🚀</button>
+            </div>
+        </div>
+
+        <!-- Playground Exécution Directe (Tools / API) -->
         <div class="form-section">
-            <h2>🧪 Tester votre Clé en Direct</h2>
+            <h2>🧪 Exécution d'Outils & Compétences (REST / Tools)</h2>
 
             <div class="form-group">
                 <label>Clé d'API OpenClaw (Header X-API-Key)</label>
@@ -770,11 +613,11 @@ def render_portal_html(
         </div>
     </main>
 
-    <!-- Modal clé démo -->
+    <!-- Modal clé gratuite -->
     <div class="modal" id="keyModal">
         <div class="modal-content">
-            <h2 style="font-size:1.5rem; font-weight:800; color:#fff;">🎉 Clé Démo Générée !</h2>
-            <p style="color:var(--text-muted); margin-top:0.5rem; font-size:0.95rem;">Voici votre clé gratuite (3 requêtes, 7 jours). Conservez-la :</p>
+            <h2 style="font-size:1.5rem; font-weight:800; color:#fff;">🎉 Clé Gratuite Générée !</h2>
+            <p style="color:var(--text-muted); margin-top:0.5rem; font-size:0.95rem;">Voici votre clé d'API gratuite et illimitée OpenClawMesh. Conservez-la :</p>
 
             <div class="key-display">
                 <code id="modalApiKey">sk_claw_...</code>
@@ -782,39 +625,30 @@ def render_portal_html(
             </div>
 
             <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:0.75rem; font-size:0.85rem; color:var(--text-muted); margin-top:1rem;">
-                <strong>Utilisation dans OpenClaw :</strong>
+                <strong>Utilisation dans vos scripts & agents :</strong>
                 <pre style="margin-top:0.5rem; color:#93c5fd; font-size:0.82rem;">export OPENCLAW_API_KEY="<span id="modalKeyPlaceholder">...</span>"</pre>
             </div>
 
-            <button class="btn" style="margin-top:1.25rem;" onclick="closeModal()">Fermer et Tester</button>
+            <button class="btn" style="margin-top:1.25rem;" onclick="closeModal()">Tester dans le Playground</button>
         </div>
     </div>
 
     <footer>
         OpenClawMesh &copy; 2026 — Inférence IA Décentralisée & Multi-Matériels.<br>
-        Paiements Bitcoin uniquement — Confidentialité & Souveraineté financière.
+        100% Free & Open-Source — Souveraineté & Calcul Libre.
     </footer>
 
     <script>
-        // ── Utils ──────────────────────────────────────────────────────
         function showAlert(containerId, message, type) {{
             const el = document.getElementById(containerId);
             el.className = 'alert ' + type;
             el.innerHTML = message;
         }}
 
-        function copyAddress() {{
-            navigator.clipboard.writeText('{btc_address}');
-            const btn = document.querySelector('.btn-copy-addr');
-            const prev = btn.textContent;
-            btn.textContent = '✓ Copié !';
-            setTimeout(() => btn.textContent = prev, 2000);
-        }}
-
         function copyKey() {{
             const key = document.getElementById('modalApiKey').innerText;
             navigator.clipboard.writeText(key);
-            alert('Clé copiée !');
+            alert('Clé d\'API copiée dans le presse-papiers !');
         }}
 
         function closeModal() {{
@@ -828,27 +662,6 @@ def render_portal_html(
             document.getElementById('keyModal').style.display = 'flex';
         }}
 
-        // ── Tabs ───────────────────────────────────────────────────────
-        function switchTab(tab) {{
-            document.getElementById('panel-submit').style.display = tab === 'submit' ? 'block' : 'none';
-            document.getElementById('panel-status').style.display = tab === 'status' ? 'block' : 'none';
-            document.getElementById('tab-submit').className = 'tab' + (tab === 'submit' ? ' active' : '');
-            document.getElementById('tab-status').className = 'tab' + (tab === 'status' ? ' active' : '');
-        }}
-
-        // ── Sélection plan via bouton carte ────────────────────────────
-        function selectPlan(plan) {{
-            document.getElementById('submitPlan').value = plan;
-            document.getElementById('btcSection').scrollIntoView({{ behavior: 'smooth' }});
-            document.getElementById('submitEmail').focus();
-        }}
-
-        function updatePriceHint() {{
-            // Peut afficher un texte indicatif si besoin
-        }}
-
-        let paymentStatusToken = '';
-
         document.addEventListener('DOMContentLoaded', () => {{
             const savedToken = localStorage.getItem('openclaw_admin_token');
             if (savedToken) {{
@@ -857,6 +670,26 @@ def render_portal_html(
             }}
         }});
 
+        // ── Génération Clé Gratuite ─────────────────────────────────────
+        async function generateFreeKey() {{
+            try {{
+                const res = await fetch('/api/v1/checkout/free-key', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{}})
+                }});
+                const data = await res.json();
+                if (data.ok && data.api_key) {{
+                    showKeyModal(data.api_key);
+                }} else {{
+                    alert('Erreur : ' + (data.detail || 'Impossible de générer la clé.'));
+                }}
+            }} catch (err) {{
+                alert('Erreur réseau lors de la génération de clé : ' + err);
+            }}
+        }}
+
+        // ── WAN Node Toggle ─────────────────────────────────────────────
         async function toggleWanNode() {{
             const tokenInput = document.getElementById('wanAdminToken');
             const token = tokenInput ? tokenInput.value.trim() : '';
@@ -902,160 +735,157 @@ def render_portal_html(
             const val = document.getElementById('wanCliVal').textContent;
             if (val) {{
                 navigator.clipboard.writeText(val);
-                showAlert('wanAlert', '📋 Commande d’appel pour agents OpenClaw copiée dans le presse-papiers !', 'success');
+                showAlert('wanAlert', '📋 Commande d’appel copiée dans le presse-papiers !', 'success');
             }}
         }}
 
-        // ── Soumettre paiement BTC ─────────────────────────────────────
-        async function submitPayment() {{
-            const email = document.getElementById('submitEmail').value.trim();
-            const plan  = document.getElementById('submitPlan').value;
-            const txid  = document.getElementById('submitTxid').value.trim();
-            const note  = document.getElementById('submitNote').value.trim();
+        // ── Chat Playground Client ─────────────────────────────────────
+        async function sendChatMessage() {{
+            const input = document.getElementById('chatInput');
+            const prompt = input.value.trim();
+            if (!prompt) return;
 
-            if (!email || !txid) {{
-                showAlert('submitAlert', '⚠️ Email et txid sont obligatoires.', 'error');
-                return;
-            }}
-            if (!/^[0-9a-fA-F]{{64}}$/.test(txid)) {{
-                showAlert('submitAlert', '⚠️ Le txid Bitcoin doit contenir 64 caractères hexadécimaux.', 'error');
-                return;
-            }}
+            const apiKey = document.getElementById('chatApiKey').value.trim() || document.getElementById('playKey').value.trim();
+            const model = document.getElementById('chatModel').value;
+            const chatBox = document.getElementById('chatBox');
+            const latencyBadge = document.getElementById('latencyBadge');
+            const kvBadge = document.getElementById('kvCacheBadge');
 
-            document.getElementById('submitAlert').className = '';
-            document.getElementById('submitAlert').innerHTML = '⌛ Envoi en cours...';
+            // 1. Ajouter le message utilisateur
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.style.cssText = 'display:flex; justify-content:flex-end; margin-bottom:0.5rem;';
+            userMsgDiv.innerHTML = `<div style="background:var(--brand-green); color:#030712; font-weight:600; padding:0.75rem 1rem; border-radius:0.75rem; max-width:80%; font-size:0.9rem;">${{escapeHtml(prompt)}}</div>`;
+            chatBox.appendChild(userMsgDiv);
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
 
+            // 2. Préparer la bulle assistant
+            const botMsgDiv = document.createElement('div');
+            botMsgDiv.style.cssText = 'display:flex; gap:0.6rem; align-items:flex-start; margin-bottom:0.5rem;';
+            const botContent = document.createElement('div');
+            botContent.style.cssText = 'background:rgba(255,255,255,0.04); border:1px solid var(--card-border); border-radius:0.75rem; padding:0.75rem 1rem; color:var(--text); font-size:0.9rem; line-height:1.5; max-width:85%;';
+            botContent.innerHTML = '<em>⚡ Inférence en cours sur le maillage...</em>';
+            botMsgDiv.innerHTML = `<div style="background:var(--brand-green-dim); border:1px solid var(--brand-green-border); color:var(--brand-green); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.85rem; flex-shrink:0;">🤖</div>`;
+            botMsgDiv.appendChild(botContent);
+            chatBox.appendChild(botMsgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            const t0 = performance.now();
             try {{
-                const res = await fetch('/api/v1/payment/submit', {{
+                const headers = {{ 'Content-Type': 'application/json' }};
+                if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
+
+                const res = await fetch('/v1/chat/completions', {{
                     method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ email, plan, txid, note }})
+                    headers: headers,
+                    body: JSON.stringify({{
+                        model: model,
+                        messages: [{{ role: 'user', content: prompt }}],
+                        stream: false
+                    }})
                 }});
                 const data = await res.json();
+                const duration = Math.round(performance.now() - t0);
+                latencyBadge.textContent = duration + ' ms';
 
-                if (res.ok && data.ok) {{
-                    showAlert('submitAlert',
-                        `✅ <strong>Paiement enregistré !</strong><br>
-                        Payment ID : <code style="font-family:monospace; color:#f7931a;">${{data.payment_id}}</code><br>
-                        Conservez ce code pour suivre votre paiement. Votre clé sera activée dès la confirmation du txid par l’administrateur.`,
-                        'success'
-                    );
-                    // Pré-remplir l'onglet de vérification
-                    document.getElementById('statusPaymentId').value = data.payment_id;
-                    paymentStatusToken = data.status_token;
+                if (data.kv_cache_hit) {{
+                    kvBadge.style.display = 'inline-block';
                 }} else {{
-                    showAlert('submitAlert', '❌ ' + (data.detail || data.error || 'Erreur inconnue.'), 'error');
-                }}
-            }} catch (err) {{
-                showAlert('submitAlert', '❌ Erreur réseau : ' + err, 'error');
-            }}
-        }}
-
-        // ── Vérifier statut ────────────────────────────────────────────
-        async function checkStatus() {{
-            const paymentId = document.getElementById('statusPaymentId').value.trim();
-            if (!paymentId) {{
-                document.getElementById('statusResult').innerHTML =
-                    '<div class="alert error">⚠️ Veuillez saisir un Payment ID.</div>';
-                return;
-            }}
-
-            document.getElementById('statusResult').innerHTML = '<p style="color:var(--text-muted);">⌛ Vérification...</p>';
-
-            try {{
-                const res = await fetch('/api/v1/payment/status/' + encodeURIComponent(paymentId), {{
-                    headers: {{ 'X-Payment-Token': paymentStatusToken }}
-                }});
-                const data = await res.json();
-
-                if (!res.ok) {{
-                    document.getElementById('statusResult').innerHTML =
-                        `<div class="alert error">❌ ${{data.detail || 'Introuvable.'}}</div>`;
-                    return;
+                    kvBadge.style.display = 'none';
                 }}
 
-                const statusLabels = {{
-                    'pending_verification': '⌛ En attente de vérification admin',
-                    'confirmed': '✅ Confirmé — Clé active',
-                    'rejected': '❌ Rejeté',
-                }};
-
-                let html = `<div class="alert success" style="display:block;">
-                    <strong>${{statusLabels[data.status] || data.status}}</strong><br>
-                    Plan : <strong>${{data.plan}}</strong> · Email : ${{data.email}}`;
-
-                if (data.status === 'confirmed' && data.api_key) {{
-                    html += `<br><br><strong>Votre clé d'API :</strong>`;
-                    document.getElementById('statusResult').innerHTML = html + '</div>';
-                    const keyDiv = document.createElement('div');
-                    keyDiv.className = 'key-display';
-                    keyDiv.innerHTML = `<code>${{data.api_key}}</code>
-                        <button class="btn-copy-addr" onclick="navigator.clipboard.writeText('${{data.api_key}}')">Copier</button>`;
-                    document.getElementById('statusResult').querySelector('.alert').appendChild(keyDiv);
-                    document.getElementById('playKey').value = data.api_key;
-                    return;
-                }} else if (data.status === 'rejected') {{
-                    html += `<br>Raison : ${{data.rejection_reason || 'Non précisée.'}}`;
+                if (res.ok && data.choices && data.choices[0]) {{
+                    botContent.innerText = data.choices[0].message.content;
+                }} else {{
+                    botContent.innerText = 'Erreur : ' + (data.detail || JSON.stringify(data));
                 }}
-
-                html += '</div>';
-                document.getElementById('statusResult').innerHTML = html;
-
             }} catch (err) {{
-                document.getElementById('statusResult').innerHTML =
-                    `<div class="alert error">❌ Erreur réseau : ${{err}}</div>`;
+                botContent.innerText = 'Erreur réseau : ' + err;
             }}
+            chatBox.scrollTop = chatBox.scrollHeight;
         }}
 
-        // ── Clé Démo ──────────────────────────────────────────────────
-        async function generateDemoKey() {{
-            const email = 'demo_' + Math.random().toString(36).substring(7) + '@openclaw.mesh';
-            try {{
-                const res = await fetch('/api/v1/checkout/demo-key', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ email }})
+        function escapeHtml(text) {{
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
+        }}
+
+        // ── Visualiseur Graphe 2D/3D Canvas ────────────────────────────
+        function initMeshGraph() {{
+            const canvas = document.getElementById('meshCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let w = canvas.width = canvas.offsetWidth || 800;
+            let h = canvas.height = 320;
+
+            const nodes = [
+                {{ id: 'local', name: 'OpenClaw Gateway', x: w*0.5, y: h*0.5, radius: 18, color: '#00ff88', pulse: 0 }},
+                {{ id: 'gpu1', name: 'GPU Node (Apple Metal MLX)', x: w*0.25, y: h*0.3, radius: 14, color: '#93c5fd', pulse: 0.5 }},
+                {{ id: 'gpu2', name: 'GPU Node (CUDA / vLLM)', x: w*0.75, y: h*0.3, radius: 14, color: '#38bdf8', pulse: 1.0 }},
+                {{ id: 'dht', name: 'DHT Kademlia Router', x: w*0.3, y: h*0.75, radius: 12, color: '#a78bfa', pulse: 1.5 }},
+                {{ id: 'relay', name: 'WAN ICE / TURN Relay', x: w*0.7, y: h*0.75, radius: 12, color: '#fbbf24', pulse: 2.0 }},
+            ];
+
+            const links = [
+                [0, 1], [0, 2], [0, 3], [0, 4], [1, 3], [2, 4], [3, 4]
+            ];
+
+            function animate() {{
+                ctx.clearRect(0, 0, w, h);
+
+                // Lignes de connexion
+                links.forEach(([i, j]) => {{
+                    const n1 = nodes[i], n2 = nodes[j];
+                    ctx.beginPath();
+                    ctx.moveTo(n1.x, n1.y);
+                    ctx.lineTo(n2.x, n2.y);
+                    ctx.strokeStyle = 'rgba(0, 255, 136, 0.15)';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
                 }});
-                const data = await res.json();
-                if (data.ok) showKeyModal(data.api_key);
-                else alert('Erreur : ' + (data.detail || 'Inconnue'));
-            }} catch (err) {{
-                alert('Erreur démo : ' + err);
-            }}
-        }}
 
-        // ── Playground ─────────────────────────────────────────────────
-        async function runPlayground() {{
-            const key = document.getElementById('playKey').value.trim();
-            const skill = document.getElementById('playSkill').value;
-            const payloadRaw = document.getElementById('playPayload').value;
-            const outEl = document.getElementById('playOutput');
+                // Dessin des nœuds avec onde de pulse
+                const now = Date.now() / 1000;
+                nodes.forEach((n, idx) => {{
+                    const pulseRadius = n.radius + Math.sin(now * 3 + n.pulse) * 4;
+                    ctx.beginPath();
+                    ctx.arc(n.x, n.y, pulseRadius + 6, 0, Math.PI * 2);
+                    ctx.fillStyle = n.color.replace(')', ', 0.12)').replace('rgb', 'rgba').replace('#00ff88', 'rgba(0,255,136,0.12)');
+                    ctx.fill();
 
-            if (!key) {{ alert('Veuillez saisir ou générer une clé d\'API d\'abord.'); return; }}
+                    ctx.beginPath();
+                    ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = n.color;
+                    ctx.fill();
 
-            let payload;
-            try {{
-                payload = JSON.parse(payloadRaw);
-            }} catch (e) {{
-                outEl.innerText = 'Erreur : Payload JSON invalide.';
-                return;
-            }}
-
-            outEl.innerText = '⌛ Exécution de la compétence sur la passerelle...';
-
-            try {{
-                const res = await fetch('/api/v1/execute', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json', 'X-API-Key': key }},
-                    body: JSON.stringify({{ skill, payload }})
+                    ctx.fillStyle = '#f3f4f6';
+                    ctx.font = '11px -apple-system, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(n.name, n.x, n.y + n.radius + 14);
                 }});
-                const result = await res.json();
-                outEl.innerText = JSON.stringify(result, null, 2);
-            }} catch (err) {{
-                outEl.innerText = 'Erreur d\'appel : ' + err;
+
+                requestAnimationFrame(animate);
             }}
+
+            window.addEventListener('resize', () => {{
+                w = canvas.width = canvas.offsetWidth || 800;
+                h = canvas.height = 320;
+                nodes[0].x = w*0.5; nodes[0].y = h*0.5;
+                nodes[1].x = w*0.25; nodes[1].y = h*0.3;
+                nodes[2].x = w*0.75; nodes[2].y = h*0.3;
+                nodes[3].x = w*0.3; nodes[3].y = h*0.75;
+                nodes[4].x = w*0.7; nodes[4].y = h*0.75;
+            }});
+
+            animate();
         }}
+
+        document.addEventListener('DOMContentLoaded', () => {{
+            initMeshGraph();
+        }});
     </script>
 </body>
 </html>
+
 """
