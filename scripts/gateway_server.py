@@ -26,10 +26,12 @@ def main():
     args = parser.parse_args()
 
     print(f"\n🚀 Démarrage de la Passerelle OpenClawMesh sur http://{args.host}:{args.port}")
-    print(f"🌐 Portail Libre & Gratuit : http://localhost:{args.port}/portal")
-    print(f"🔑 Génération Clé Instantanée : http://localhost:{args.port}/api/v1/checkout/free-key")
-    print(f"⚡ Endpoints OpenAI : http://localhost:{args.port}/v1/chat/completions")
-    print(f"🛡️  Endpoint Exécution : http://localhost:{args.port}/api/v1/execute\n")
+    print(f"🌐 Portail & Command Center : http://{args.host}:{args.port}/portal")
+    print(f"🔑 Génération Clé Locale : http://{args.host}:{args.port}/api/v1/checkout/free-key")
+    print(f"⚡ Endpoints OpenAI : http://{args.host}:{args.port}/v1/chat/completions")
+    print(f"🛡️  Endpoint Exécution : http://{args.host}:{args.port}/api/v1/execute")
+    print("🔒 [Avis de Sécurité] Écoute locale par défaut (127.0.0.1). L'accès aux outils, mémoire et calcul")
+    print("   exige le consentement explicite de l'opérateur. L'exposition WAN requiert TLS et authentification.\n")
 
     uvicorn.run(
         "openclaw_mesh.gateway.server:app",

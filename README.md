@@ -21,9 +21,15 @@
 
 ---
 
-**OpenClawMesh** is a sovereign peer-to-peer framework and modular Skill for **OpenClaw** AI agents. LAN connectivity is the default use case; WAN features (DHT, relay, and STUN) are optional and can be enabled with one click.
+**OpenClawMesh** is a sovereign peer-to-peer framework and modular Skill for **OpenClaw** AI agents. LAN connectivity is the default, secure execution mode; WAN features (DHT, relay, and STUN traversal) are strictly optional and subject to explicit user consent.
 
-Agents discover each other over LAN and the Internet, delegate compute, leverage local GPU/NPU hardware, route end-to-end encrypted payloads, and share persistent vector memory — **100% Free & Open-Source, with zero dependency on any centralized cloud provider**.
+Agents discover each other on the local network, delegate compute, leverage local GPU/NPU hardware, route end-to-end encrypted payloads, and share episodic memory — **100% Free, Open-Source & Sovereign**.
+
+> [!IMPORTANT]
+> **Security, Data Privacy & Operator Consent:**
+> - **LAN-First by default**: No WAN communication (Internet, STUN, DHT, UPnP) is initiated without explicit operator request.
+> - **Flow Control**: Delegating compute, prompts, files, audio/images, or tool outputs to a remote peer requires operator approval.
+> - **Secured WAN Exposure**: Any external access strictly requires TLS encryption and a shared PSK or Ed25519 TrustStore.
 
 ---
 
@@ -33,42 +39,43 @@ Agents discover each other over LAN and the Internet, delegate compute, leverage
 <tr>
 <td width="50%">
 
-**🌐 Universal Discovery & WAN Routing**
-- Zero-config LAN via **mDNS Zeroconf** (dual service type: JarvisMesh & OpenClawMesh)
-- Global WAN via **Kademlia DHT 160-bit** (real UDP, *k*=20, α=3, global seed bootstrap & auto-refresh)
-- **Auto UPnP Port Mapping** (SSDP M-SEARCH + SOAP IGD) & **STUN RFC 5389** NAT traversal with HTTPS fallback
-- **Transparent WAN Relay Routing** with automatic client fallback
+**🌐 Local Discovery & P2P Routing**
+- Zero-config LAN discovery via **mDNS Zeroconf** (JarvisMesh & OpenClawMesh)
+- Optional WAN routing via **Kademlia DHT 160-bit** (real UDP, *k*=20, α=3 with configured seeds)
+- **STUN RFC 5389** NAT traversal & **E2EE Relay** (strictly opt-in)
+- Optional **UPnP IGD** port mapping upon explicit operator activation
 
-**⚡ Universal Inference Engine**
+**⚡ Multi-Hardware Universal Inference Engine**
 - 🟢 **NVIDIA** — CUDA / TensorRT / PyTorch
 - 🔴 **AMD** — ROCm / DirectML / HIP
 - 🔵 **Intel Core Ultra** — NPU / OpenVINO / AVX-512
 - 🟣 **Apple Silicon M1–M4** — Metal GPU via MLX-LM
 - ⚪ **CPU Fallback** — Ollama / llama.cpp / vLLM
 
-**🎯 Auto VRAM Quantization**
-- Selects optimal model size & format (4-bit, 8-bit, FP16) from detected VRAM
+**🎯 VRAM Quantization & Semantic Cache**
+- Dynamic quantization format selection (4-bit, 8-bit, FP16)
+- **Semantic KV-Cache** with LRU memory eviction
 
 </td>
 <td width="50%">
 
-**🔐 Zero-Trust Security**
+**🔐 Zero-Trust Security & Anti-Replay**
 - **ChaCha20-Poly1305 AEAD** + **X25519 ECDH** — E2EE (relays see only ciphertext)
-- **Ed25519** node identities + `TrustStore` allowlist
-- Anti-replay: timestamp freshness window + bounded nonce cache
+- **Ed25519** node identities + `TrustStore` access control
+- Comprehensive anti-replay: timestamp freshness window + bounded request/nonce cache
 
-**🔀 Distributed Pipeline**
-- Split LLM / MoE models across mesh nodes (pipeline parallelism)
-- Native **streaming** (async generator, token-by-token)
+**🔀 Distributed Pipeline & MoE**
+- Distributed MoE with real quantized tensor buffers
+- Native **streaming** (SSE, token-by-token)
 
-**👁️ Multi-Modal AI**
-- Vision VLM (Qwen2-VL, Pixtral), STT (Whisper), TTS
+**👁️ Multi-Modal AI & Tools**
+- Vision VLM, STT (Whisper), TTS connectors
+- Standard **OpenAI Tools / Function Calling** compatibility
 
-**🌐 Free Universal Gateway & Command Center**
-- Instant Free API Key generation (no credit card, no account, 100% Free)
-- One-click WAN node toggle (100% Confidence mode with TLS + PSK auto-provisioning)
-- Live interactive skill playground (LLM, RAG semantic search, Echo)
-
+**🖥️ Web Portal & Local Command Center**
+- Interactive Mesh Visualizer (2D/3D Canvas)
+- Live Chat Playground (LLM, RAG, Echo)
+- Local FastAPI Gateway with authentication
 </td>
 </tr>
 </table>

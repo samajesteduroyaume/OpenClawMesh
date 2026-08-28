@@ -149,7 +149,7 @@ class OpenClawMeshNode:
                 )
                 await self.dht.start_network()
                 await self.dht.bootstrap_global()
-                self._dht_task = self.dht.start_auto_refresh(45.0)
+                self._dht_task = self.dht.start_auto_refresh(interval_seconds=45.0)
 
                 # Publier nos compétences sur la toile mondiale DHT
                 for skill_name in self.registry.list_remote_names():

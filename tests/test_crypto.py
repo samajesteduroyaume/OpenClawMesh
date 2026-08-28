@@ -88,3 +88,43 @@ def test_trust_store(tmp_path):
 
     loaded_store.revoke(id_alice.public_key_hex)
     assert loaded_store.is_trusted(id_alice.public_key_hex) is False
+
+
+def test_ed25519_anti_replay_cache():
+    identity = NodeIdentity.generate()
+    req = TaskRequest(
+        skill="llm",
+        payload={"prompt": "Replay test"},
+        origin="agent-replay-tester",
+    )
+    req.sign_ed25519(identity)
+    assert req.pubkey is not None
+    assert req.sig is not None
+
+    # 1. First verification: success
+    assert (
+        verify_ed25519_signature(
+            public_key_hex=req.pubkey,
+            request_id=req.request_id,
+            origin=req.origin,
+            skill=req.skill,
+            ts=req.ts,
+            payload=req.payload,
+            signature_hex=req.sig,
+        )
+        is True
+    )
+
+    # 2. Replay with identical (origin, request_id): must fail
+    assert (
+        verify_ed25519_signature(
+            public_key_hex=req.pubkey,
+            request_id=req.request_id,
+            origin=req.origin,
+            skill=req.skill,
+            ts=req.ts,
+            payload=req.payload,
+            signature_hex=req.sig,
+        )
+        is False
+    )

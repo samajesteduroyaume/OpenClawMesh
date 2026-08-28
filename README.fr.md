@@ -21,9 +21,15 @@
 
 ---
 
-**OpenClawMesh** est un protocole pair-à-pair souverain et un Skill modulaire pour les agents IA **OpenClaw**. La connectivité LAN est le cas par défaut ; les fonctions WAN (DHT, relais et STUN) sont optionnelles et activables en un clic.
+**OpenClawMesh** est un protocole pair-à-pair souverain et un Skill modulaire pour les agents IA **OpenClaw**. La connectivité locale (LAN) est le mode d'exécution sécurisé par défaut ; les extensions WAN (DHT, relais et traversée STUN) sont strictement optionnelles et soumises au consentement explicite de l'utilisateur.
 
-Les agents se découvrent sur le réseau local et Internet, délèguent du calcul, exploitent les GPU/NPU locaux, routent des charges utiles chiffrées de bout en bout et partagent une mémoire vectorielle persistante — **100% Gratuit et Open-Source, sans dépendre d'aucun prestataire cloud centralisé**.
+Les agents se découvrent sur le réseau local, délèguent du calcul, exploitent les GPU/NPU locaux, routent des charges utiles chiffrées de bout en bout et partagent une mémoire vectorielle — **100% Libre, Open-Source et Souverain**.
+
+> [!IMPORTANT]
+> **Sécurité, Données & Consentement Opérateur :**
+> - **LAN-First par défaut** : Aucune communication WAN (Internet, STUN, DHT, UPnP) n'est engagée sans demande explicite de l'opérateur.
+> - **Contrôle des flux** : La délégation de calculs, prompts, fichiers, audio/images ou résultats d'outils vers un pair distant requiert l'autorisation de l'utilisateur.
+> - **Exposition WAN Sécurisée** : Tout accès externe requiert obligatoirement le chiffrement TLS et une clé PSK ou TrustStore Ed25519.
 
 ---
 
@@ -33,42 +39,43 @@ Les agents se découvrent sur le réseau local et Internet, délèguent du calcu
 <tr>
 <td width="50%">
 
-**🌐 Découverte Universelle & Routage WAN**
-- LAN sans configuration via **mDNS Zeroconf** (double type de service : JarvisMesh & OpenClawMesh)
-- WAN mondial via **DHT Kademlia 160-bit** (UDP réel, *k*=20, α=3, amorçage de seeds publics mondiaux & auto-refresh)
-- **Mappage de Port Automatique UPnP** (SSDP M-SEARCH + SOAP IGD) & traversée NAT **STUN RFC 5389** avec fallback HTTPS
-- **Routage de Relais WAN Transparent** avec bascule automatique côté client
+**🌐 Découverte Locale & Routage P2P**
+- Découverte LAN sans configuration via **mDNS Zeroconf** (JarvisMesh & OpenClawMesh)
+- Routage WAN optionnel via **DHT Kademlia 160-bit** (UDP réel, *k*=20, α=3 avec seeds configurés)
+- Traversée NAT **STUN RFC 5389** & **Relais E2EE** (strictement opt-in)
+- Mappage de port optionnel **UPnP IGD** sur demande explicite
 
-**⚡ Moteur d'Inférence Universel**
+**⚡ Moteur d'Inférence Universel Multi-Matériels**
 - 🟢 **NVIDIA** — CUDA / TensorRT / PyTorch
 - 🔴 **AMD** — ROCm / DirectML / HIP
 - 🔵 **Intel Core Ultra** — NPU / OpenVINO / AVX-512
 - 🟣 **Apple Silicon M1–M4** — Metal GPU via MLX-LM
 - ⚪ **Fallback CPU** — Ollama / llama.cpp / vLLM
 
-**🎯 Quantisation VRAM Automatique**
-- Sélectionne le format optimal (4-bit, 8-bit, FP16) selon la VRAM disponible
+**🎯 Quantisation VRAM & Cache Sémantique**
+- Sélection dynamique du format optimal (4-bit, 8-bit, FP16)
+- **KV-Cache Sémantique** avec éviction mémoire LRU
 
 </td>
 <td width="50%">
 
-**🔐 Sécurité Zéro-Confiance**
+**🔐 Sécurité Zéro-Confiance & Anti-Rejeu**
 - **ChaCha20-Poly1305 AEAD** + **X25519 ECDH** — E2EE (les relais ne voient que le chiffré)
-- Identités **Ed25519** + liste blanche `TrustStore`
-- Anti-rejeu : fenêtre d'horodatage + cache de nonces borné
+- Identités **Ed25519** + contrôle d'accès `TrustStore`
+- Anti-rejeu complet : fenêtre d'horodatage + cache de requêtes et nonces borné
 
-**🔀 Pipeline Distribué**
-- Fragmentation de grands modèles LLM / MoE sur plusieurs nœuds
-- **Streaming** natif (générateur async, token par token)
+**🔀 Pipeline Distribué & MoE**
+- Fragmentation MoE avec transmission de tenseurs quantifiés réels
+- **Streaming** natif (SSE, token par token)
 
-**👁️ IA Multi-Modale**
-- Vision VLM (Qwen2-VL, Pixtral), STT (Whisper), TTS
+**👁️ IA Multi-Modale & Outils**
+- Connecteurs Vision VLM, STT (Whisper), TTS
+- Compatibilité standard **OpenAI Tools / Function Calling**
 
-**🌐 Passerelle d'Accès Libre & Command Center**
-- Génération instantanée de clés d'API gratuites (sans carte, sans compte, 100% Free)
-- Bascule Nœud WAN 100% Confiance en 1 clic (TLS + PSK)
-- Console & Playground interactif de compétences en direct (LLM, RAG, Echo)
-
+**🖥️ Portail Web & Command Center Local**
+- Visualisation interactive du maillage (Canvas 2D/3D)
+- Console & Playground de chat en direct (LLM, RAG, Echo)
+- Passerelle locale FastAPI avec authentification
 </td>
 </tr>
 </table>

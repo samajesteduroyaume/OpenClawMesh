@@ -170,11 +170,12 @@ async def discover_nat_and_public_ip(
     local_port: int = 8770,
     stun_servers: list[tuple[str, int]] = DEFAULT_STUN_SERVERS,
     timeout: float = 2.0,
-    enabled: bool = True,
-    try_upnp: bool = True,
+    enabled: bool = False,
+    try_upnp: bool = False,
 ) -> NATProfile:
     """
     Envoie une requête STUN Binding (RFC 5389) et teste UPnP pour déterminer l'IP publique et le port mappé.
+    Cette fonction est strictement opt-in (désactivée par défaut) et requiert le consentement explicite.
     """
     local_ip = "127.0.0.1"
     if not enabled:
@@ -183,7 +184,7 @@ async def discover_nat_and_public_ip(
             public_port=None,
             local_ip=local_ip,
             local_port=local_port,
-            nat_type="Disabled (explicit opt-in required)",
+            nat_type="Local Only (LAN default)",
             is_direct_connectable=False,
             upnp_mapped=False,
         )
@@ -242,26 +243,7 @@ async def discover_nat_and_public_ip(
         except Exception as e:
             logger.debug(f"Échec tentative STUN sur {host}:{port} : {e}")
 
-    # Fallback HTTPS si STUN est bloqué
-    try:
-        req = urllib.request.Request("https://api.ipify.org?format=json", headers={"User-Agent": "OpenClawMesh"})
-        with urllib.request.urlopen(req, timeout=1.5) as resp:
-            import json
-            pub_ip = json.loads(resp.read().decode()).get("ip")
-            if pub_ip:
-                return NATProfile(
-                    public_ip=pub_ip,
-                    public_port=local_port if upnp_success else None,
-                    local_ip=local_ip,
-                    local_port=local_port,
-                    nat_type="UPnP Mapped" if upnp_success else "Public Access via HTTPS",
-                    is_direct_connectable=upnp_success,
-                    upnp_mapped=upnp_success,
-                )
-    except Exception:
-        pass
-
-    # Fallback si STUN & HTTPS sont bloqués
+    # Fallback si STUN ne répond pas
     return NATProfile(
         public_ip=None,
         public_port=None,

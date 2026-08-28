@@ -158,9 +158,14 @@ async def rate_limit_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+def _is_admin_token_valid(token: str | None) -> bool:
+    """Vérifie si le token administrateur est valide (temps constant)."""
+    return bool(token and secrets.compare_digest(token, ADMIN_TOKEN))
+
+
 def _require_admin(token: str | None) -> None:
-    """Vérifie le token administrateur (temps constant)."""
-    if not token or not secrets.compare_digest(token, ADMIN_TOKEN):
+    """Vérifie le token administrateur (temps constant) ou lève une exception 401."""
+    if not _is_admin_token_valid(token):
         raise HTTPException(status_code=401, detail="Token admin invalide.")
 
 
@@ -507,8 +512,22 @@ async def openai_chat_completions(
 # 3.2 Observabilité Prometheus & Statut Cluster
 # ---------------------------------------------------------------------- #
 @app.get("/metrics", response_class=PlainTextResponse)
-async def prometheus_metrics():
+async def prometheus_metrics(
+    request: Request,
+    token: str | None = Header(None, alias="X-Admin-Token"),
+    api_key: str | None = Header(None, alias="X-API-Key"),
+):
     """Exporte les métriques système et réseau au format Prometheus/OpenTelemetry."""
+    client_host = request.client.host if request.client else "127.0.0.1"
+    is_local = client_host in ("127.0.0.1", "::1", "localhost", "testclient")
+    key_rec = db.get_key(api_key) if api_key else None
+    is_authed = (token is not None and _is_admin_token_valid(token)) or (key_rec is not None and key_rec.is_valid()[0])
+    if not (is_local or is_authed):
+        raise HTTPException(
+            status_code=401,
+            detail="Authentification requise (X-Admin-Token ou X-API-Key) pour accéder aux métriques.",
+        )
+
     active_keys = len(db.list_all_keys())
     cache_stats = kv_cache.stats()
     avg_latency = (
@@ -544,8 +563,22 @@ async def prometheus_metrics():
 
 
 @app.get("/api/v1/cluster/status")
-async def get_cluster_status():
+async def get_cluster_status(
+    request: Request,
+    token: str | None = Header(None, alias="X-Admin-Token"),
+    api_key: str | None = Header(None, alias="X-API-Key"),
+):
     """Retourne l'état complet du cluster : métriques, KV-Cache, nœud WAN et réputation."""
+    client_host = request.client.host if request.client else "127.0.0.1"
+    is_local = client_host in ("127.0.0.1", "::1", "localhost", "testclient")
+    key_rec = db.get_key(api_key) if api_key else None
+    is_authed = (token is not None and _is_admin_token_valid(token)) or (key_rec is not None and key_rec.is_valid()[0])
+    if not (is_local or is_authed):
+        raise HTTPException(
+            status_code=401,
+            detail="Authentification requise (X-Admin-Token ou X-API-Key) pour consulter l'état du cluster.",
+        )
+
     cache_st = kv_cache.stats()
     rep_recs = reputation_mgr.get_all_records()
     return {
@@ -600,7 +633,17 @@ async def admin_toggle_wan_node(
         try:
             ssl_ctx = create_ephemeral_ssl_context()
         except Exception as exc:
-            logger.debug(f"Impossible de créer un certificat TLS éphémère: {exc}")
+            logger.error(f"Échec création certificat TLS WAN: {exc}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Impossible de sécuriser le nœud WAN en TLS : {exc}. L'exposition non chiffrée sur 0.0.0.0 est bloquée par sécurité.",
+            ) from None
+
+        if ssl_ctx is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Contexte TLS indisponible. L'exposition non chiffrée sur 0.0.0.0 est bloquée par sécurité.",
+            )
 
     _wan_node = OpenClawMeshNode(
         name=_settings.node_name,
@@ -636,7 +679,7 @@ async def admin_toggle_wan_node(
         "psk": active_psk,
         "connect_url": connect_url,
         "cli_command": cli_cmd,
-        "message": "⚡ Nœud WAN activé en 100% Confiance ! Chiffrement et clé de sécurité auto-générés.",
+        "message": "⚡ Nœud WAN activé en 100% Confiance ! Chiffrement TLS et clé de sécurité auto-générés.",
     }
 
 

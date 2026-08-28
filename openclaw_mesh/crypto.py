@@ -13,6 +13,7 @@ import os
 import re
 import tempfile
 import time
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +28,8 @@ except ImportError:
     _HAS_CRYPTO = False
 
 _settings = get_settings()
+_seen_ed25519_requests: OrderedDict[tuple[str, str], float] = OrderedDict()
+_ED25519_REPLAY_CACHE_SIZE = 10000
 
 
 def _signing_base_ed25519(
@@ -128,17 +131,22 @@ def verify_ed25519_signature(
     max_drift_seconds: float | None = None,
 ) -> bool:
     """
-    Vérifie la signature Ed25519 d'une requête ainsi que l'horodatage anti-rejeu.
+    Vérifie la signature Ed25519 d'une requête ainsi que l'horodatage et le cache anti-rejeu.
     """
     if not _HAS_CRYPTO:
         return False
-    if not public_key_hex or not signature_hex:
+    if not public_key_hex or not signature_hex or not request_id or not isinstance(ts, (int, float)):
         return False
 
     # Protection anti-rejeu par horodatage (tolérance +/- max_drift_seconds)
     drift_limit = max_drift_seconds or _settings.signature_max_drift_seconds
     now = time.time()
-    if abs(now - ts) > drift_limit:
+    if abs(now - float(ts)) > drift_limit:
+        return False
+
+    # Protection anti-rejeu par cache d'identifiants de requête déjà vus
+    cache_key = (origin, request_id)
+    if cache_key in _seen_ed25519_requests:
         return False
 
     try:
@@ -147,6 +155,10 @@ def verify_ed25519_signature(
         public_key = ed25519.Ed25519PublicKey.from_public_bytes(pub_bytes)
         data = _signing_base_ed25519(request_id, origin, skill, ts, payload, public_key_hex)
         public_key.verify(sig_bytes, data)
+        _seen_ed25519_requests[cache_key] = now
+        _seen_ed25519_requests.move_to_end(cache_key)
+        while len(_seen_ed25519_requests) > _ED25519_REPLAY_CACHE_SIZE:
+            _seen_ed25519_requests.popitem(last=False)
         return True
     except Exception:
         return False

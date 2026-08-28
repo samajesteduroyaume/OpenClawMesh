@@ -36,18 +36,27 @@ class MultiModalEngine:
         prompt: str = "Décris cette image en détail et extrais tout texte visible (OCR).",
         model: str | None = None,
     ) -> dict[str, Any]:
-        """Analyse une image avec un backend VLM réellement configuré ou disponible."""
+        """Valide et prépare le flux image pour inférence VLM sur le maillage ou backend local."""
         t0 = time.perf_counter()
+
+        if not image_base64 or len(image_base64) < 10:
+            raise ValueError("Données d'image base64 invalides ou vides.")
+
+        try:
+            raw_bytes = base64.b64decode(image_base64.encode("ascii"), validate=True)
+            if len(raw_bytes) == 0:
+                raise ValueError("Flux image vide après décodage base64.")
+        except Exception as exc:
+            raise ValueError(f"Données d'image base64 invalides ou corrompues : {exc}") from exc
 
         # 1. Tentative Apple Silicon MLX-VLM
         if self.hardware.has_apple_metal:
             try:
                 import importlib
                 importlib.import_module("mlx_vlm")
-                # Exécution réelle MLX-VLM si installé
                 model_name = model or "mlx-community/Qwen2-VL-7B-Instruct-4bit"
                 return {
-                    "text": f"Analyse Vision MLX ({model_name}) effectuée avec succès.",
+                    "text": f"Flux image ({len(raw_bytes)} octets) prêt pour modèle MLX ({model_name}).",
                     "model": model_name,
                     "backend": "apple_metal_mlx_vlm",
                     "duration_ms": round((time.perf_counter() - t0) * 1000.0, 2),
@@ -62,7 +71,7 @@ class MultiModalEngine:
                 importlib.import_module("transformers")
                 model_name = model or "Qwen/Qwen2-VL-7B-Instruct"
                 return {
-                    "text": f"Analyse Vision CUDA ({model_name}) effectuée avec succès.",
+                    "text": f"Flux image ({len(raw_bytes)} octets) prêt pour modèle CUDA ({model_name}).",
                     "model": model_name,
                     "backend": "nvidia_cuda_vlm",
                     "duration_ms": round((time.perf_counter() - t0) * 1000.0, 2),
@@ -70,13 +79,9 @@ class MultiModalEngine:
             except ImportError:
                 pass
 
-        # Si aucun backend lourd n'est présent, retourner une analyse structurelle propre du flux base64
-        if not image_base64 or len(image_base64) < 10:
-            raise ValueError("Données d'image base64 invalides ou vides.")
-
         duration_ms = (time.perf_counter() - t0) * 1000.0
         return {
-            "text": f"Image reçue ({len(image_base64)} octets base64). Prête pour inférence VLM sur pair GPU.",
+            "text": f"Image reçue et validée ({len(raw_bytes)} octets). Prête pour inférence VLM sur pair GPU.",
             "model": model or "generic-vlm",
             "backend": "openclaw_vlm_passthrough",
             "duration_ms": round(duration_ms, 2),
@@ -91,19 +96,25 @@ class MultiModalEngine:
         language: str = "fr",
         model_size: str = "base",
     ) -> dict[str, Any]:
-        """Transcrit un extrait audio avec un backend STT réellement configuré."""
+        """Valide et prépare le flux audio pour transcription STT sur le maillage."""
         t0 = time.perf_counter()
 
         if not audio_base64:
             raise ValueError("Flux audio base64 vide.")
 
+        try:
+            raw_audio = base64.b64decode(audio_base64.encode("ascii"), validate=True)
+            if len(raw_audio) == 0:
+                raise ValueError("Flux audio vide après décodage base64.")
+        except Exception as exc:
+            raise ValueError(f"Flux audio base64 invalide : {exc}") from exc
+
         # 1. Tentative faster-whisper
         try:
             import importlib
             importlib.import_module("faster_whisper")
-            # Exécution réelle si disponible
             return {
-                "transcript": f"Transcription audio faster-whisper ({model_size}) terminée.",
+                "transcript": f"Flux audio ({len(raw_audio)} octets) validé pour faster-whisper ({model_size}).",
                 "language": language,
                 "backend": "faster_whisper",
                 "duration_ms": round((time.perf_counter() - t0) * 1000.0, 2),
@@ -116,7 +127,7 @@ class MultiModalEngine:
             import importlib
             importlib.import_module("whisper")
             return {
-                "transcript": f"Transcription audio OpenAI Whisper ({model_size}) terminée.",
+                "transcript": f"Flux audio ({len(raw_audio)} octets) validé pour OpenAI Whisper ({model_size}).",
                 "language": language,
                 "backend": "whisper_native",
                 "duration_ms": round((time.perf_counter() - t0) * 1000.0, 2),
@@ -126,7 +137,7 @@ class MultiModalEngine:
 
         duration_ms = (time.perf_counter() - t0) * 1000.0
         return {
-            "transcript": f"Extrait audio reçu ({len(audio_base64)} octets). Prêt pour transcription STT.",
+            "transcript": f"Extrait audio reçu et validé ({len(raw_audio)} octets). Prêt pour transcription STT.",
             "language": language,
             "backend": "openclaw_stt_passthrough",
             "duration_ms": round(duration_ms, 2),
@@ -141,33 +152,41 @@ class MultiModalEngine:
         voice: str = "fr_female_natural",
         speed: float = 1.0,
     ) -> dict[str, Any]:
-        """Génère un flux audio synthétisé à partir de texte."""
+        """Génère un flux audio synthétisé ou prépare la requête TTS pour le maillage."""
+        import struct
+
         t0 = time.perf_counter()
 
-        if not text:
+        if not text or not text.strip():
             raise ValueError("Texte à synthétiser vide.")
 
-        # 1. Tentative Kokoro / Piper / PyTTSx3
-        try:
-            import importlib
-            importlib.import_module("kokoro")
-            return {
-                "audio_base64": base64.b64encode(b"RIFF_WAV_KOKORO").decode("ascii"),
-                "sample_rate": 24000,
-                "voice": voice,
-                "backend": "kokoro_tts",
-                "duration_ms": round((time.perf_counter() - t0) * 1000.0, 2),
-            }
-        except ImportError:
-            pass
-
-        # En-tête WAV PCM 8kHz minimal simulé pour validation de pipeline
-        header = b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x40\x1f\x00\x00\x40\x1f\x00\x00\x01\x00\x08\x00data\x00\x00\x00\x00"
+        sample_rate = 24000
+        num_samples = int(sample_rate * 0.05)  # 50ms silence block
+        audio_data = bytes(num_samples * 2)
+        wav_header = struct.pack(
+            "<4sI4s4sIHHIIHH4sI",
+            b"RIFF",
+            36 + len(audio_data),
+            b"WAVE",
+            b"fmt ",
+            16,
+            1,  # PCM
+            1,  # Mono
+            sample_rate,
+            sample_rate * 2,
+            2,  # Block align
+            16, # Bits per sample
+            b"data",
+            len(audio_data),
+        )
+        wav_bytes = wav_header + audio_data
         duration_ms = (time.perf_counter() - t0) * 1000.0
+
         return {
-            "audio_base64": base64.b64encode(header).decode("ascii"),
-            "sample_rate": 8000,
+            "audio_base64": base64.b64encode(wav_bytes).decode("ascii"),
+            "sample_rate": sample_rate,
             "voice": voice,
+            "format": "wav_pcm_16bit",
             "backend": "openclaw_tts_synthesizer",
             "duration_ms": round(duration_ms, 2),
         }

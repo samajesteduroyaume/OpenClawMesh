@@ -40,14 +40,8 @@ MAX_DHT_VALUE_BYTES = 256 * 1024
 MAX_DHT_HOPS = 20
 _DHT_SIGNATURE_FIELD = "_sig"
 
-# Nœuds d'amorçage publics WAN mondiaux
-DEFAULT_DHT_BOOTSTRAP_SEEDS: list[tuple[str, int]] = [
-    ("router.bittorrent.com", 6881),
-    ("dht.transmissionbt.com", 6881),
-    ("router.utorrent.com", 6881),
-    ("dht.aelitis.com", 6881),
-    ("boot.openclawmesh.org", 8780),
-]
+# Nœuds d'amorçage WAN configurés (vide par défaut pour éviter tout trafic externe non consenti)
+DEFAULT_DHT_BOOTSTRAP_SEEDS: list[tuple[str, int]] = []
 
 
 def hash_key(key: str) -> str:
@@ -800,7 +794,10 @@ class KademliaDHT:
         et en effectuant un lookup itératif pour peupler les k-buckets.
         Retourne le nombre de contacts actifs découverts.
         """
-        seed_list = seeds or DEFAULT_DHT_BOOTSTRAP_SEEDS
+        seed_list = seeds if seeds is not None else DEFAULT_DHT_BOOTSTRAP_SEEDS
+        if not seed_list:
+            return self.routing_table.count_contacts()
+
         added_count = 0
 
         for host, port in seed_list:
@@ -840,12 +837,17 @@ class KademliaDHT:
 
         return self.routing_table.count_contacts()
 
-    def start_auto_refresh(self, interval_seconds: float = 45.0) -> asyncio.Task:
-        """Démarre une tâche de fond périodique pour rafraîchir en continu la table de routage DHT."""
+    def start_auto_refresh(
+        self, seeds: list[tuple[str, int]] | None = None, interval_seconds: float = 45.0
+    ) -> asyncio.Task:
+        """Démarre une tâche de fond périodique pour rafraîchir en continu la table de routage DHT si des seeds sont configurés."""
+        active_seeds = seeds if seeds is not None else DEFAULT_DHT_BOOTSTRAP_SEEDS
+
         async def _loop():
             while self._transport is not None:
                 try:
-                    await self.bootstrap_global()
+                    if active_seeds:
+                        await self.bootstrap_global(seeds=active_seeds)
                 except Exception as exc:
                     logger.debug(f"Erreur auto-refresh DHT: {exc}")
                 await asyncio.sleep(interval_seconds)
