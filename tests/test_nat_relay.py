@@ -1,7 +1,7 @@
 import asyncio
-import pytest
-from openclaw_mesh.network.nat_traversal import discover_nat_and_public_ip, NATProfile
-from openclaw_mesh.network.relay import WANRelayServer, WANRelayClient
+
+from openclaw_mesh.network.nat_traversal import NATProfile, discover_nat_and_public_ip
+from openclaw_mesh.network.relay import WANRelayClient, WANRelayServer
 
 
 def test_nat_profile_discovery():
@@ -22,8 +22,12 @@ def test_wan_relay_server_and_client_communication():
         await relay.start()
 
         # Connecter deux clients : Alice et Bob
-        alice = WANRelayClient(relay_url=f"ws://127.0.0.1:{relay_port}", node_id="alice_node_123", name="Alice")
-        bob = WANRelayClient(relay_url=f"ws://127.0.0.1:{relay_port}", node_id="bob_node_456", name="Bob")
+        alice = WANRelayClient(
+            relay_url=f"ws://127.0.0.1:{relay_port}", node_id="alice_node_123", name="Alice"
+        )
+        bob = WANRelayClient(
+            relay_url=f"ws://127.0.0.1:{relay_port}", node_id="bob_node_456", name="Bob"
+        )
 
         assert await alice.connect() is True
         assert await bob.connect() is True

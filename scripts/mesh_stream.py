@@ -4,6 +4,7 @@ Script de consommation streaming (token-par-token) pour l'agent OpenClaw.
 Usage:
   python3 scripts/mesh_stream.py <skill> '<payload_json>' [peer_name_or_url]
 """
+
 import asyncio
 import json
 import sys

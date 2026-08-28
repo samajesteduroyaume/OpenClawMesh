@@ -7,6 +7,7 @@ la meilleure version et quantification de modèle IA :
 - Sélection du format : GGUF (Q4_K_M, Q8_0), MLX (4-bit, 8-bit), PyTorch FP16/BF16
 - Gestion du cache local (~/.cache/openclaw_mesh/models)
 """
+
 from __future__ import annotations
 
 import os
@@ -21,7 +22,7 @@ from .hardware import HardwareProfile, detect_hardware
 class ModelRecommendation:
     model_name: str
     quantization: str  # "4bit", "8bit", "fp16", "bf16"
-    format: str        # "mlx", "gguf", "safetensors", "openvino"
+    format: str  # "mlx", "gguf", "safetensors", "openvino"
     estimated_vram_mb: float
     max_context_tokens: int
     recommended_batch_size: int
@@ -105,10 +106,14 @@ class AutoModelManager:
         if self.cache_dir.exists():
             for item in self.cache_dir.iterdir():
                 if item.is_dir():
-                    size_mb = sum(f.stat().st_size for f in item.glob("**/*") if f.is_file()) / (1024 * 1024)
-                    models.append({
-                        "name": item.name,
-                        "path": str(item),
-                        "size_mb": round(size_mb, 2),
-                    })
+                    size_mb = sum(f.stat().st_size for f in item.glob("**/*") if f.is_file()) / (
+                        1024 * 1024
+                    )
+                    models.append(
+                        {
+                            "name": item.name,
+                            "path": str(item),
+                            "size_mb": round(size_mb, 2),
+                        }
+                    )
         return models

@@ -16,8 +16,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import sys
 import ssl
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -54,7 +54,9 @@ async def cmd_discover(args: argparse.Namespace) -> None:
         )
 
     if not args.enable_discovery:
-        message = "Découverte LAN désactivée. Utilisez --enable-discovery après vérification du réseau."
+        message = (
+            "Découverte LAN désactivée. Utilisez --enable-discovery après vérification du réseau."
+        )
         if args.json:
             _print_json({"peers": {}, "warning": message})
         elif _HAS_RICH:

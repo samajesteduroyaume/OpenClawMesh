@@ -69,7 +69,9 @@ class Settings(BaseSettings):
     max_active_tasks: int = Field(default=100, description="Nombre maximum de tâches actives")
     max_queued_tasks: int = Field(default=200, description="Nombre maximum de tâches en attente")
     task_timeout: float = Field(default=120.0, description="Timeout par défaut des tâches")
-    max_output_bytes: int = Field(default=2 * 1024 * 1024, description="Taille maximale d'une sortie distante")
+    max_output_bytes: int = Field(
+        default=2 * 1024 * 1024, description="Taille maximale d'une sortie distante"
+    )
 
     # ------------------------------------------------------------------ #
     # Configuration Sécurité
@@ -132,11 +134,17 @@ class Settings(BaseSettings):
     # Configuration Relais WAN
     # ------------------------------------------------------------------ #
     relay_enabled: bool = Field(default=False, description="Activer relais WAN")
-    relay_host: str = Field(default="127.0.0.1", description="Hôte du relais (WAN explicitement configuré)")
+    relay_host: str = Field(
+        default="127.0.0.1", description="Hôte du relais (WAN explicitement configuré)"
+    )
     relay_port: int = Field(default=8790, description="Port du relais")
     relay_name: str = Field(default="openclaw-wan-relay", description="Nom du relais")
-    relay_max_clients: int = Field(default=100, description="Nombre maximum de pairs connectés au relais")
-    relay_max_message_bytes: int = Field(default=2 * 1024 * 1024, description="Taille maximale d'une trame relais")
+    relay_max_clients: int = Field(
+        default=100, description="Nombre maximum de pairs connectés au relais"
+    )
+    relay_max_message_bytes: int = Field(
+        default=2 * 1024 * 1024, description="Taille maximale d'une trame relais"
+    )
 
     # ------------------------------------------------------------------ #
     # Configuration Moteurs IA
@@ -224,7 +232,9 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------ #
     # Configuration Tests
     # ------------------------------------------------------------------ #
-    test_mode: bool = Field(default=False, description="Mode test (override de certaines configurations)")
+    test_mode: bool = Field(
+        default=False, description="Mode test (override de certaines configurations)"
+    )
     test_host: str = Field(default="127.0.0.1", description="Hôte pour tests")
     test_port_base: int = Field(default=8900, description="Base port pour tests")
 

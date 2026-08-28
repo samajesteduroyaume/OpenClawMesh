@@ -4,6 +4,7 @@ Script de délégation et d'appel de compétence pour l'agent OpenClaw.
 Usage:
   python3 scripts/mesh_call.py <skill> '<payload_json>' [peer_name_or_url]
 """
+
 import asyncio
 import json
 import sys

@@ -189,19 +189,27 @@ from openclaw_mesh import OpenClawMeshNode, MeshClient, SkillRegistry
 # ── Démarrer un nœud ──────────────────────────────────────────────────
 registry = SkillRegistry(name="mon-nœud")
 
+
 async def llm(payload: dict) -> dict:
     return {"text": f"Réponse : {payload.get('prompt')}", "model": "local"}
 
+
 registry.register(llm, expose_remote=True)
 
+
 async def servir():
-    node = OpenClawMeshNode(name="mon-nœud", port=8770, psk=os.environ["OPENCLAW_PSK"], registry=registry)
+    node = OpenClawMeshNode(
+        name="mon-nœud", port=8770, psk=os.environ["OPENCLAW_PSK"], registry=registry
+    )
     await node.start(enable_zeroconf=False)  # Activer uniquement après revue de l’exposition LAN.
     await asyncio.Event().wait()
 
+
 # ── Appeler depuis un client ──────────────────────────────────────────
 async def demo_client():
-    client = MeshClient(name="orchestrateur", psk=os.environ["OPENCLAW_PSK"], enable_discovery=False)
+    client = MeshClient(
+        name="orchestrateur", psk=os.environ["OPENCLAW_PSK"], enable_discovery=False
+    )
     await client.start()
     await asyncio.sleep(3)  # Découverte mDNS
 
@@ -215,8 +223,10 @@ async def demo_client():
 
     # Streaming token par token
     await client.call_stream(
-        "mon-nœud", "llm", {"prompt": "Raconte une histoire"},
-        on_chunk=lambda c: print(c, end="", flush=True)
+        "mon-nœud",
+        "llm",
+        {"prompt": "Raconte une histoire"},
+        on_chunk=lambda c: print(c, end="", flush=True),
     )
     await client.stop()
 ```
@@ -252,10 +262,11 @@ print(identity.public_key_hex)  # Partager avec les pairs de confiance
 
 # Session E2EE
 from openclaw_mesh import E2EESession
+
 session = E2EESession()
 session.establish_with_peer(peer_pubkey_bytes)
 packet = session.encrypt({"secret": "payload"})
-data   = session.decrypt(packet)
+data = session.decrypt(packet)
 ```
 
 ---

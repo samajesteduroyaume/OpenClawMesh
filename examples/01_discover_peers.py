@@ -1,6 +1,7 @@
 """
 Exemple 1 : Découverte automatique des pairs JarvisMesh & OpenClawMesh sur le LAN.
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -37,7 +38,9 @@ async def main():
 
         skills = desc.get("skills", peer.skills)
         print(f"   ├─ Compétences ({len(skills)}) : {', '.join(skills)}")
-        print(f"   └─ RTT : {health.get('rtt_ms', '-')} ms | Tâches actives : {health.get('active_tasks', 0)}")
+        print(
+            f"   └─ RTT : {health.get('rtt_ms', '-')} ms | Tâches actives : {health.get('active_tasks', 0)}"
+        )
 
     await client.stop()
 

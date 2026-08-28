@@ -1,6 +1,7 @@
 """
 Exemple 4 : Création d'un nœud OpenClaw exposant un outil personnalisé au maillage.
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -60,7 +61,9 @@ async def main():
         registry=registry,
     )
 
-    print("🚀 Démarrage du nœud OpenClaw avec les compétences 'calculator' et 'countdown_stream'...")
+    print(
+        "🚀 Démarrage du nœud OpenClaw avec les compétences 'calculator' et 'countdown_stream'..."
+    )
     await node.start()
     print("🌐 Nœud publié sur mDNS. Appuyez sur Ctrl+C pour arrêter.")
 

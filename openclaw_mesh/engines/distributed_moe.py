@@ -4,6 +4,7 @@ Orchestrateur de Parallélisme par Pipeline & Mixture of Experts (MoE) Distribu�
 Permet de répartir l'exécution d'un grand modèle de langage (LLM / MoE)
 entre plusieurs machines du maillage OpenClawMesh lorsque la mémoire d'un seul nœud est insuffisante.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -19,6 +20,7 @@ logger = logging.getLogger("openclaw_mesh.moe")
 @dataclass
 class PipelineStage:
     """Représente une étape de calcul dans le pipeline distribué."""
+
     stage_id: int
     node_name: str
     layer_range: tuple[int, int]
@@ -44,12 +46,14 @@ class DistributedMoEOrchestrator:
         for i, node in enumerate(self.nodes):
             start = i * layers_per_node
             end = total_layers if i == num_nodes - 1 else (i + 1) * layers_per_node
-            self.stages.append(PipelineStage(
-                stage_id=i,
-                node_name=node,
-                layer_range=(start, end),
-                expert_ids=[i * 2, i * 2 + 1],
-            ))
+            self.stages.append(
+                PipelineStage(
+                    stage_id=i,
+                    node_name=node,
+                    layer_range=(start, end),
+                    expert_ids=[i * 2, i * 2 + 1],
+                )
+            )
 
     def update_cluster_nodes(self, nodes: list[str]) -> None:
         """Met à jour les nœuds disponibles et recalcule le partitionnement."""
@@ -66,7 +70,11 @@ class DistributedMoEOrchestrator:
         Chaque nœud traite son ensemble de couches/experts et passe l'activation au nœud suivant.
         """
         t0 = time.perf_counter()
-        current_activation = {"prompt": prompt, "stage": 0, "intermediate_tensor_summary": f"tokens_len_{len(prompt)}"}
+        current_activation = {
+            "prompt": prompt,
+            "stage": 0,
+            "intermediate_tensor_summary": f"tokens_len_{len(prompt)}",
+        }
         stage_traces = []
 
         for stage in self.stages:
@@ -83,23 +91,29 @@ class DistributedMoEOrchestrator:
                     res = await delegate_fn(stage.node_name, stage_payload)
                     current_activation = res
                 except Exception as e:
-                    logger.warning(f"Échec étape {stage.stage_id} sur {stage.node_name}, fallback local : {e}")
+                    logger.warning(
+                        f"Échec étape {stage.stage_id} sur {stage.node_name}, fallback local : {e}"
+                    )
                     await asyncio.sleep(0.01)
                     current_activation["stage"] = stage.stage_id + 1
             else:
                 # Calcul local simulé / direct
                 await asyncio.sleep(0.015)  # Latence de calcul des couches
                 current_activation["stage"] = stage.stage_id + 1
-                current_activation["intermediate_tensor_summary"] = f"layers_{stage.layer_range[0]}_{stage.layer_range[1]}_computed"
+                current_activation["intermediate_tensor_summary"] = (
+                    f"layers_{stage.layer_range[0]}_{stage.layer_range[1]}_computed"
+                )
 
             stage_duration = (time.perf_counter() - stage_t0) * 1000.0
             stage.latency_ms = round(stage_duration, 2)
-            stage_traces.append({
-                "stage_id": stage.stage_id,
-                "node": stage.node_name,
-                "layers": f"{stage.layer_range[0]}-{stage.layer_range[1]}",
-                "duration_ms": stage.latency_ms,
-            })
+            stage_traces.append(
+                {
+                    "stage_id": stage.stage_id,
+                    "node": stage.node_name,
+                    "layers": f"{stage.layer_range[0]}-{stage.layer_range[1]}",
+                    "duration_ms": stage.latency_ms,
+                }
+            )
 
         total_duration_ms = (time.perf_counter() - t0) * 1000.0
 

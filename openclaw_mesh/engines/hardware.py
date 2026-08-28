@@ -8,6 +8,7 @@ Détecte et caractérise automatiquement :
 - 🟣 Apple Silicon (Metal GPU M1/M2/M3/M4 via MLX / Metal Performance Shaders)
 - ⚪ CPU Universel (AVX2, AVX-512, ARM Neon)
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -30,7 +31,9 @@ class HardwareProfile:
     cpu_model: str
     cpu_cores_logical: int
     cpu_cores_physical: int
-    accelerator_type: str  # "nvidia_cuda", "amd_rocm", "intel_openvino", "apple_metal", "cpu_generic"
+    accelerator_type: (
+        str  # "nvidia_cuda", "amd_rocm", "intel_openvino", "apple_metal", "cpu_generic"
+    )
     accelerator_name: str
     vram_total_mb: float = 0.0
     vram_free_mb: float = 0.0
@@ -72,7 +75,11 @@ def detect_hardware() -> HardwareProfile:
     arch = platform.machine()
     cpu_model = _get_cpu_name()
     logical_cores = os.cpu_count() or 1
-    physical_cores = max(1, logical_cores // 2) if "intel" in cpu_model.lower() or "amd" in cpu_model.lower() else logical_cores
+    physical_cores = (
+        max(1, logical_cores // 2)
+        if "intel" in cpu_model.lower() or "amd" in cpu_model.lower()
+        else logical_cores
+    )
 
     devices = []
     has_cuda = False
@@ -92,6 +99,7 @@ def detect_hardware() -> HardwareProfile:
     # ------------------------------------------------------------------ #
     try:
         import torch
+
         if torch.cuda.is_available():
             has_cuda = True
             dev_count = torch.cuda.device_count()
@@ -104,20 +112,30 @@ def detect_hardware() -> HardwareProfile:
                 props = torch.cuda.get_device_properties(i)
                 vram_mb = props.total_memory / (1024 * 1024)
                 total_vram += vram_mb
-                devices.append({
-                    "type": "nvidia_gpu",
-                    "index": i,
-                    "name": props.name,
-                    "vram_mb": round(vram_mb, 2),
-                    "compute_capability": f"{props.major}.{props.minor}",
-                })
+                devices.append(
+                    {
+                        "type": "nvidia_gpu",
+                        "index": i,
+                        "name": props.name,
+                        "vram_mb": round(vram_mb, 2),
+                        "compute_capability": f"{props.major}.{props.minor}",
+                    }
+                )
     except ImportError:
         # Fallback via nvidia-smi en ligne de commande
         try:
-            out = subprocess.check_output(
-                ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"],
-                stderr=subprocess.DEVNULL
-            ).decode().strip()
+            out = (
+                subprocess.check_output(
+                    [
+                        "nvidia-smi",
+                        "--query-gpu=name,memory.total",
+                        "--format=csv,noheader,nounits",
+                    ],
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode()
+                .strip()
+            )
             if out:
                 has_cuda = True
                 acc_type = "nvidia_cuda"
@@ -137,17 +155,21 @@ def detect_hardware() -> HardwareProfile:
 
         # Mémoire unifiée Mac
         try:
-            mem_bytes = int(subprocess.check_output(["sysctl", "-n", "hw.memsize"]).decode().strip())
+            mem_bytes = int(
+                subprocess.check_output(["sysctl", "-n", "hw.memsize"]).decode().strip()
+            )
             total_vram = mem_bytes / (1024 * 1024)
         except Exception:
             total_vram = 16384.0  # 16 GB par défaut
 
-        devices.append({
-            "type": "apple_metal",
-            "name": cpu_model,
-            "vram_unified_mb": round(total_vram, 2),
-            "backend": "mlx / metal",
-        })
+        devices.append(
+            {
+                "type": "apple_metal",
+                "name": cpu_model,
+                "vram_unified_mb": round(total_vram, 2),
+                "backend": "mlx / metal",
+            }
+        )
 
     # ------------------------------------------------------------------ #
     # 3. Détection AMD ROCm / DirectML
@@ -173,6 +195,7 @@ def detect_hardware() -> HardwareProfile:
     is_intel_ultra = "ultra" in cpu_model.lower() or "intel" in cpu_model.lower()
     try:
         import openvino as ov  # type: ignore
+
         has_intel_openvino = True
         core = ov.Core()
         ov_devices = core.available_devices
@@ -191,7 +214,15 @@ def detect_hardware() -> HardwareProfile:
             rec_backend = "openvino"
 
         for d in ov_devices:
-            devices.append({"type": f"intel_openvino_{d.lower()}", "device": d, "full_name": core.get_property(d, "FULL_DEVICE_NAME") if hasattr(core, "get_property") else d})
+            devices.append(
+                {
+                    "type": f"intel_openvino_{d.lower()}",
+                    "device": d,
+                    "full_name": core.get_property(d, "FULL_DEVICE_NAME")
+                    if hasattr(core, "get_property")
+                    else d,
+                }
+            )
     except ImportError:
         if is_intel_ultra and acc_type == "cpu_generic":
             acc_name = f"Intel Core Ultra (Optimisé AVX2/AVX-512) : {cpu_model}"
@@ -199,12 +230,14 @@ def detect_hardware() -> HardwareProfile:
 
     # Si aucun accélérateur spécifique n'a été sélectionné
     if acc_type == "cpu_generic":
-        devices.append({
-            "type": "cpu",
-            "name": cpu_model,
-            "logical_cores": logical_cores,
-            "architecture": arch,
-        })
+        devices.append(
+            {
+                "type": "cpu",
+                "name": cpu_model,
+                "logical_cores": logical_cores,
+                "architecture": arch,
+            }
+        )
 
     return HardwareProfile(
         os_name=sys_name,

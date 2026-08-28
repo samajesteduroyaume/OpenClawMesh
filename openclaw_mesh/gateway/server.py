@@ -9,6 +9,7 @@ Gère :
 - Exécution des compétences premium pour les agents OpenClaw.
 - Le portail web client et le dashboard d'administration.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -41,6 +42,7 @@ from .portal import render_portal_html
 
 logger = logging.getLogger("openclaw_mesh.gateway")
 _settings = get_settings()
+
 
 # Configuration de l'environnement
 def _load_or_create_admin_token() -> str:
@@ -77,9 +79,7 @@ ADMIN_TOKEN = _load_or_create_admin_token()
 DEFAULT_DB_PATH = os.getenv("GATEWAY_DB_PATH", "openclaw_keys.db")
 
 # Adresse Bitcoin de réception des paiements
-BTC_WALLET_ADDRESS = os.getenv(
-    "BTC_WALLET_ADDRESS", "bc1qwq8sll9vrl83lclyhha2gyncpd5275cdr2wul5"
-)
+BTC_WALLET_ADDRESS = os.getenv("BTC_WALLET_ADDRESS", "bc1qwq8sll9vrl83lclyhha2gyncpd5275cdr2wul5")
 BTC_EXPLORER_URL = os.getenv("BTC_EXPLORER_URL", "")
 BTC_PRICE_URL = os.getenv(
     "BTC_PRICE_URL",
@@ -96,9 +96,7 @@ BTC_VERIFY_INTERVAL = max(10, int(os.getenv("BTC_VERIFY_INTERVAL_SECONDS", "30")
 try:
     BTC_PLAN_MIN_SATS: dict[str, int] = {
         plan: int(amount)
-        for plan, amount in json.loads(
-            os.getenv("BTC_PLAN_MIN_SATS", "{}")
-        ).items()
+        for plan, amount in json.loads(os.getenv("BTC_PLAN_MIN_SATS", "{}")).items()
     }
 except (TypeError, ValueError, json.JSONDecodeError):
     BTC_PLAN_MIN_SATS = {}
@@ -112,6 +110,7 @@ PLAN_PRICES_EUR: dict[str, int] = {
     "lifetime": 200,
     "demo_free": 0,
 }
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -139,7 +138,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in os.getenv("GATEWAY_CORS_ORIGINS", "").split(",") if origin.strip()],
+    allow_origins=[
+        origin.strip()
+        for origin in os.getenv("GATEWAY_CORS_ORIGINS", "").split(",")
+        if origin.strip()
+    ],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -194,7 +197,9 @@ def _minimum_sats(plan: str, btc_eur_price: Decimal) -> int:
 def _transaction_is_paid(txid: str, expected_sats: int) -> tuple[bool, str]:
     """Vérifie destinataire, montant minimum configuré et confirmations du txid."""
     if not BTC_EXPLORER_URL:
-        raise RuntimeError("BTC_EXPLORER_URL doit être configuré pour vérifier un paiement automatiquement.")
+        raise RuntimeError(
+            "BTC_EXPLORER_URL doit être configuré pour vérifier un paiement automatiquement."
+        )
     if expected_sats <= 0:
         return False, "Montant BTC minimum invalide."
     base_url = BTC_EXPLORER_URL.rstrip("/")
@@ -259,12 +264,15 @@ async def _verify_pending_payments() -> None:
                 if paid:
                     block_hash = await asyncio.to_thread(_transaction_block_hash, txid)
                     key_rec = db.confirm_payment(
-                        row["event_id"], days_valid=raw_data.get("days_valid"),
+                        row["event_id"],
+                        days_valid=raw_data.get("days_valid"),
                         confirmed_by="auto_btc_verifier",
                         confirmation_metadata={"confirmed_block_hash": block_hash},
                     )
                     if key_rec:
-                        logger.info("✅ Paiement BTC confirmé automatiquement — TXID: %s...", txid[:16])
+                        logger.info(
+                            "✅ Paiement BTC confirmé automatiquement — TXID: %s...", txid[:16]
+                        )
                 else:
                     logger.info("Paiement BTC en attente — TXID: %s... (%s)", txid[:16], reason)
 
@@ -314,7 +322,7 @@ _rate_limit_lock = asyncio.Lock()
 
 async def _enforce_rate_limit(request: Request) -> None:
     """Limite les endpoints HTTP même lorsqu'aucun reverse proxy n'est présent."""
-    if not os.getenv("OPENCLAW_RATE_LIMIT_ENABLED", "true").lower() in {"1", "true", "yes", "on"}:
+    if os.getenv("OPENCLAW_RATE_LIMIT_ENABLED", "true").lower() not in {"1", "true", "yes", "on"}:
         return
     client = request.client.host if request.client else "unknown"
     now = time.monotonic()
@@ -325,7 +333,9 @@ async def _enforce_rate_limit(request: Request) -> None:
         while events and now - events[0] >= window:
             events.popleft()
         if len(events) >= limit:
-            raise HTTPException(status_code=429, detail="Trop de requêtes, veuillez réessayer plus tard.")
+            raise HTTPException(
+                status_code=429, detail="Trop de requêtes, veuillez réessayer plus tard."
+            )
         events.append(now)
 
 
@@ -351,7 +361,9 @@ def _require_admin(token: str | None) -> None:
 # Modèles de Données Pydantic
 # ---------------------------------------------------------------------- #
 class ExecutePayload(BaseModel):
-    skill: str = Field(..., min_length=1, max_length=100, description="Nom de la compétence à exécuter")
+    skill: str = Field(
+        ..., min_length=1, max_length=100, description="Nom de la compétence à exécuter"
+    )
     payload: dict[str, Any] = Field(default_factory=dict, description="Paramètres d'entrée")
 
 
@@ -481,7 +493,10 @@ async def submit_btc_payment(payload: BTCPaymentSubmission):
 
     logger.info(
         "Paiement BTC soumis — ID: %s | Email: %s | Plan: %s | TXID: %s...",
-        payment_id, payload.email, payload.plan, txid_clean[:16],
+        payment_id,
+        payload.email,
+        payload.plan,
+        txid_clean[:16],
     )
 
     return {
@@ -624,7 +639,11 @@ async def execute_premium_skill(
             query = payload.get("query", "")
             result = {
                 "results": [
-                    {"doc_id": "premium_doc_1", "score": 0.96, "content": f"Information indexée pour : {query}"}
+                    {
+                        "doc_id": "premium_doc_1",
+                        "score": 0.96,
+                        "content": f"Information indexée pour : {query}",
+                    }
                 ]
             }
         elif skill_name == "echo":
@@ -659,7 +678,11 @@ async def execute_premium_skill(
 async def create_demo_key(payload: dict):
     """Crée instantanément une clé de démonstration (3 requêtes, 7 jours)."""
     email = payload.get("email", f"demo_{secrets.token_hex(4)}@openclaw.mesh")
-    if not isinstance(email, str) or len(email) > 320 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+    if (
+        not isinstance(email, str)
+        or len(email) > 320
+        or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+    ):
         raise HTTPException(status_code=400, detail="Adresse email invalide.")
     email = email.strip().lower()
     if email in _demo_issued_emails:
@@ -714,9 +737,7 @@ async def admin_toggle_wan_node(
         registry=gateway_registry,
         psk=_settings.psk,
         trust_store=(
-            TrustStore.load(_settings.trust_store_path)
-            if _settings.trust_store_path
-            else None
+            TrustStore.load(_settings.trust_store_path) if _settings.trust_store_path else None
         ),
     )
     try:
@@ -749,16 +770,18 @@ async def admin_list_pending_payments(token: str = Header(None, alias="X-Admin-T
     payments = []
     for r in rows:
         payload_data = json.loads(r["raw_payload_json"] or "{}")
-        payments.append({
-            "event_id": r["event_id"],
-            "payment_id": payload_data.get("payment_id"),
-            "email": r["customer_email"],
-            "plan": payload_data.get("plan"),
-            "txid": r["txid"] or payload_data.get("txid"),
-            "amount_eur": (r["amount_cents"] or 0) / 100,
-            "submitted_at": payload_data.get("submitted_at"),
-            "note": payload_data.get("note", ""),
-        })
+        payments.append(
+            {
+                "event_id": r["event_id"],
+                "payment_id": payload_data.get("payment_id"),
+                "email": r["customer_email"],
+                "plan": payload_data.get("plan"),
+                "txid": r["txid"] or payload_data.get("txid"),
+                "amount_eur": (r["amount_cents"] or 0) / 100,
+                "submitted_at": payload_data.get("submitted_at"),
+                "note": payload_data.get("note", ""),
+            }
+        )
 
     return {"count": len(payments), "pending_payments": payments}
 
@@ -781,16 +804,22 @@ async def admin_confirm_btc_payment(
         ).fetchone()
 
     if not row:
-        raise HTTPException(status_code=404, detail=f"Payment ID '{payload.payment_id}' introuvable.")
+        raise HTTPException(
+            status_code=404, detail=f"Payment ID '{payload.payment_id}' introuvable."
+        )
     if row["event_type"] == "confirmed":
         raise HTTPException(status_code=409, detail="Ce paiement a déjà été confirmé.")
     if row["event_type"] == "rejected":
-        raise HTTPException(status_code=409, detail="Ce paiement a été rejeté et ne peut pas être confirmé.")
+        raise HTTPException(
+            status_code=409, detail="Ce paiement a été rejeté et ne peut pas être confirmé."
+        )
 
     raw_data = json.loads(row["raw_payload_json"] or "{}")
     email = row["customer_email"]
     plan = raw_data.get("plan", "pro_monthly")
-    days_valid = payload.days_valid if payload.days_valid is not None else raw_data.get("days_valid")
+    days_valid = (
+        payload.days_valid if payload.days_valid is not None else raw_data.get("days_valid")
+    )
 
     key_rec = db.confirm_payment(
         event_id,
@@ -831,12 +860,15 @@ async def admin_reject_btc_payment(
 
     with db._get_connection() as conn:
         row = conn.execute(
-            "SELECT event_type, raw_payload_json FROM payment_events WHERE event_id = ?", (event_id,)
+            "SELECT event_type, raw_payload_json FROM payment_events WHERE event_id = ?",
+            (event_id,),
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Payment ID introuvable.")
         if row["event_type"] != "pending_verification":
-            raise HTTPException(status_code=409, detail="Seul un paiement en attente peut être rejeté.")
+            raise HTTPException(
+                status_code=409, detail="Seul un paiement en attente peut être rejeté."
+            )
         raw_data = json.loads(row["raw_payload_json"] or "{}")
         raw_data["rejected_at"] = time.time()
         raw_data["rejection_reason"] = reason

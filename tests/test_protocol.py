@@ -92,11 +92,13 @@ def test_protocol_rejects_non_object_and_invalid_task_request():
     with pytest.raises(ValueError, match="objet"):
         parse_message("[]")
     with pytest.raises(ValueError, match="Payload invalide"):
-        TaskRequest.from_dict({
-            "type": "task_request",
-            "skill": "echo",
-            "payload": [],
-            "request_id": "request-1",
-            "origin": "tester",
-            "ts": time.time(),
-        })
+        TaskRequest.from_dict(
+            {
+                "type": "task_request",
+                "skill": "echo",
+                "payload": [],
+                "request_id": "request-1",
+                "origin": "tester",
+                "ts": time.time(),
+            }
+        )

@@ -1,9 +1,9 @@
 import asyncio
-import pytest
-from openclaw_mesh.node import OpenClawMeshNode
-from openclaw_mesh.client import MeshClient
+
 from openclaw_mesh.bridge import SkillRegistry, skill
+from openclaw_mesh.client import MeshClient
 from openclaw_mesh.crypto import NodeIdentity, TrustStore
+from openclaw_mesh.node import OpenClawMeshNode
 
 
 def test_client_server_basic_exchange():
@@ -32,7 +32,12 @@ def test_client_server_basic_exchange():
         await node.start(enable_zeroconf=False)
 
         client = MeshClient(name="test-client-1", enable_discovery=False)
-        client.add_peer(name="test-node-1", address="127.0.0.1", port=8991, skills=["add_numbers", "stream_text"])
+        client.add_peer(
+            name="test-node-1",
+            address="127.0.0.1",
+            port=8991,
+            skills=["add_numbers", "stream_text"],
+        )
 
         try:
             # 1. Test describe skills
@@ -54,6 +59,7 @@ def test_client_server_basic_exchange():
 
             # 4. Test streaming skill call
             received_chunks = []
+
             def on_chunk(c):
                 received_chunks.append(c.get("text", ""))
 
@@ -130,10 +136,14 @@ def test_client_server_ed25519_auth():
         )
         await node.start(enable_zeroconf=False)
 
-        trusted_client = MeshClient(name="trusted-client", identity=client_id, enable_discovery=False)
+        trusted_client = MeshClient(
+            name="trusted-client", identity=client_id, enable_discovery=False
+        )
         trusted_client.add_peer("ed25519-node", "127.0.0.1", 8993, ["echo"])
 
-        untrusted_client = MeshClient(name="untrusted-client", identity=untrusted_id, enable_discovery=False)
+        untrusted_client = MeshClient(
+            name="untrusted-client", identity=untrusted_id, enable_discovery=False
+        )
         untrusted_client.add_peer("ed25519-node", "127.0.0.1", 8993, ["echo"])
 
         try:

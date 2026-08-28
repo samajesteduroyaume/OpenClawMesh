@@ -5,6 +5,7 @@ Permet à OpenClaw de rester joignable sur le maillage et d'exposer ses outils.
 Usage:
   python3 scripts/mesh_daemon.py [--name openclaw-mac] [--port 8770]
 """
+
 import argparse
 import asyncio
 import sys
@@ -14,16 +15,20 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from openclaw_mesh.node import OpenClawMeshNode
 from openclaw_mesh.bridge import SkillRegistry, skill
 from openclaw_mesh.crypto import NodeIdentity, TrustStore
+from openclaw_mesh.node import OpenClawMeshNode
 
 
-def create_default_node(name: str, port: int, keyfile: str = "", trustfile: str = "") -> OpenClawMeshNode:
+def create_default_node(
+    name: str, port: int, keyfile: str = "", trustfile: str = ""
+) -> OpenClawMeshNode:
     registry = SkillRegistry(name=name)
 
     # Exemple de compétence additionnelle
-    @skill(name="claw_status", description="Retourne l'état opérationnel et l'agent OpenClaw actif.")
+    @skill(
+        name="claw_status", description="Retourne l'état opérationnel et l'agent OpenClaw actif."
+    )
     def claw_status(payload: dict) -> dict:
         return {
             "status": "ready",

@@ -7,6 +7,7 @@ Interface dark mode, responsive, avec paiement Bitcoin natif :
 - Suivi du statut de paiement par payment_id
 - Playground de test de compétences en temps réel
 """
+
 from __future__ import annotations
 
 import base64

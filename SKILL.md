@@ -176,23 +176,24 @@ WAN nodes are routed through a **WebSocket relay** (`mesh_cli.py relay`), and th
 import asyncio
 from openclaw_mesh import MeshClient
 
+
 async def main():
     # Initialize client
     client = MeshClient(name="openclaw-agent")
     await client.start()
-    
+
     # Discover peers
     await asyncio.sleep(1.5)
     print("Peers detected on LAN:", client.list_peers())
 
     # Call remote GPU / NPU inference node
     response = await client.delegate(
-        skill="llm",
-        payload={"prompt": "Explain quantum computing in one sentence."}
+        skill="llm", payload={"prompt": "Explain quantum computing in one sentence."}
     )
     print("Result:", response.result)
 
     await client.stop()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

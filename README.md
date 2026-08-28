@@ -197,15 +197,21 @@ from openclaw_mesh import OpenClawMeshNode, MeshClient, SkillRegistry
 # ── Start a node ──────────────────────────────────────────────────────
 registry = SkillRegistry(name="my-node")
 
+
 async def llm(payload: dict) -> dict:
     return {"text": f"Answer: {payload.get('prompt')}", "model": "local"}
 
+
 registry.register(llm, expose_remote=True)
 
+
 async def serve():
-    node = OpenClawMeshNode(name="my-node", port=8770, psk=os.environ["OPENCLAW_PSK"], registry=registry)
+    node = OpenClawMeshNode(
+        name="my-node", port=8770, psk=os.environ["OPENCLAW_PSK"], registry=registry
+    )
     await node.start(enable_zeroconf=False)  # Enable only after reviewing LAN exposure.
     await asyncio.Event().wait()
+
 
 # ── Call from a client ────────────────────────────────────────────────
 async def client_demo():
@@ -222,8 +228,10 @@ async def client_demo():
 
     # Streaming
     await client.call_stream(
-        "my-node", "llm", {"prompt": "Tell me a story"},
-        on_chunk=lambda c: print(c, end="", flush=True)
+        "my-node",
+        "llm",
+        {"prompt": "Tell me a story"},
+        on_chunk=lambda c: print(c, end="", flush=True),
     )
     await client.stop()
 ```
@@ -259,10 +267,11 @@ print(identity.public_key_hex)  # Share with peers
 
 # E2EE session
 from openclaw_mesh import E2EESession
+
 session = E2EESession()
 session.establish_with_peer(peer_pubkey_bytes)
 packet = session.encrypt({"secret": "payload"})
-data   = session.decrypt(packet)
+data = session.decrypt(packet)
 ```
 
 ---

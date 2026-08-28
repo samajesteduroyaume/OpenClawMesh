@@ -5,6 +5,7 @@ Permet à un agent OpenClaw de démarrer un serveur local de compétences,
 de s'annoncer sur le réseau mDNS et de servir des requêtes entrantes
 provenant d'autres nœuds OpenClaw ou JarvisMesh.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -13,6 +14,7 @@ import logging
 import ssl as ssl_module
 import time
 from collections.abc import Callable
+from typing import Any
 
 import websockets
 
@@ -129,7 +131,7 @@ class OpenClawMeshNode:
     # ------------------------------------------------------------------ #
     # Traitement des Requêtes Entrantes WebSocket
     # ------------------------------------------------------------------ #
-    async def _handle_ws(self, ws: websockets.WebSocketServerProtocol) -> None:
+    async def _handle_ws(self, ws: Any) -> None:
         """Traite une connexion entrante d'un pair."""
         send_lock = asyncio.Lock()
         try:
@@ -147,7 +149,7 @@ class OpenClawMeshNode:
 
     async def _process_message_with_timeout(
         self,
-        ws: websockets.WebSocketServerProtocol,
+        ws: Any,
         raw: str,
         send_lock: asyncio.Lock,
     ) -> None:
@@ -163,7 +165,7 @@ class OpenClawMeshNode:
 
     async def _process_message(
         self,
-        ws: websockets.WebSocketServerProtocol,
+        ws: Any,
         raw: str,
         send_lock: asyncio.Lock,
     ) -> None:
@@ -297,7 +299,12 @@ class OpenClawMeshNode:
         # 4. Exécution de la Compétence Demandée
         handler = self.registry.get(req.skill)
         if handler is not None and not self.registry.is_remote_exposed(req.skill):
-            resp = TaskResponse(request_id=req.request_id, ok=False, error="Compétence non exposée à distance", handled_by=self.name)
+            resp = TaskResponse(
+                request_id=req.request_id,
+                ok=False,
+                error="Compétence non exposée à distance",
+                handled_by=self.name,
+            )
             async with send_lock:
                 await ws.send(resp.to_json())
             return
@@ -313,7 +320,12 @@ class OpenClawMeshNode:
             return
 
         if self._task_semaphore.locked():
-            resp = TaskResponse(request_id=req.request_id, ok=False, error="Capacité du nœud atteinte", handled_by=self.name)
+            resp = TaskResponse(
+                request_id=req.request_id,
+                ok=False,
+                error="Capacité du nœud atteinte",
+                handled_by=self.name,
+            )
             async with send_lock:
                 await ws.send(resp.to_json())
             return
@@ -393,7 +405,12 @@ class OpenClawMeshNode:
 
         except Exception as exec_err:
             logger.error(f"Erreur lors de l'exécution de '{req.skill}': {exec_err}", exc_info=True)
-            resp = TaskResponse(request_id=req.request_id, ok=False, error="Erreur d'exécution", handled_by=self.name)
+            resp = TaskResponse(
+                request_id=req.request_id,
+                ok=False,
+                error="Erreur d'exécution",
+                handled_by=self.name,
+            )
             async with send_lock:
                 await ws.send(resp.to_json())
         finally:

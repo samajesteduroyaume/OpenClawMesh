@@ -1,6 +1,6 @@
 import asyncio
-import pytest
-from openclaw_mesh.engines.distributed_moe import DistributedMoEOrchestrator, PipelineStage
+
+from openclaw_mesh.engines.distributed_moe import DistributedMoEOrchestrator
 
 
 def test_distributed_moe_stage_splitting():

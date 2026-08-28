@@ -1,12 +1,12 @@
 import pytest
 
 from openclaw_mesh.bridge import SkillRegistry
-from openclaw_mesh.engines.inference import UniversalInferenceEngine
 from openclaw_mesh.crypto import NodeIdentity
 from openclaw_mesh.crypto_e2ee import E2EESession
-from openclaw_mesh.network.dht import Contact, KademliaDHT
-from openclaw_mesh.gateway.portal import render_portal_html
+from openclaw_mesh.engines.inference import UniversalInferenceEngine
 from openclaw_mesh.gateway.db import KeyDatabase
+from openclaw_mesh.gateway.portal import render_portal_html
+from openclaw_mesh.network.dht import Contact, KademliaDHT
 
 
 def test_system_diagnostics_are_not_exposed_remotely():

@@ -5,12 +5,14 @@ Couvre : KeyDatabase CRUD, quotas & expiration,
          endpoints API (portail, démo, auth, execute),
          flux de paiement BTC (soumission, statut, confirmation admin).
 """
+
 import hashlib
 import time
 
 import pytest
 from fastapi.testclient import TestClient
 
+import openclaw_mesh.gateway.server as gateway_server
 from openclaw_mesh.gateway.db import KeyDatabase
 from openclaw_mesh.gateway.server import ADMIN_TOKEN, app
 
@@ -18,6 +20,13 @@ from openclaw_mesh.gateway.server import ADMIN_TOKEN, app
 @pytest.fixture
 def temp_db(tmp_path):
     return KeyDatabase(tmp_path / "test_keys.db")
+
+
+@pytest.fixture(autouse=True)
+def isolate_gateway_db(tmp_path, monkeypatch):
+    test_db = KeyDatabase(tmp_path / "gateway_test.db")
+    monkeypatch.setattr(gateway_server, "db", test_db)
+    return test_db
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -105,9 +114,7 @@ def test_gateway_api_endpoints():
     assert "lifetime" in info["plans"]
 
     # 3. Clé démo
-    demo_resp = client.post(
-        "/api/v1/checkout/demo-key", json={"email": "demo_test@user.com"}
-    )
+    demo_resp = client.post("/api/v1/checkout/demo-key", json={"email": "demo_test@user.com"})
     assert demo_resp.status_code == 200
     demo_data = demo_resp.json()
     assert demo_data["ok"] is True
@@ -270,7 +277,10 @@ def test_btc_admin_confirm_flow():
 
     # 7. Admin sans token → 401
     unauth_resp = client.get("/api/v1/admin/payments/pending")
-    assert unauth_resp.status_code in (401, 422)  # Selon FastAPI version : 422 si header manquant ou 401
+    assert unauth_resp.status_code in (
+        401,
+        422,
+    )  # Selon FastAPI version : 422 si header manquant ou 401
 
     # 8. Admin mauvais token → 401
     bad_token_resp = client.get(

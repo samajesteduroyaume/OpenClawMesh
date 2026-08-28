@@ -102,12 +102,12 @@ Chaque message est `{"txid": "<8 hex>", "type": <type>, "node_id": "<40 hex>", "
 from openclaw_mesh.network.dht import KademliaDHT, Contact
 
 dht = KademliaDHT(name="my-node", host="127.0.0.1", port=8780, psk="shared-secret")
-await dht.start_network()            # écoute UDP réelle
+await dht.start_network()  # écoute UDP réelle
 
 # Rejoindre le réseau via un pair connu, puis publier/rechercher
 await dht.bootstrap([Contact(node_id="...", host="192.0.2.5", port=8780)])
 await dht.advertise_skill_distributed("llm", {"host": "10.0.0.5", "port": 8770})
-result = await dht.lookup_skill_distributed("llm")   # FIND_VALUE itératif
+result = await dht.lookup_skill_distributed("llm")  # FIND_VALUE itératif
 ```
 
 ### 4.3. Recherche itérative (alpha-parallèle)

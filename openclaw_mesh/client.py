@@ -7,6 +7,7 @@ Permet à un agent OpenClaw :
 - De recevoir les réponses complètes ou les chunks en streaming token-par-token.
 - De signer les requêtes avec HMAC-SHA256 ou Ed25519.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -38,7 +39,7 @@ def _is_ws_closed(ws: Any) -> bool:
     if ws is None:
         return True
     if hasattr(ws, "closed"):
-        return ws.closed
+        return bool(ws.closed)
     if hasattr(ws, "state"):
         state_str = str(ws.state)
         state_name = getattr(ws.state, "name", "")
@@ -64,8 +65,12 @@ class MeshClient:
         self.ssl_context = ssl_context
 
         # Une option explicitement fournie doit primer sur la configuration globale.
-        discovery_enabled = enable_discovery if enable_discovery is not None else _settings.mdns_enabled
-        self.discovery = discovery or (MeshDiscovery(node_name=self.name) if discovery_enabled else None)
+        discovery_enabled = (
+            enable_discovery if enable_discovery is not None else _settings.mdns_enabled
+        )
+        self.discovery = discovery or (
+            MeshDiscovery(node_name=self.name) if discovery_enabled else None
+        )
         self.static_peers: dict[str, PeerInfo] = {}
 
         # Pool de connexions WebSockets persistantes {endpoint_key: WebSocketClientProtocol}
@@ -73,7 +78,9 @@ class MeshClient:
         self._send_locks: dict[str, asyncio.Lock] = {}
         self._reader_tasks: dict[str, asyncio.Task] = {}
         self._pending: dict[str, dict[str, asyncio.Future]] = {}  # endpoint -> {req_id -> Future}
-        self._stream_cbs: dict[str, dict[str, Callable[[Any], None]]] = {}  # endpoint -> {req_id -> callback}
+        self._stream_cbs: dict[
+            str, dict[str, Callable[[Any], None]]
+        ] = {}  # endpoint -> {req_id -> callback}
 
         # Cache d'introspection et de santé
         self._peer_skills_cache: dict[str, list[str]] = {}
@@ -111,9 +118,13 @@ class MeshClient:
     # ------------------------------------------------------------------ #
     # Gestion des Pairs et Résolution
     # ------------------------------------------------------------------ #
-    def add_peer(self, name: str, address: str, port: int, skills: list[str] | None = None) -> PeerInfo:
+    def add_peer(
+        self, name: str, address: str, port: int, skills: list[str] | None = None
+    ) -> PeerInfo:
         """Enregistre manuellement un pair statique."""
-        peer = PeerInfo(name=name, address=address, port=port, skills=skills or [], service_type="static")
+        peer = PeerInfo(
+            name=name, address=address, port=port, skills=skills or [], service_type="static"
+        )
         self.static_peers[name] = peer
         return peer
 
@@ -189,7 +200,9 @@ class MeshClient:
             parts = target.split(":")
             return target, f"ws://{parts[0]}:{parts[1]}"
 
-        raise ValueError(f"Pair ou endpoint inconnu : '{target}'. Pairs disponibles : {list(all_peers.keys())}")
+        raise ValueError(
+            f"Pair ou endpoint inconnu : '{target}'. Pairs disponibles : {list(all_peers.keys())}"
+        )
 
     async def _get_connection(self, endpoint_key: str, ws_url: str) -> Any:
         """Obtient ou réutilise une connexion WebSocket persistante multiplexée."""
@@ -218,7 +231,7 @@ class MeshClient:
 
         return ws
 
-    async def _reader_loop(self, endpoint_key: str, ws: websockets.WebSocketClientProtocol) -> None:
+    async def _reader_loop(self, endpoint_key: str, ws: Any) -> None:
         """Boucle de lecture unique multiplexant les réponses et chunks entrants."""
         try:
             async for raw in ws:
@@ -401,5 +414,7 @@ class MeshClient:
             )
 
         if on_chunk:
-            return await self.call_stream(best_peer, skill, payload, on_chunk=on_chunk, timeout=timeout)
+            return await self.call_stream(
+                best_peer, skill, payload, on_chunk=on_chunk, timeout=timeout
+            )
         return await self.call(best_peer, skill, payload, timeout=timeout)

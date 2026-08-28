@@ -35,7 +35,15 @@ def _e2ee_auth_base(package: dict[str, Any]) -> bytes:
     """Base canonique des métadonnées de session signées par l’identité du pair."""
     fields = {
         key: package[key]
-        for key in ("version", "algorithm", "ephemeral_pubkey", "nonce", "ciphertext", "data_type", "timestamp")
+        for key in (
+            "version",
+            "algorithm",
+            "ephemeral_pubkey",
+            "nonce",
+            "ciphertext",
+            "data_type",
+            "timestamp",
+        )
         if key in package
     }
     return json.dumps(fields, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -137,7 +145,9 @@ class E2EESession:
         # Historique des nonces localement produits pour éviter toute collision.
         self._sent_nonces: set[bytes] = set()
         self._identity = identity
-        self._peer_identity_public_key = peer_identity_public_key.lower() if peer_identity_public_key else None
+        self._peer_identity_public_key = (
+            peer_identity_public_key.lower() if peer_identity_public_key else None
+        )
         self._require_identity_binding = (
             _settings.e2ee_require_identity_binding
             if require_identity_binding is None
@@ -288,8 +298,12 @@ class E2EESession:
             if identity_hex.lower() != self._peer_identity_public_key:
                 raise ReplayError("Identité Ed25519 E2EE inattendue")
             try:
-                identity_key = ed25519.Ed25519PublicKey.from_public_bytes(bytes.fromhex(identity_hex))
-                identity_key.verify(bytes.fromhex(signature_hex), _e2ee_auth_base(encrypted_package))
+                identity_key = ed25519.Ed25519PublicKey.from_public_bytes(
+                    bytes.fromhex(identity_hex)
+                )
+                identity_key.verify(
+                    bytes.fromhex(signature_hex), _e2ee_auth_base(encrypted_package)
+                )
             except (TypeError, ValueError, KeyError, InvalidSignature) as exc:
                 raise ReplayError("Signature d'identité E2EE invalide") from exc
         now = time.time()

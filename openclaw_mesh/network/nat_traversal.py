@@ -4,6 +4,7 @@ Module de Traversée NAT & Détection STUN pour OpenClawMesh.
 Détermine automatiquement l'adresse IP publique et le port externe du nœud
 pour établir des liaisons directes P2P à travers les pare-feux et routeurs (NAT).
 """
+
 from __future__ import annotations
 
 import logging
@@ -81,12 +82,14 @@ async def discover_nat_and_public_ip(
                 # Recherche de l'attribut XOR-MAPPED-ADDRESS (0x0020) ou MAPPED-ADDRESS (0x0001)
                 idx = 20
                 while idx < len(data):
-                    attr_type, attr_len = struct.unpack("!HH", data[idx:idx+4])
+                    attr_type, attr_len = struct.unpack("!HH", data[idx : idx + 4])
                     if attr_type == 0x0020:  # XOR-MAPPED-ADDRESS
-                        x_family, x_port = struct.unpack("!BBH", data[idx+4:idx+8])
+                        x_family, x_port = struct.unpack("!BBH", data[idx + 4 : idx + 8])
                         xor_port = x_port ^ 0x2112
-                        xor_ip_bytes = data[idx+8:idx+12]
-                        real_ip_bytes = bytes(b ^ m for b, m in zip(xor_ip_bytes, magic_cookie, strict=True))
+                        xor_ip_bytes = data[idx + 8 : idx + 12]
+                        real_ip_bytes = bytes(
+                            b ^ m for b, m in zip(xor_ip_bytes, magic_cookie, strict=True)
+                        )
                         pub_ip = socket.inet_ntoa(real_ip_bytes)
 
                         return NATProfile(

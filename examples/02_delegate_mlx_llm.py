@@ -1,6 +1,7 @@
 """
 Exemple 2 : Délégation d'inférence LLM locale avec streaming token-par-token.
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -19,7 +20,7 @@ async def main():
     await asyncio.sleep(1.5)
 
     prompt = "Explique en 2 phrases simples le principe du maillage P2P d'agents IA."
-    print(f"\n💬 Prompt envoyé : \"{prompt}\"\n")
+    print(f'\n💬 Prompt envoyé : "{prompt}"\n')
     print("🤖 Réponse en streaming direct :")
 
     def on_token(chunk):

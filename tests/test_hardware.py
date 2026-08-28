@@ -1,6 +1,8 @@
 import asyncio
+
 import pytest
-from openclaw_mesh.engines.hardware import detect_hardware, HardwareProfile
+
+from openclaw_mesh.engines.hardware import HardwareProfile, detect_hardware
 from openclaw_mesh.engines.inference import UniversalInferenceEngine
 
 
@@ -11,7 +13,17 @@ def test_hardware_detection():
     assert hw.cpu_cores_logical >= 1
     assert hw.cpu_model != ""
     assert hw.accelerator_name != ""
-    assert hw.recommended_backend in ("mlx", "cuda", "rocm", "openvino", "openvino_npu", "openvino_gpu", "intel_cpu", "directml", "cpu")
+    assert hw.recommended_backend in (
+        "mlx",
+        "cuda",
+        "rocm",
+        "openvino",
+        "openvino_npu",
+        "openvino_gpu",
+        "intel_cpu",
+        "directml",
+        "cpu",
+    )
 
     d = hw.to_dict()
     assert "os_name" in d

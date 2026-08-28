@@ -3,6 +3,7 @@
 Script de découverte rapide pour l'agent OpenClaw.
 Affiche les pairs actifs sous format JSON structuré.
 """
+
 import asyncio
 import json
 import sys
@@ -12,7 +13,6 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from openclaw_mesh.discovery import scan_mesh_peers
 from openclaw_mesh.client import MeshClient
 
 

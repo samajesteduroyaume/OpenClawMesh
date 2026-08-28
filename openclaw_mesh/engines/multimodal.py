@@ -6,6 +6,7 @@ Fournit des compétences multi-modales prêtes à l'emploi et intégrées au mai
 - 🎙️ Speech-to-Text (Whisper audio transcription)
 - 🔊 Text-to-Speech (Synthèse vocale locale)
 """
+
 from __future__ import annotations
 
 import logging

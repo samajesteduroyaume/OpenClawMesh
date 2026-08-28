@@ -5,6 +5,7 @@ Point d'Entrée Direct pour Lancer un Relais WAN WebSocket E2EE OpenClawMesh.
 Exemple :
   python3 scripts/mesh_relay.py --port 8790 --name wan-relay-paris
 """
+
 import argparse
 import asyncio
 import sys

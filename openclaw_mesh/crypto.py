@@ -5,6 +5,7 @@ Module de cryptographie asymétrique Ed25519 et gestion des identités OpenClawM
 Gère les clés privées/publiques Ed25519, la signature, la vérification anti-rejeu,
 et la liste blanche de confiance (TrustStore).
 """
+
 from __future__ import annotations
 
 import json
@@ -20,6 +21,7 @@ from .config import get_settings
 try:
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import ed25519
+
     _HAS_CRYPTO = True
 except ImportError:
     _HAS_CRYPTO = False
@@ -33,7 +35,7 @@ def _signing_base_ed25519(
     skill: str,
     ts: float,
     payload: dict[str, Any],
-    pubkey_hex: str = ""
+    pubkey_hex: str = "",
 ) -> bytes:
     """Génère la chaîne canonique d'octets à signer en Ed25519 (compatible JarvisMesh)."""
     payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -104,9 +106,13 @@ class NodeIdentity:
         raw = file_path.read_bytes()
         return cls.from_private_bytes(raw)
 
-    def sign(self, request_id: str, origin: str, skill: str, ts: float, payload: dict[str, Any]) -> str:
+    def sign(
+        self, request_id: str, origin: str, skill: str, ts: float, payload: dict[str, Any]
+    ) -> str:
         """Signe canoniquement une requête TaskRequest en Ed25519."""
-        data_to_sign = _signing_base_ed25519(request_id, origin, skill, ts, payload, self.public_key_hex)
+        data_to_sign = _signing_base_ed25519(
+            request_id, origin, skill, ts, payload, self.public_key_hex
+        )
         sig = self._private_key.sign(data_to_sign)
         return sig.hex()
 

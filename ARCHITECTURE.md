@@ -176,13 +176,17 @@ Chaque endpoint utilise **une seule connexion WebSocket** avec **une seule tâch
 ```python
 registry = SkillRegistry(name="mon-nœud")
 
+
 # Décorateur direct
 @registry.register
 async def llm(payload: dict) -> dict: ...
 
+
 # Décorateur nommé via skill()
 @skill(name="vision", description="Analyse d'image")
 async def analyze(payload: dict) -> dict: ...
+
+
 registry.register(analyze)
 
 # Enregistrement batch
@@ -200,9 +204,9 @@ registry.register_dict({"echo": echo_fn, "ping": ping_fn})
 **Responsabilité** : Configuration centralisée via `pydantic-settings`. Singleton thread-safe.
 
 ```python
-settings = get_settings()   # retourne toujours la même instance
-settings = reload_settings() # recharge depuis l'environnement
-reset_settings()             # remet à None (utile en tests)
+settings = get_settings()  # retourne toujours la même instance
+settings = reload_settings()  # recharge depuis l'environnement
+reset_settings()  # remet à None (utile en tests)
 ```
 
 ---
@@ -348,11 +352,11 @@ session_b.establish_with_peer(session_a.public_key_bytes)
 session_a.establish_with_peer(session_b.public_key_bytes)
 
 packet = session_a.encrypt({"secret": "data"})
-data   = session_b.decrypt(packet)
+data = session_b.decrypt(packet)
 
 # One-shot (sans état)
 packet = encrypt_message_for_peer(peer_pubkey_hex, {"msg": "hello"})
-data   = decrypt_message_with_key(my_private_bytes, packet)
+data = decrypt_message_with_key(my_private_bytes, packet)
 ```
 
 ---
@@ -405,9 +409,9 @@ await dht.start_network()
 await dht.bootstrap([Contact(node_id="...", host="seed.example.com", port=8780)])
 
 # Publication d'une compétence dans le DHT
-await dht.advertise_skill_distributed("llm", {
-    "host": "203.0.113.42", "port": 8770, "node": "mac-m3"
-})
+await dht.advertise_skill_distributed(
+    "llm", {"host": "203.0.113.42", "port": 8770, "node": "mac-m3"}
+)
 
 # Recherche distribuée
 endpoint = await dht.lookup_skill_distributed("llm")
@@ -484,7 +488,7 @@ result = await engine.generate(
     prompt="def fibonacci(n):",
     max_tokens=256,
     temperature=0.1,
-    system_prompt="Tu es un expert Python."
+    system_prompt="Tu es un expert Python.",
 )
 # → {"text": "...", "model": "...", "backend": "apple_metal_mlx", "duration_ms": 234.5}
 
@@ -684,9 +688,11 @@ from openclaw_mesh import OpenClawMeshNode, SkillRegistry
 
 registry = SkillRegistry(name="mon-nœud")
 
+
 @registry.register
 async def llm(payload: dict) -> dict:
     return {"text": f"Réponse : {payload.get('prompt')}"}
+
 
 async def main():
     node = OpenClawMeshNode(
@@ -699,6 +705,7 @@ async def main():
     print(f"Nœud démarré sur {node.advertise_ip}:{node.port}")
     await asyncio.Event().wait()  # tourne indéfiniment
 
+
 asyncio.run(main())
 ```
 
@@ -706,6 +713,7 @@ asyncio.run(main())
 
 ```python
 from openclaw_mesh import MeshClient
+
 
 async def main():
     client = MeshClient(name="orchestrateur", psk="mon_psk_secret")
@@ -722,9 +730,10 @@ async def main():
 
     # Streaming token-par-token
     await client.call_stream(
-        "mon-agent", "llm",
+        "mon-agent",
+        "llm",
         {"prompt": "Explique les closures"},
-        on_chunk=lambda c: print(c, end="", flush=True)
+        on_chunk=lambda c: print(c, end="", flush=True),
     )
     await client.stop()
 ```
@@ -768,17 +777,13 @@ async def start_wan_node():
     # 3. DHT Kademlia
     dht = KademliaDHT(host="127.0.0.1", port=8780)
     await dht.start_network()
-    await dht.bootstrap([
-        Contact(node_id="aabbcc...", host="seed.openclaw.io", port=8780)
-    ])
+    await dht.bootstrap([Contact(node_id="aabbcc...", host="seed.openclaw.io", port=8780)])
 
     # 4. Publier les skills dans le DHT global
     for skill_name in node.registry.list_names():
-        await dht.advertise_skill_distributed(skill_name, {
-            "host": nat.public_ip,
-            "port": 8770,
-            "node": "wan-node-1"
-        })
+        await dht.advertise_skill_distributed(
+            skill_name, {"host": nat.public_ip, "port": 8770, "node": "wan-node-1"}
+        )
 ```
 
 ---
@@ -831,7 +836,9 @@ class MeshClient:
     async def start(self) -> None: ...
     async def stop(self) -> None: ...
 
-    def add_peer(self, name: str, address: str, port: int, skills: list[str] | None = None) -> PeerInfo: ...
+    def add_peer(
+        self, name: str, address: str, port: int, skills: list[str] | None = None
+    ) -> PeerInfo: ...
     def list_peers(self) -> dict[str, PeerInfo]: ...
 
     async def call(
@@ -839,13 +846,20 @@ class MeshClient:
     ) -> TaskResponse: ...
 
     async def call_stream(
-        self, target: str, skill: str, payload: dict | None = None,
-        on_chunk: Callable[[Any], None] | None = None, timeout: float = 120.0
+        self,
+        target: str,
+        skill: str,
+        payload: dict | None = None,
+        on_chunk: Callable[[Any], None] | None = None,
+        timeout: float = 120.0,
     ) -> TaskResponse: ...
 
     async def delegate(
-        self, skill: str, payload: dict | None = None,
-        on_chunk: Callable[[Any], None] | None = None, timeout: float = 60.0
+        self,
+        skill: str,
+        payload: dict | None = None,
+        on_chunk: Callable[[Any], None] | None = None,
+        timeout: float = 60.0,
     ) -> TaskResponse:
         """Routage intelligent : sélectionne automatiquement le meilleur pair."""
 
@@ -861,8 +875,11 @@ class SkillRegistry:
     """Registre central des compétences d'un nœud."""
 
     def register(
-        self, fn: Callable, name: str | None = None,
-        description: str | None = None, schema: Any | None = None
+        self,
+        fn: Callable,
+        name: str | None = None,
+        description: str | None = None,
+        schema: Any | None = None,
     ) -> Callable: ...
 
     def register_dict(self, skills: dict[str, Callable]) -> None: ...
@@ -891,8 +908,9 @@ class NodeIdentity:
 ```python
 class E2EESession:
     """Session de chiffrement de bout en bout X25519 + ChaCha20-Poly1305."""
-    public_key_bytes: bytes   # 32 octets X25519
-    public_key_hex: str       # 64 chars hex
+
+    public_key_bytes: bytes  # 32 octets X25519
+    public_key_hex: str  # 64 chars hex
     is_established: bool
 
     def establish_with_peer(
@@ -904,8 +922,10 @@ class E2EESession:
     ) -> dict: ...
 
     def decrypt(
-        self, encrypted_package: dict, associated_data: bytes | None = None,
-        max_drift_seconds: float | None = None
+        self,
+        encrypted_package: dict,
+        associated_data: bytes | None = None,
+        max_drift_seconds: float | None = None,
     ) -> Any: ...
 ```
 
@@ -915,7 +935,9 @@ class E2EESession:
 class KademliaDHT:
     """Nœud DHT Kademlia 160-bit avec transport UDP réel."""
 
-    async def start_network(self, host: str | None = None, port: int | None = None) -> tuple[str, int]: ...
+    async def start_network(
+        self, host: str | None = None, port: int | None = None
+    ) -> tuple[str, int]: ...
     async def stop_network(self) -> None: ...
     async def bootstrap(self, contacts: list[Contact], timeout: float = 3.0) -> int: ...
 
@@ -976,6 +998,7 @@ pre-commit run --all-files           # Toutes les vérifications
 
 ```python
 import pytest
+
 
 @pytest.mark.asyncio
 async def test_my_feature():

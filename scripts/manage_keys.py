@@ -7,6 +7,7 @@ Usage:
   python3 scripts/manage_keys.py revoke --key sk_claw_...
   python3 scripts/manage_keys.py info --key sk_claw_...
 """
+
 import argparse
 import json
 import sys
@@ -22,6 +23,7 @@ from openclaw_mesh.gateway.db import KeyDatabase
 try:
     from rich.console import Console
     from rich.table import Table
+
     _HAS_RICH = True
     console = Console()
 except ImportError:
@@ -41,9 +43,17 @@ def main():
     # 2. create
     p_create = subparsers.add_parser("create", help="Créer manuellement une nouvelle clé")
     p_create.add_argument("--email", required=True, help="Email de l'utilisateur")
-    p_create.add_argument("--plan", default="pro_monthly", help="Nom du plan (ex: pro_monthly, developer_yearly, lifetime)")
-    p_create.add_argument("--days", type=int, default=30, help="Durée de validité en jours (0 = illimité)")
-    p_create.add_argument("--quota", type=int, default=-1, help="Quota max de requêtes (-1 = illimité)")
+    p_create.add_argument(
+        "--plan",
+        default="pro_monthly",
+        help="Nom du plan (ex: pro_monthly, developer_yearly, lifetime)",
+    )
+    p_create.add_argument(
+        "--days", type=int, default=30, help="Durée de validité en jours (0 = illimité)"
+    )
+    p_create.add_argument(
+        "--quota", type=int, default=-1, help="Quota max de requêtes (-1 = illimité)"
+    )
 
     # 3. revoke
     p_revoke = subparsers.add_parser("revoke", help="Révoquer une clé")
@@ -73,7 +83,11 @@ def main():
                 valid, _ = k.is_valid()
                 status_str = "[green]Active[/green]" if valid else "[red]Inactive[/red]"
                 quota_str = f"{k.quota_used} / {k.quota_limit if k.quota_limit != -1 else '∞'}"
-                expires_str = f"{round((k.expires_at - time.time())/86400, 1)}j" if k.expires_at else "Jamais"
+                expires_str = (
+                    f"{round((k.expires_at - time.time()) / 86400, 1)}j"
+                    if k.expires_at
+                    else "Jamais"
+                )
                 key_id = k.metadata.get("key_id", "non divulgué")
                 table.add_row(str(key_id), k.email, k.plan, status_str, quota_str, expires_str)
 
@@ -86,23 +100,25 @@ def main():
             days_valid=args.days,
             quota_limit=args.quota,
         )
-        print(f"\n✅ Clé créée avec succès !")
+        print("\n✅ Clé créée avec succès !")
         print(f"🔑 Clé : {key_rec.key}")
         print(f"📧 Email : {key_rec.email}")
         print(f"📦 Plan : {key_rec.plan}")
-        print(f"📅 Expiration : {time.ctime(key_rec.expires_at) if key_rec.expires_at else 'Illimitée'}\n")
+        print(
+            f"📅 Expiration : {time.ctime(key_rec.expires_at) if key_rec.expires_at else 'Illimitée'}\n"
+        )
 
     elif args.action == "revoke":
         ok = db.revoke_key(args.key)
         if ok:
             print(f"🚫 Clé '{args.key}' révoquée avec succès.")
         else:
-            print(f"❌ Clé non trouvée.")
+            print("❌ Clé non trouvée.")
 
     elif args.action == "info":
         key_rec = db.get_key(args.key)
         if not key_rec:
-            print(f"❌ Clé non trouvée.")
+            print("❌ Clé non trouvée.")
             sys.exit(1)
         valid, reason = key_rec.is_valid()
         print(json.dumps(key_rec.to_dict(include_key=False), indent=2))

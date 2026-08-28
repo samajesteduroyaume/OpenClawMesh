@@ -1,6 +1,5 @@
 import time
-import pytest
-from pathlib import Path
+
 from openclaw_mesh.crypto import NodeIdentity, TrustStore, verify_ed25519_signature
 from openclaw_mesh.protocol import TaskRequest
 

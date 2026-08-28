@@ -8,6 +8,7 @@ Supporte automatiquement et de manière transparente :
 4. 🟣 Apple Silicon (Metal GPU M1/M2/M3/M4 via MLX-LM)
 5. ⚪ Serveurs Locaux (Ollama, llama.cpp, vLLM via REST) & Fallback CPU universel
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -29,7 +30,9 @@ class UniversalInferenceEngine:
     def __init__(self, hardware: HardwareProfile | None = None) -> None:
         self.hardware = hardware or detect_hardware()
         self.backend = self.hardware.recommended_backend
-        logger.info(f"Moteur d'Inférence initialisé avec l'accélérateur : {self.hardware.accelerator_name}")
+        logger.info(
+            f"Moteur d'Inférence initialisé avec l'accélérateur : {self.hardware.accelerator_name}"
+        )
 
     def get_status(self) -> dict[str, Any]:
         """Retourne l'état du matériel et du backend d'inférence."""
@@ -67,6 +70,7 @@ class UniversalInferenceEngine:
             try:
                 from mlx_lm import generate as mlx_gen
                 from mlx_lm import load
+
                 mlx_model_name = model or "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit"
                 model_obj, tokenizer = load(mlx_model_name)
                 formatted_prompt = f"{system_prompt}\n{prompt}" if system_prompt else prompt
@@ -86,8 +90,11 @@ class UniversalInferenceEngine:
             try:
                 import torch
                 from transformers import pipeline
+
                 cuda_model = model or "Qwen/Qwen2.5-Coder-7B-Instruct"
-                pipe = pipeline("text-generation", model=cuda_model, device="cuda", torch_dtype=torch.float16)
+                pipe = pipeline(
+                    "text-generation", model=cuda_model, device="cuda", torch_dtype=torch.float16
+                )
                 out = pipe(prompt, max_new_tokens=max_tokens, temperature=temperature)
                 text = out[0]["generated_text"]
                 duration_ms = (time.perf_counter() - t0) * 1000.0
@@ -104,8 +111,11 @@ class UniversalInferenceEngine:
         if "openvino" in self.backend:
             try:
                 import openvino_genai as ov_genai
+
                 ov_model_path = model or "openvino_model"
-                pipe = ov_genai.LLMPipeline(ov_model_path, "NPU" if self.hardware.has_intel_npu else "CPU")
+                pipe = ov_genai.LLMPipeline(
+                    ov_model_path, "NPU" if self.hardware.has_intel_npu else "CPU"
+                )
                 text = pipe.generate(prompt, max_new_tokens=max_tokens)
                 duration_ms = (time.perf_counter() - t0) * 1000.0
                 return {
@@ -139,6 +149,7 @@ class UniversalInferenceEngine:
         if self.backend == "mlx" and model != "test":
             try:
                 from mlx_lm import load, stream_generate
+
                 mlx_model_name = model or "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit"
                 model_obj, tokenizer = load(mlx_model_name)
                 for response in stream_generate(model_obj, tokenizer, prompt=prompt):

@@ -5,6 +5,7 @@ Protocole OpenClawMesh — Messages échangés entre agents P2P.
 Format JSON minimal, asynchrone, supportant le multiplexage, le streaming
 de chunks et la double authentification HMAC-SHA256 et Ed25519.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -37,14 +38,18 @@ def _canonical_payload_json(payload: dict[str, Any]) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
-def _signing_base(request_id: str, origin: str, skill: str, ts: float, payload: dict[str, Any]) -> bytes:
+def _signing_base(
+    request_id: str, origin: str, skill: str, ts: float, payload: dict[str, Any]
+) -> bytes:
     """Base canonique de signature HMAC-SHA256 compatible JarvisMesh."""
     payload_json = _canonical_payload_json(payload)
     base = f"{request_id}|{origin}|{skill}|{ts!r}|{payload_json}"
     return base.encode("utf-8")
 
 
-def sign_request(psk: str, request_id: str, origin: str, skill: str, ts: float, payload: dict[str, Any]) -> str:
+def sign_request(
+    psk: str, request_id: str, origin: str, skill: str, ts: float, payload: dict[str, Any]
+) -> str:
     """Calcule le HMAC-SHA256 hex d'une requête pour une clé pré-partagée."""
     mac = hmac.HMAC(
         psk.encode("utf-8"),
@@ -61,7 +66,7 @@ def verify_request(
     skill: str,
     ts: float,
     payload: dict[str, Any],
-    signature: str | None
+    signature: str | None,
 ) -> bool:
     """Vérifie la signature HMAC-SHA256 d'une requête en temps constant."""
     if not signature or not request_id or not isinstance(ts, (int, float)):
@@ -84,6 +89,7 @@ def verify_request(
 @dataclass
 class TaskRequest:
     """Requête d'exécution de compétence envoyée à un pair du maillage."""
+
     skill: str
     payload: dict[str, Any] = field(default_factory=dict)
     request_id: str = field(default_factory=lambda: uuid.uuid4().hex)
@@ -103,11 +109,15 @@ class TaskRequest:
 
     def sign(self, psk: str) -> None:
         """Signe avec une clé partagée HMAC-SHA256."""
-        self.sig = sign_request(psk, self.request_id, self.origin, self.skill, self.ts, self.payload)
+        self.sig = sign_request(
+            psk, self.request_id, self.origin, self.skill, self.ts, self.payload
+        )
 
     def verify(self, psk: str) -> bool:
         """Vérifie la signature HMAC-SHA256."""
-        return verify_request(psk, self.request_id, self.origin, self.skill, self.ts, self.payload, self.sig)
+        return verify_request(
+            psk, self.request_id, self.origin, self.skill, self.ts, self.payload, self.sig
+        )
 
     def sign_ed25519(self, identity: Any) -> None:
         """Signe avec une clé privée asymétrique Ed25519."""
@@ -141,6 +151,7 @@ class TaskRequest:
 @dataclass
 class TaskChunk:
     """Chunk intermédiaire pour le streaming token-par-token (ex: LLM)."""
+
     request_id: str
     index: int
     chunk: Any
@@ -165,6 +176,7 @@ class TaskChunk:
 @dataclass
 class TaskResponse:
     """Réponse finale à une TaskRequest."""
+
     request_id: str
     ok: bool
     result: Any = None

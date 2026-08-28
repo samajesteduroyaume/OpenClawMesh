@@ -1,19 +1,21 @@
 import asyncio
+
 import pytest
 
 try:
+    import jarvismesh.core.node as jm_node
     import jarvismesh.core.protocol as jm_proto
     import jarvismesh.security.crypto as jm_crypto
-    import jarvismesh.core.node as jm_node
+
     _HAS_JARVISMESH = True
 except ImportError:
     _HAS_JARVISMESH = False
 
-import openclaw_mesh.protocol as oc_proto
 import openclaw_mesh.crypto as oc_crypto
+import openclaw_mesh.protocol as oc_proto
+from openclaw_mesh.bridge import SkillRegistry, skill
 from openclaw_mesh.client import MeshClient
 from openclaw_mesh.node import OpenClawMeshNode
-from openclaw_mesh.bridge import SkillRegistry, skill
 
 
 @pytest.mark.skipif(not _HAS_JARVISMESH, reason="JarvisMesh n'est pas disponible sur le système")
@@ -92,6 +94,7 @@ def test_crypto_cross_verification_ed25519():
 @pytest.mark.skipif(not _HAS_JARVISMESH, reason="JarvisMesh n'est pas disponible sur le système")
 def test_openclaw_client_to_jarvismesh_node():
     """Vérifie qu'un MeshClient OpenClaw peut interroger directement un JarvisNode réel."""
+
     async def _run():
         def sample_jarvis_skill(payload: dict) -> dict:
             return {"jarvis_response": f"Processed: {payload.get('text')}"}
@@ -108,7 +111,9 @@ def test_openclaw_client_to_jarvismesh_node():
 
         try:
             # Appel depuis OpenClaw vers JarvisMesh
-            resp = await oc_client.call("jarvis-real-node", "jarvis_skill", {"text": "Hello from OpenClaw"})
+            resp = await oc_client.call(
+                "jarvis-real-node", "jarvis_skill", {"text": "Hello from OpenClaw"}
+            )
             assert resp.ok is True
             assert resp.result == {"jarvis_response": "Processed: Hello from OpenClaw"}
             assert resp.handled_by == "jarvis-real-node"
@@ -132,6 +137,7 @@ def test_openclaw_client_to_jarvismesh_node():
 @pytest.mark.skipif(not _HAS_JARVISMESH, reason="JarvisMesh n'est pas disponible sur le système")
 def test_jarvismesh_node_to_openclaw_node():
     """Vérifie qu'un JarvisNode peut déléguer une tâche à un OpenClawMeshNode."""
+
     async def _run():
         reg = SkillRegistry(name="openclaw-provider")
 
@@ -150,7 +156,9 @@ def test_jarvismesh_node_to_openclaw_node():
 
         try:
             # JarvisNode appelle OpenClawMeshNode via delegate
-            resp = await jarvis_caller.delegate("claw_processor", {"val": 21}, peer_name="openclaw-server")
+            resp = await jarvis_caller.delegate(
+                "claw_processor", {"val": 21}, peer_name="openclaw-server"
+            )
             assert resp.ok is True
             assert resp.result == {"status": "success", "doubled": 42}
             assert resp.handled_by == "openclaw-server"

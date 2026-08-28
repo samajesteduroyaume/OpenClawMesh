@@ -2,6 +2,7 @@
 """
 CLI autonome OpenClawMesh — exécutable directement par un agent OpenClaw.
 """
+
 import sys
 from pathlib import Path
 

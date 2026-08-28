@@ -1,6 +1,7 @@
 """
 Exemple 3 : Interaction avec la mémoire vectorielle persistante (SQLite Vector Store).
 """
+
 import asyncio
 import sys
 from pathlib import Path

@@ -4,6 +4,7 @@ Gestionnaire de Base de Données SQLite pour Clés d'API & Monétisation OpenCla
 Gère les clés d'API (création, validation, décompte de quotas, expirations, abonnements),
 les transactions de paiement et les logs d'utilisation.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -180,6 +181,7 @@ class KeyDatabase:
         expires_at = (now + (days_valid * 86400)) if days_valid and days_valid > 0 else None
 
         import json
+
         safe_metadata = dict(metadata or {})
         safe_metadata.setdefault("key_id", _key_audit_id(key))
         meta_json = json.dumps(safe_metadata)
@@ -192,7 +194,17 @@ class KeyDatabase:
                     quota_limit, quota_used, metadata_json, customer_id, subscription_id
                 ) VALUES (NULL, ?, ?, ?, 1, ?, ?, ?, 0, ?, ?, ?)
                 """,
-                (_key_hash(key), email, plan, now, expires_at, quota_limit, meta_json, customer_id, subscription_id),
+                (
+                    _key_hash(key),
+                    email,
+                    plan,
+                    now,
+                    expires_at,
+                    quota_limit,
+                    meta_json,
+                    customer_id,
+                    subscription_id,
+                ),
             )
 
         return KeyRecord(
@@ -212,9 +224,12 @@ class KeyDatabase:
     def get_key(self, key_str: str) -> KeyRecord | None:
         """Récupère une clé par sa valeur."""
         import json
+
         with self._get_connection() as conn:
             normalized_key = key_str.strip()
-            row = conn.execute("SELECT * FROM api_keys WHERE key_hash = ?", (_key_hash(normalized_key),)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM api_keys WHERE key_hash = ?", (_key_hash(normalized_key),)
+            ).fetchone()
             if not row:
                 return None
 
@@ -235,30 +250,41 @@ class KeyDatabase:
     def find_by_email(self, email: str) -> list[KeyRecord]:
         """Trouve toutes les clés associées à une adresse email."""
         import json
+
         with self._get_connection() as conn:
-            rows = conn.execute("SELECT * FROM api_keys WHERE email = ? ORDER BY created_at DESC", (email.strip().lower(),)).fetchall()
+            rows = conn.execute(
+                "SELECT * FROM api_keys WHERE email = ? ORDER BY created_at DESC",
+                (email.strip().lower(),),
+            ).fetchall()
             keys = []
             for r in rows:
-                keys.append(KeyRecord(
-                    key="",
-                    email=r["email"],
-                    plan=r["plan"],
-                    active=bool(r["active"]),
-                    created_at=r["created_at"],
-                    expires_at=r["expires_at"],
-                    quota_limit=r["quota_limit"],
-                    quota_used=r["quota_used"],
-                    metadata=json.loads(r["metadata_json"] or "{}"),
-                    customer_id=r["customer_id"],
-                    subscription_id=r["subscription_id"],
-                ))
+                keys.append(
+                    KeyRecord(
+                        key="",
+                        email=r["email"],
+                        plan=r["plan"],
+                        active=bool(r["active"]),
+                        created_at=r["created_at"],
+                        expires_at=r["expires_at"],
+                        quota_limit=r["quota_limit"],
+                        quota_used=r["quota_used"],
+                        metadata=json.loads(r["metadata_json"] or "{}"),
+                        customer_id=r["customer_id"],
+                        subscription_id=r["subscription_id"],
+                    )
+                )
             return keys
 
-    def increment_usage(self, key_str: str, skill_name: str = "", duration_ms: float = 0.0, status: str = "ok") -> bool:
+    def increment_usage(
+        self, key_str: str, skill_name: str = "", duration_ms: float = 0.0, status: str = "ok"
+    ) -> bool:
         """Incrémente le compteur d'utilisation et enregistre un log."""
         now = time.time()
         with self._get_connection() as conn:
-            conn.execute("UPDATE api_keys SET quota_used = quota_used + 1 WHERE key_hash = ?", (_key_hash(key_str),))
+            conn.execute(
+                "UPDATE api_keys SET quota_used = quota_used + 1 WHERE key_hash = ?",
+                (_key_hash(key_str),),
+            )
             conn.execute(
                 "INSERT INTO usage_logs (key, skill, ts, duration_ms, status) VALUES (?, ?, ?, ?, ?)",
                 (_key_audit_id(key_str), skill_name, now, duration_ms, status),
@@ -285,7 +311,9 @@ class KeyDatabase:
     def revoke_key(self, key_str: str) -> bool:
         """Désactive une clé."""
         with self._get_connection() as conn:
-            res = conn.execute("UPDATE api_keys SET active = 0 WHERE key_hash = ?", (_key_hash(key_str),))
+            res = conn.execute(
+                "UPDATE api_keys SET active = 0 WHERE key_hash = ?", (_key_hash(key_str),)
+            )
             return res.rowcount > 0
 
     def revoke_key_hash(self, key_hash: str) -> bool:
@@ -298,19 +326,27 @@ class KeyDatabase:
         """Prolonge la validité d'une clé liée à un abonnement."""
         now = time.time()
         with self._get_connection() as conn:
-            row = conn.execute("SELECT expires_at FROM api_keys WHERE subscription_id = ?", (subscription_id,)).fetchone()
+            row = conn.execute(
+                "SELECT expires_at FROM api_keys WHERE subscription_id = ?", (subscription_id,)
+            ).fetchone()
             if not row:
                 return False
             current_expiry = row["expires_at"] or now
             new_expiry = max(now, current_expiry) + (days_extension * 86400)
-            conn.execute("UPDATE api_keys SET expires_at = ?, active = 1 WHERE subscription_id = ?", (new_expiry, subscription_id))
+            conn.execute(
+                "UPDATE api_keys SET expires_at = ?, active = 1 WHERE subscription_id = ?",
+                (new_expiry, subscription_id),
+            )
             return True
 
     def list_all_keys(self, limit: int = 100) -> list[KeyRecord]:
         """Liste toutes les clés existantes pour le dashboard admin."""
         import json
+
         with self._get_connection() as conn:
-            rows = conn.execute("SELECT * FROM api_keys ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+            rows = conn.execute(
+                "SELECT * FROM api_keys ORDER BY created_at DESC LIMIT ?", (limit,)
+            ).fetchall()
             return [
                 KeyRecord(
                     key="",
@@ -343,6 +379,7 @@ class KeyDatabase:
         txid: str | None = None,
     ) -> bool:
         import json
+
         with self._get_connection() as conn:
             try:
                 conn.execute(
@@ -353,9 +390,16 @@ class KeyDatabase:
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
-                        event_id, provider, event_type, customer_email,
-                        amount_cents, currency, time.time(), json.dumps(raw_payload or {}), txid
-                    )
+                        event_id,
+                        provider,
+                        event_type,
+                        customer_email,
+                        amount_cents,
+                        currency,
+                        time.time(),
+                        json.dumps(raw_payload or {}),
+                        txid,
+                    ),
                 )
                 return True
             except sqlite3.IntegrityError:
@@ -409,7 +453,16 @@ class KeyDatabase:
             conn.execute(
                 "INSERT INTO api_keys (key, key_hash, email, plan, active, created_at, expires_at, "
                 "quota_limit, quota_used, metadata_json) VALUES (?, ?, ?, ?, 1, ?, ?, ?, 0, ?)",
-                (None, _key_hash(key), email, plan, now, expires_at, quota_limit, json.dumps(metadata)),
+                (
+                    None,
+                    _key_hash(key),
+                    email,
+                    plan,
+                    now,
+                    expires_at,
+                    quota_limit,
+                    json.dumps(metadata),
+                ),
             )
             raw_data.update({"confirmed_at": now, "confirmed_key_hash": _key_hash(key)})
             if confirmation_metadata:
@@ -420,17 +473,29 @@ class KeyDatabase:
                 (json.dumps(raw_data), event_id),
             )
             return KeyRecord(
-                key=key, email=email, plan=plan, created_at=now,
-                expires_at=expires_at, quota_limit=quota_limit, metadata=metadata,
+                key=key,
+                email=email,
+                plan=plan,
+                created_at=now,
+                expires_at=expires_at,
+                quota_limit=quota_limit,
+                metadata=metadata,
             )
 
     @staticmethod
     def _key_from_row(row: sqlite3.Row) -> KeyRecord:
         import json
+
         return KeyRecord(
-            key="", email=row["email"], plan=row["plan"],
-            active=bool(row["active"]), created_at=row["created_at"],
-            expires_at=row["expires_at"], quota_limit=row["quota_limit"],
-            quota_used=row["quota_used"], metadata=json.loads(row["metadata_json"] or "{}"),
-            customer_id=row["customer_id"], subscription_id=row["subscription_id"],
+            key="",
+            email=row["email"],
+            plan=row["plan"],
+            active=bool(row["active"]),
+            created_at=row["created_at"],
+            expires_at=row["expires_at"],
+            quota_limit=row["quota_limit"],
+            quota_used=row["quota_used"],
+            metadata=json.loads(row["metadata_json"] or "{}"),
+            customer_id=row["customer_id"],
+            subscription_id=row["subscription_id"],
         )

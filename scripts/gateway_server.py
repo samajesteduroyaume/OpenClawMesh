@@ -4,6 +4,7 @@ Lanceur du Serveur Passerelle de Monétisation OpenClawMesh.
 Usage:
     python3 scripts/gateway_server.py [--port 8000] [--host 127.0.0.1]
 """
+
 import argparse
 import sys
 from pathlib import Path
@@ -13,7 +14,6 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 import uvicorn
-from openclaw_mesh.gateway.server import app
 
 
 def main():

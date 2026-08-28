@@ -289,7 +289,10 @@ class KademliaDHT:
         """Enregistre localement une entrée clé-valeur."""
         if not isinstance(key, str) or not key or ttl_seconds <= 0 or ttl_seconds > MAX_DHT_TTL:
             raise ValueError("Clé ou TTL DHT invalide")
-        if len(json.dumps(value, separators=(",", ":"), default=str).encode("utf-8")) > MAX_DHT_VALUE_BYTES:
+        if (
+            len(json.dumps(value, separators=(",", ":"), default=str).encode("utf-8"))
+            > MAX_DHT_VALUE_BYTES
+        ):
             raise ValueError("Valeur DHT trop volumineuse")
         h_key = hash_key(key) if not _is_hex_id(key) else key
         self.storage[h_key] = (value, time.time() + ttl_seconds)
@@ -677,7 +680,10 @@ class KademliaDHT:
             raise ValueError("TTL DHT hors limites")
         if not isinstance(key, str) or not key or len(key) > 512:
             raise ValueError("Clé DHT invalide")
-        if len(json.dumps(value, separators=(",", ":"), default=str).encode("utf-8")) > MAX_DHT_VALUE_BYTES:
+        if (
+            len(json.dumps(value, separators=(",", ":"), default=str).encode("utf-8"))
+            > MAX_DHT_VALUE_BYTES
+        ):
             raise ValueError("Valeur DHT trop volumineuse")
         self.routing_table.add_contact(sender)
         self.store_local(key, value, ttl_seconds=ttl)
