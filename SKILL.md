@@ -20,6 +20,10 @@ metadata:
 
 ---
 
+<div align="center">
+<img src="assets/banner.jpg" alt="OpenClawMesh Skill on ClawHub" width="100%" style="border-radius: 10px; margin-bottom: 15px;">
+</div>
+
 # 🌐 OpenClawMesh — Decentralized P2P AI Mesh Skill
 
 ## Permissions et consentement

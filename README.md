@@ -1,6 +1,12 @@
 <div align="center">
 
+<img src="assets/banner.jpg" alt="OpenClawMesh Hero Banner" width="100%" style="border-radius: 12px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+
+<br/>
+
 <img src="https://img.shields.io/badge/OpenClawMesh-v1.1.0-brightgreen?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="version">
+<img src="https://img.shields.io/badge/ClawHub-Verified%20Skill-00E5FF?style=for-the-badge&logo=dependabot&logoColor=white" alt="clawhub">
+<img src="https://img.shields.io/badge/Network-Decentralized%20Mesh-7928CA?style=for-the-badge&logo=libp2p&logoColor=white" alt="mesh">
 
 # ⚡ OpenClawMesh
 
