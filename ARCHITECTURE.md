@@ -576,10 +576,8 @@ gunicorn openclaw_mesh.gateway.server:app \
 ### 7.3 Cycle de Vie d'une Clé
 
 ```
-payment.submit ───────────────► pending_verification + status_token
+free_key.generate ────────────► KeyRecord(active=True, plan="free")
                                       │
-BTC confirmations suffisantes ───────► KeyRecord(active=True)
-Bitcoin reorg détectée ──────────────► active = False
 quota_used >= quota_limit ───────────► is_valid() returns False
 expires_at < now ────────────────────► is_valid() returns False
 admin revoke ────────────────────────► active = False
@@ -591,9 +589,6 @@ admin revoke ──────────────────────�
 # Variables requises
 export GATEWAY_ADMIN_TOKEN="mon_token_admin_secret_long"
 export GATEWAY_DB_PATH="/data/openclaw_keys.db"
-export BTC_WALLET_ADDRESS="bc1q..."
-export BTC_AUTO_VERIFY=true
-export BTC_REQUIRED_CONFIRMATIONS=2
 
 # Développement
 uvicorn openclaw_mesh.gateway.server:app --host 127.0.0.1 --port 8000
@@ -605,7 +600,8 @@ gunicorn openclaw_mesh.gateway.server:app \
   --access-logfile /var/log/openclaw/access.log
 ```
 
-La confirmation Bitcoin est manuelle par défaut. La vérification automatique n’est activée qu’avec `BTC_AUTO_VERIFY=true`; l’endpoint d’administration reste protégé par un secret fort.
+L'accès est 100% gratuit, libre et souverain. Aucun intermédiaire financier, passerelle bancaire ou vérification de paiement n'est requis.
+
 
 ---
 
