@@ -20,7 +20,8 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
 [![Access: 100% Free](https://img.shields.io/badge/Access-100%25%20Free-00ff88.svg?style=flat-square)](LICENSE)
 [![JarvisMesh](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg?style=flat-square)](#-jarvismesh-compatibility)
-[![Tests](https://img.shields.io/badge/Tests-89%20passing-brightgreen.svg?style=flat-square)](#-tests)
+[![Tests](https://img.shields.io/badge/Tests-99%20passing-brightgreen.svg?style=flat-square)](file:///Users/selim/Desktop/OpenClawMesh/tests)
+
 [![Hardware](https://img.shields.io/badge/Hardware-NVIDIA%20%7C%20AMD%20%7C%20Intel%20%7C%20Apple-8a2be2.svg?style=flat-square)](#-universal-hardware-acceleration)
 
 
