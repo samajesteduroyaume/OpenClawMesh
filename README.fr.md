@@ -4,24 +4,24 @@
 
 <br/>
 
-<img src="https://img.shields.io/badge/OpenClawMesh-v1.1.0-brightgreen?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="version">
-<img src="https://img.shields.io/badge/ClawHub-Skill%20Officiel-00E5FF?style=for-the-badge&logo=dependabot&logoColor=white" alt="clawhub">
-<img src="https://img.shields.io/badge/Réseau-Mesh%20Décentralisé-7928CA?style=for-the-badge&logo=libp2p&logoColor=white" alt="mesh">
+<img src="https://img.shields.io/badge/OpenClawMesh-v1.2.0-brightgreen?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="version">
+<img src="https://img.shields.io/badge/ClawHub-Skill%20V%C3%A9rifi%C3%A9-00E5FF?style=for-the-badge&logo=dependabot&logoColor=white" alt="clawhub">
+<img src="https://img.shields.io/badge/R%C3%A9seau-Mesh%20D%C3%A9centralis%C3%A9-7928CA?style=for-the-badge&logo=libp2p&logoColor=white" alt="mesh">
 
 # ⚡ OpenClawMesh
 
-### Protocole P2P Décentralisé pour Agents IA · Inférence Multi-Matériels Universelle · 100% Gratuit & Souverain
+### Protocole P2P d'Agents IA · Inférence Universelle Multi-Matériels · 100% Gratuit & Souverain
 
-[🇬🇧 Read in English](README.md) · [📐 Architecture](ARCHITECTURE.md) · [📜 Protocole](references/PROTOCOL_SPEC.md) · [🌐 Portail Passerelle](http://localhost:8000)
+[🇬🇧 Read in English](README.md) · [📐 Architecture](ARCHITECTURE.md) · [📜 Spécification du Protocole](references/PROTOCOL_SPEC.md) · [🌐 Portail Gateway](http://localhost:8000)
 
 ---
 
-[![Licence: MIT](https://img.shields.io/badge/Licence-MIT-brightgreen.svg?style=flat-square)](LICENSE.fr)
+[![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg?style=flat-square)](LICENSE.fr)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
-[![Accès: 100% Gratuit](https://img.shields.io/badge/Accès-100%25%20Gratuit-00ff88.svg?style=flat-square)](LICENSE.fr)
-[![JarvisMesh](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg?style=flat-square)](#-compatibilité-jarvismesh)
-[![Tests](https://img.shields.io/badge/Tests-70%20passants-brightgreen.svg?style=flat-square)](#-tests)
-[![Matériel](https://img.shields.io/badge/Matériel-NVIDIA%20%7C%20AMD%20%7C%20Intel%20%7C%20Apple-8a2be2.svg?style=flat-square)](#-accélération-matérielle-universelle)
+[![Accès: 100% Gratuit](https://img.shields.io/badge/Acc%C3%A8s-100%25%20Gratuit-00ff88.svg?style=flat-square)](LICENSE.fr)
+[![JarvisMesh](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg?style=flat-square)](#-compatibilit%C3%A9-avec-jarvismesh)
+[![Tests](https://img.shields.io/badge/Tests-89%20passing-brightgreen.svg?style=flat-square)](#-tests)
+[![Matériel](https://img.shields.io/badge/Mat%C3%A9riel-NVIDIA%20%7C%20AMD%20%7C%20Intel%20%7C%20Apple-8a2be2.svg?style=flat-square)](#-acc%C3%A9l%C3%A9ration-mat%C3%A9rielle-universelle)
 
 </div>
 

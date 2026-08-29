@@ -1,0 +1,13 @@
+[package]
+name = "openclaw-mesh-client"
+version = "1.2.0"
+edition = "2021"
+authors = ["OpenClawMesh Contributors"]
+description = "Official Rust client SDK for OpenClawMesh decentralized AI network"
+
+[dependencies]
+tokio = { version = "1.38", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures-util = "0.3"

@@ -380,3 +380,30 @@ def decrypt_message_with_key(
         associated_data=associated_data,
         max_drift_seconds=max_drift_seconds,
     )
+
+
+def generate_ephemeral_keypair() -> tuple[str, str]:
+    """Génère une paire de clés éphémères X25519 (priv_hex, pub_hex)."""
+    priv = x25519.X25519PrivateKey.generate()
+    priv_bytes = priv.private_bytes_raw()
+    pub_bytes = priv.public_key().public_bytes_raw()
+    return priv_bytes.hex(), pub_bytes.hex()
+
+
+def derive_shared_key(
+    private_key_hex: str,
+    peer_public_key_hex: str,
+    salt: bytes = b"openclaw_e2ee_salt_v1",
+) -> bytes:
+    """Dérive une clé symétrique partagée de 32 octets via ECDH X25519 et HKDF-SHA256."""
+    priv = x25519.X25519PrivateKey.from_private_bytes(bytes.fromhex(private_key_hex))
+    pub = x25519.X25519PublicKey.from_public_bytes(bytes.fromhex(peer_public_key_hex))
+    raw_secret = priv.exchange(pub)
+    hkdf = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        info=b"openclaw_mesh_e2ee_session_key",
+    )
+    return hkdf.derive(raw_secret)
+

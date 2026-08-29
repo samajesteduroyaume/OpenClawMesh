@@ -4,7 +4,7 @@
 
 <br/>
 
-<img src="https://img.shields.io/badge/OpenClawMesh-v1.1.0-brightgreen?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="version">
+<img src="https://img.shields.io/badge/OpenClawMesh-v1.2.0-brightgreen?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="version">
 <img src="https://img.shields.io/badge/ClawHub-Verified%20Skill-00E5FF?style=for-the-badge&logo=dependabot&logoColor=white" alt="clawhub">
 <img src="https://img.shields.io/badge/Network-Decentralized%20Mesh-7928CA?style=for-the-badge&logo=libp2p&logoColor=white" alt="mesh">
 
@@ -20,8 +20,9 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
 [![Access: 100% Free](https://img.shields.io/badge/Access-100%25%20Free-00ff88.svg?style=flat-square)](LICENSE)
 [![JarvisMesh](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg?style=flat-square)](#-jarvismesh-compatibility)
-[![Tests](https://img.shields.io/badge/Tests-70%20passing-brightgreen.svg?style=flat-square)](#-tests)
+[![Tests](https://img.shields.io/badge/Tests-89%20passing-brightgreen.svg?style=flat-square)](#-tests)
 [![Hardware](https://img.shields.io/badge/Hardware-NVIDIA%20%7C%20AMD%20%7C%20Intel%20%7C%20Apple-8a2be2.svg?style=flat-square)](#-universal-hardware-acceleration)
+
 
 </div>
 
