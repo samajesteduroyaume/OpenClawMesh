@@ -47,12 +47,13 @@ Activate this skill when:
    - 🔵 **Intel Core Ultra & Arc** (Intel NPU, OpenVINO, oneAPI, AVX-512)
    - 🟣 **Apple Silicon** (M1/M2/M3/M4 Metal GPU via MLX)
    - ⚪ **Universal CPU** (Ollama, llama.cpp, vLLM, CPU fallback)
-2. **Streaming AI Responses**: Real-time token streaming is required for interactive dialogue or large code generation (`llm_stream`).
+2. **Streaming AI Responses**: Real-time token streaming is required for interactive dialogue or large code generation (`llm_stream`) over WebSocket or ultra-low latency direct UDP QUIC tunnel (`--quic`).
 3. **Local Vector Memory & RAG**: Querying or updating persistent episodic memory stored on SQLite vector store nodes (`memory_search`, `memory_store`, `memory_recall`, `rag_query`).
 4. **Multimodal Vision & Audio STT**: Transcribing audio via Whisper (`transcribe_audio`) or analyzing images with Vision models (`vlm_analyze`).
-5. **Cluster Peer Discovery**: Checking what AI nodes, machines, and tools are available across your machines on the local Wi-Fi/LAN and the WAN Kademlia DHT (`discover`).
-6. **Hardware Acceleration Diagnostic**: Inspecting local AI hardware accelerators (`hardware`).
-7. **Exposing OpenClaw Tools**: Publishing OpenClaw tools so other JarvisMesh / OpenClaw agents can call them remotely.
+5. **Cluster Peer Discovery**: Checking what AI nodes, machines, and tools are available across your machines on the local Wi-Fi/LAN and the WAN Kademlia DHT (`discover` or `dht --find-providers`).
+6. **Decentralized Topic Pub/Sub**: Real-time broadcast and subscription across agent meshes using GossipSub v1.1 (`gossipsub`).
+7. **Hardware Acceleration Diagnostic**: Inspecting local AI hardware accelerators (`hardware`).
+8. **Exposing OpenClaw Tools**: Publishing OpenClaw tools so other JarvisMesh / OpenClaw agents can call them remotely.
 
 ---
 
@@ -66,14 +67,14 @@ Identify available GPU / NPU accelerators on the local machine:
 python3 scripts/mesh_cli.py hardware
 ```
 
-### 2. Discover Active Mesh Peers
+### 2. Discover Active Mesh Peers & DHT Providers
 Find all online JarvisMesh & OpenClaw nodes, their addresses, latencies, and advertised skills:
 ```bash
+# LAN discovery
 python3 scripts/mesh_cli.py discover --inspect
-```
-Or structured JSON output:
-```bash
-python3 scripts/mesh_discover.py
+
+# Find DHT content providers for a specific model or skill
+python3 scripts/mesh_cli.py dht --find-providers llm_stream --bootstrap "seed.openclaw.mesh:8780"
 ```
 
 ### 3. Delegate a Task (Auto-Routed or Targeted)
@@ -82,30 +83,36 @@ Send a task request to the network. If `--peer` is omitted, OpenClawMesh automat
 # Auto-routed LLM prompt to the best available GPU/NPU node
 python3 scripts/mesh_cli.py call --skill llm --payload '{"prompt": "Write a Python FastAPI health check endpoint."}'
 
-# Target a specific peer node (e.g. NVIDIA GPU server or Intel Ultra laptop)
-python3 scripts/mesh_cli.py call --peer gpu-server --skill memory_search --payload '{"query": "P2P protocol memory", "top_k": 3}'
+# Ultra-low latency direct UDP QUIC call
+python3 scripts/mesh_cli.py call --skill llm --payload '{"prompt": "Fast ping"}' --quic
 ```
 
-### 4. Stream LLM Generation Token-by-Token
-Stream responses directly to stdout in real time:
+### 4. Stream LLM Generation Token-by-Token (Sub-10ms QUIC)
+Stream responses directly to stdout in real time over UDP QUIC:
 ```bash
-python3 scripts/mesh_cli.py stream --skill llm_stream --payload '{"prompt": "Explain quantum computing in 3 bullet points."}'
-```
-Or via script:
-```bash
-python3 scripts/mesh_stream.py llm_stream '{"prompt": "Summarize today tasks."}'
+python3 scripts/mesh_cli.py stream --skill llm_stream --payload '{"prompt": "Explain quantum computing in 3 bullet points."}' --quic
 ```
 
-### 5. Check Health & Latency
+### 5. Decentralized Pub/Sub (GossipSub v1.1)
+Publish and subscribe to decentralized agent mesh topics:
+```bash
+# Subscribe to cluster announcements
+python3 scripts/mesh_cli.py gossipsub --topic "openclaw/v1/models" --subscribe "openclaw/v1/models" --daemon
+
+# Publish a status update
+python3 scripts/mesh_cli.py gossipsub --topic "openclaw/v1/models" --publish '{"node": "gpu-node", "vram_free": 16000}'
+```
+
+### 6. Check Health & Latency
 Probe a specific peer node:
 ```bash
 python3 scripts/mesh_cli.py ping --peer mac-m3
 ```
 
-### 6. Run OpenClaw as a Mesh Node
-Expose local OpenClaw capabilities as a discoverable P2P service:
+### 7. Run OpenClaw as a Full Mesh Node
+Expose local OpenClaw capabilities with WebSocket, UDP QUIC, and GossipSub active:
 ```bash
-python3 scripts/mesh_cli.py serve --name openclaw-worker --port 8770
+python3 scripts/mesh_cli.py serve --name openclaw-worker --port 8770 --wan --dht
 ```
 
 ---

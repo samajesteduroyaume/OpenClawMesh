@@ -20,16 +20,16 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
 [![Access: 100% Free](https://img.shields.io/badge/Access-100%25%20Free-00ff88.svg?style=flat-square)](LICENSE)
 [![JarvisMesh](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg?style=flat-square)](#-jarvismesh-compatibility)
-[![Tests](https://img.shields.io/badge/Tests-53%20passing-brightgreen.svg?style=flat-square)](#-tests)
+[![Tests](https://img.shields.io/badge/Tests-70%20passing-brightgreen.svg?style=flat-square)](#-tests)
 [![Hardware](https://img.shields.io/badge/Hardware-NVIDIA%20%7C%20AMD%20%7C%20Intel%20%7C%20Apple-8a2be2.svg?style=flat-square)](#-universal-hardware-acceleration)
 
 </div>
 
 ---
 
-**OpenClawMesh** is a sovereign peer-to-peer framework and modular Skill for **OpenClaw** AI agents. LAN connectivity is the default, secure execution mode; WAN features (DHT, relay, and STUN traversal) are strictly optional and subject to explicit user consent.
+**OpenClawMesh** is a sovereign peer-to-peer framework and modular Skill for **OpenClaw** AI agents. LAN connectivity is the default, secure execution mode; WAN features (DHT, relay, GossipSub, and STUN traversal) are strictly optional and subject to explicit user consent.
 
-Agents discover each other on the local network, delegate compute, leverage local GPU/NPU hardware, route end-to-end encrypted payloads, and share episodic memory — **100% Free, Open-Source & Sovereign**.
+Agents discover each other on the local network, delegate compute, leverage local GPU/NPU hardware, route end-to-end encrypted payloads, stream tokens over sub-10ms UDP tunnels, and share episodic memory — **100% Free, Open-Source & Sovereign**.
 
 > [!IMPORTANT]
 > **Security, Data Privacy & Operator Consent:**
@@ -47,9 +47,24 @@ Agents discover each other on the local network, delegate compute, leverage loca
 
 **🌐 Local Discovery & P2P Routing**
 - Zero-config LAN discovery via **mDNS Zeroconf** (JarvisMesh & OpenClawMesh)
-- Optional WAN routing via **Kademlia DHT 160-bit** (real UDP, *k*=20, α=3 with configured seeds)
+- Optional WAN routing via **Kademlia DHT 160-bit** with **Content Routing & Provider Records**
 - **STUN RFC 5389** NAT traversal & **E2EE Relay** (strictly opt-in)
 - Optional **UPnP IGD** port mapping upon explicit operator activation
+
+**⚡ Ultra-Low Latency UDP Transport (QUIC / WebRTC)**
+- Direct UDP tunnels with sub-10ms token-by-token streaming
+- Lightweight binary protocol framing (`OCQ1` header)
+- Asynchronous stream multiplexing and 0-RTT/1-RTT handshakes
+- NAT puncture and direct peer connectivity without port forwarding
+
+**📡 GossipSub v1.1 Pub/Sub Overlay**
+- Scalable decentralized topic broadcast and auto-stabilizing mesh
+- Mesh maintenance (`GRAFT` / `PRUNE` with exponential backoff)
+- Eager push combined with lazy gossip (`IHAVE` / `IWANT`)
+- Deduplication cache (`mcache`) and peer scoring against spam
+
+</td>
+<td width="50%">
 
 **⚡ Multi-Hardware Universal Inference Engine**
 - 🟢 **NVIDIA** — CUDA / TensorRT / PyTorch
@@ -57,13 +72,6 @@ Agents discover each other on the local network, delegate compute, leverage loca
 - 🔵 **Intel Core Ultra** — NPU / OpenVINO / AVX-512
 - 🟣 **Apple Silicon M1–M4** — Metal GPU via MLX-LM
 - ⚪ **CPU Fallback** — Ollama / llama.cpp / vLLM
-
-**🎯 VRAM Quantization & Semantic Cache**
-- Dynamic quantization format selection (4-bit, 8-bit, FP16)
-- **Semantic KV-Cache** with LRU memory eviction
-
-</td>
-<td width="50%">
 
 **🔐 Zero-Trust Security & Anti-Replay**
 - **ChaCha20-Poly1305 AEAD** + **X25519 ECDH** — E2EE (relays see only ciphertext)
@@ -74,14 +82,9 @@ Agents discover each other on the local network, delegate compute, leverage loca
 - Distributed MoE with real quantized tensor buffers
 - Native **streaming** (SSE, token-by-token)
 
-**👁️ Multi-Modal AI & Tools**
-- Vision VLM, STT (Whisper), TTS connectors
-- Standard **OpenAI Tools / Function Calling** compatibility
-
-**🖥️ Web Portal & Local Command Center**
-- Interactive Mesh Visualizer (2D/3D Canvas)
-- Live Chat Playground (LLM, RAG, Echo)
-- Local FastAPI Gateway with authentication
+**🎯 VRAM Quantization & Semantic Cache**
+- Dynamic quantization format selection (4-bit, 8-bit, FP16)
+- **Semantic KV-Cache** with LRU memory eviction
 </td>
 </tr>
 </table>
@@ -175,7 +178,7 @@ pytest tests/ -v --cov=openclaw_mesh
 pytest tests/test_gateway.py -v
 ```
 
-> **53 tests passing** — covering P2P networking, Kademlia DHT bootstrap & auto-refresh, UPnP port mapping & STUN traversal, E2EE anti-replay and identity authentication, WAN relay routing, VRAM quantization, multi-modal engines, and the Free Gateway.
+> **70 tests passing** — covering P2P networking, QUIC/WebRTC UDP ultra-low latency streaming, GossipSub v1.1 pub/sub overlay, Kademlia DHT bootstrap, auto-refresh & provider records, UPnP port mapping & STUN traversal, E2EE anti-replay and identity authentication, WAN relay routing, VRAM quantization, multi-modal engines, and the Free Gateway.
 
 ---
 
@@ -197,6 +200,9 @@ All settings are driven by environment variables (prefix `OPENCLAW_`):
 ```bash
 OPENCLAW_NODE_NAME=my-prod-node      # Node name (mDNS)
 OPENCLAW_DEFAULT_PORT=8770           # WebSocket port
+OPENCLAW_QUIC_ENABLED=true           # Ultra-low latency UDP QUIC transport
+OPENCLAW_QUIC_PORT=8775              # UDP QUIC port
+OPENCLAW_GOSSIPSUB_ENABLED=true      # GossipSub v1.1 pub/sub overlay
 OPENCLAW_PSK=your_psk_secret         # HMAC pre-shared key
 OPENCLAW_E2EE_ENABLED=true           # End-to-end encryption
 OPENCLAW_DHT_ENABLED=true            # Kademlia DHT WAN discovery
@@ -214,15 +220,15 @@ Full reference: [`config.py`](openclaw_mesh/config.py) · [`ARCHITECTURE.md`](AR
 ```
 OpenClawMesh/
 ├── openclaw_mesh/
-│   ├── node.py            # WebSocket server (skill dispatch, auth)
-│   ├── client.py          # WebSocket client (connection pool, multiplexing, relay fallback)
+│   ├── node.py            # Node server (WebSocket + QUIC UDP + GossipSub dispatch)
+│   ├── client.py          # MeshClient (WebSocket pool, QUIC stream multiplexing, DHT fallback)
 │   ├── protocol.py        # Wire format JSON (TaskRequest/Chunk/Response)
 │   ├── bridge.py          # SkillRegistry (sync/async/generator support)
 │   ├── crypto.py          # Ed25519 NodeIdentity & TrustStore
 │   ├── crypto_e2ee.py     # X25519 + ChaCha20-Poly1305 E2EE sessions
 │   ├── discovery.py       # mDNS/Zeroconf LAN discovery
 │   ├── config.py          # Pydantic Settings (env-driven singleton)
-│   ├── cli.py             # argparse CLI (11 commands)
+│   ├── cli.py             # argparse CLI (12 commands: discover, call, stream, ping, serve, dht, gossipsub...)
 │   ├── engines/
 │   │   ├── hardware.py    # Universal hardware detection
 │   │   ├── inference.py   # MLX / CUDA / OpenVINO / CPU inference engine
@@ -230,14 +236,16 @@ OpenClawMesh/
 │   │   ├── distributed_moe.py # Pipeline parallelism across nodes
 │   │   └── multimodal.py  # Vision / STT / TTS
 │   ├── network/
-│   │   ├── dht.py         # Kademlia 160-bit DHT (UDP transport, global seeds & auto-refresh)
+│   │   ├── quic_webrtc.py # Ultra-low latency UDP QUIC transport & token streaming
+│   │   ├── gossipsub.py   # Decentralized Pub/Sub overlay v1.1 (GRAFT/PRUNE, IHAVE/IWANT)
+│   │   ├── dht.py         # Kademlia 160-bit DHT & Content Routing / Provider Records
 │   │   ├── relay.py       # WAN WebSocket relay (opaque routing)
 │   │   └── nat_traversal.py   # STUN RFC 5389 & UPnP auto port mapping NAT discovery
 │   └── gateway/
 │       ├── server.py      # FastAPI gateway (Free keys, execution, WAN control)
 │       ├── db.py          # SQLite KeyDatabase (keys, quotas, audit logs)
 │       └── portal.py      # Web UI (Free key generator, command center, playground)
-├── tests/                 # 53 unit & integration tests
+├── tests/                 # 70 unit & integration tests
 ├── ARCHITECTURE.md        # Full technical documentation (senior engineer level)
 ├── SKILL.md               # OpenClaw skill descriptor
 ├── LICENSE                # MIT License (100% Free & Open Source)

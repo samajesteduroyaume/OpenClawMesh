@@ -205,3 +205,32 @@ def test_dht_save_and_load_state(tmp_path):
     assert restored == 5
     assert dht2.routing_table.count_contacts() == 5
 
+
+def test_dht_provider_records_and_content_routing():
+    """Vérifie la publication et la découverte décentralisée de fournisseurs (Provider Records)."""
+
+    async def _run():
+        node_a = _make_node("provider-a", 8795)
+        node_b = _make_node("provider-b", 8796)
+        _, port_a = await node_a.start_network()
+        host_b, port_b = await node_b.start_network()
+
+        # A bootstrap vers B
+        contact_b = Contact(node_id=node_b.node_id, host=host_b, port=port_b, name="provider-b")
+        await node_a.bootstrap([contact_b])
+
+        # A annonce être fournisseur pour la compétence 'embed_dense'
+        info_a = {"node_id": node_a.node_id, "host": "127.0.0.1", "port": port_a, "name": "provider-a"}
+        ok = await node_a.provide_distributed("skill:embed_dense", info_a)
+        assert ok is True
+
+        # B recherche les fournisseurs de 'embed_dense'
+        providers = await node_b.find_providers_distributed("skill:embed_dense")
+        assert len(providers) >= 1
+        assert any(p.get("node_id") == node_a.node_id for p in providers)
+
+        await node_a.stop_network()
+        await node_b.stop_network()
+
+    asyncio.run(_run())
+

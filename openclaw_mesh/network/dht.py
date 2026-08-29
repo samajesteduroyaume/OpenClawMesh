@@ -263,6 +263,8 @@ class KademliaDHT:
         self.psk = psk or _settings.psk
         self.routing_table = RoutingTable(self.node_id)
         self.storage: dict[str, tuple[Any, float]] = {}  # key -> (value, expiration)
+        # Table des Provider Records (Content Routing DHT) : h_key -> {provider_node_id: (provider_info, expiration)}
+        self.providers: dict[str, dict[str, tuple[dict[str, Any], float]]] = {}
 
         # --- Transport réseau UDP ---
         self._transport: asyncio.DatagramTransport | None = None
@@ -317,6 +319,38 @@ class KademliaDHT:
             else:
                 del self.storage[h_key]
         return None
+
+    def add_provider_local(
+        self,
+        key: str,
+        provider_node_id: str,
+        provider_info: dict[str, Any],
+        ttl_seconds: float = DEFAULT_TTL,
+    ) -> None:
+        """Enregistre un fournisseur pour une ressource/compétence dans la table locale."""
+        if ttl_seconds <= 0 or ttl_seconds > MAX_DHT_TTL:
+            raise ValueError("TTL Provider DHT invalide")
+        h_key = hash_key(key) if not _is_hex_id(key) else key
+        if h_key not in self.providers:
+            self.providers[h_key] = {}
+        self.providers[h_key][provider_node_id] = (provider_info, time.time() + ttl_seconds)
+
+    def get_providers_local(self, key: str) -> list[dict[str, Any]]:
+        """Récupère tous les fournisseurs non expirés pour une clé donnée."""
+        h_key = hash_key(key) if not _is_hex_id(key) else key
+        if h_key not in self.providers:
+            return []
+        now = time.time()
+        active: list[dict[str, Any]] = []
+        expired = []
+        for pid, (info, exp) in self.providers[h_key].items():
+            if now < exp:
+                active.append(info)
+            else:
+                expired.append(pid)
+        for pid in expired:
+            del self.providers[h_key][pid]
+        return active
 
     def save_state(self, filepath: str | Path) -> None:
         """Sauvegarde les contacts et l'état de la table de routage sur disque."""
@@ -453,7 +487,14 @@ class KademliaDHT:
             self.routing_table.add_contact(sender)
 
         # 1. Réponse à une requête émise localement → résolution de la future
-        if msg_type in ("pong", "find_node_response", "find_value_response", "store_response"):
+        if msg_type in (
+            "pong",
+            "find_node_response",
+            "find_value_response",
+            "store_response",
+            "add_provider_response",
+            "get_providers_response",
+        ):
             fut = self._pending.pop(txid or "", None)
             if fut is not None and not fut.done():
                 fut.set_result(msg)
@@ -497,6 +538,34 @@ class KademliaDHT:
                 addr,
                 txid,
                 {"type": "store_response", "node_id": self.node_id, "name": self.name, **resp},
+            )
+        elif msg_type == "add_provider":
+            try:
+                resp = self.rpc_add_provider(
+                    sender,
+                    msg.get("key", ""),
+                    msg.get("provider_node_id", sender.node_id),
+                    msg.get("provider_info", {}),
+                    ttl=msg.get("ttl", DEFAULT_TTL),
+                )
+            except (TypeError, ValueError, OverflowError) as exc:
+                resp = {"status": "error", "provider_added": False, "error": str(exc)}
+            self._reply(
+                addr,
+                txid,
+                {"type": "add_provider_response", "node_id": self.node_id, "name": self.name, **resp},
+            )
+        elif msg_type == "get_providers":
+            result = self.rpc_get_providers(sender, msg.get("key", ""))
+            self._reply(
+                addr,
+                txid,
+                {
+                    "type": "get_providers_response",
+                    "node_id": self.node_id,
+                    "name": self.name,
+                    **result,
+                },
             )
 
     async def send_rpc(
@@ -572,6 +641,44 @@ class KademliaDHT:
             timeout=timeout,
         )
         return bool(resp and resp.get("status") == "ok")
+
+    async def add_provider_rpc(
+        self,
+        contact: Contact,
+        key: str,
+        provider_node_id: str,
+        provider_info: dict[str, Any],
+        ttl: float = DEFAULT_TTL,
+        timeout: float = RPC_TIMEOUT,
+    ) -> bool:
+        """Enregistre un Provider Record auprès d'un pair."""
+        target_key = key if _is_hex_id(key) else hash_key(key)
+        resp = await self.send_rpc(
+            contact,
+            {
+                "type": "add_provider",
+                "key": target_key,
+                "provider_node_id": provider_node_id,
+                "provider_info": provider_info,
+                "ttl": ttl,
+            },
+            timeout=timeout,
+        )
+        return bool(resp and resp.get("status") == "ok")
+
+    async def get_providers_rpc(
+        self, contact: Contact, key: str, timeout: float = RPC_TIMEOUT
+    ) -> tuple[list[dict[str, Any]], list[Contact]]:
+        """Interroge un pair pour obtenir la liste des fournisseurs d'une ressource."""
+        target_key = key if _is_hex_id(key) else hash_key(key)
+        resp = await self.send_rpc(
+            contact, {"type": "get_providers", "key": target_key}, timeout=timeout
+        )
+        if not resp:
+            return [], []
+        provs = resp.get("providers", [])
+        closest = [Contact.from_dict(c) for c in resp.get("closest_nodes", [])]
+        return provs, closest
 
     async def bootstrap(self, contacts: list[Contact], timeout: float = RPC_TIMEOUT) -> int:
         """
@@ -750,30 +857,115 @@ class KademliaDHT:
         closest = self.routing_table.find_closest_contacts(target_id, count=K_BUCKET_SIZE)
         return {"found": False, "closest_nodes": [c.to_dict() for c in closest]}
 
+    def rpc_add_provider(
+        self,
+        sender: Contact,
+        key: str,
+        provider_node_id: str,
+        provider_info: dict[str, Any],
+        ttl: float = DEFAULT_TTL,
+    ) -> dict[str, Any]:
+        """Traite une annonce de fournisseur de ressource."""
+        if ttl <= 0 or ttl > MAX_DHT_TTL:
+            raise ValueError("TTL DHT hors limites")
+        if not isinstance(key, str) or not key or len(key) > 512:
+            raise ValueError("Clé DHT invalide")
+        self.routing_table.add_contact(sender)
+        self.add_provider_local(key, provider_node_id, provider_info, ttl_seconds=ttl)
+        return {"status": "ok", "provider_added": True}
+
+    def rpc_get_providers(self, sender: Contact, key: str) -> dict[str, Any]:
+        """Retourne la liste des fournisseurs pour une clé et les k pairs les plus proches."""
+        self.routing_table.add_contact(sender)
+        provs = self.get_providers_local(key)
+        target_id = key if _is_hex_id(key) else hash_key(key)
+        closest = self.routing_table.find_closest_contacts(target_id, count=K_BUCKET_SIZE)
+        return {"providers": provs, "closest_nodes": [c.to_dict() for c in closest]}
+
     # ------------------------------------------------------------------ #
-    # Publication & Recherche Décentralisée de Compétences
+    # Publication & Recherche Décentralisée de Compétences & Providers
     # ------------------------------------------------------------------ #
     def advertise_skill(self, skill_name: str, endpoint_info: dict[str, Any]) -> str:
         """Publie une compétence IA et son adresse dans l'espace DHT localement."""
         k = f"skill:{skill_name}"
         self.store_local(k, endpoint_info)
+        self.add_provider_local(k, self.node_id, endpoint_info)
         return hash_key(k)
 
     def lookup_skill(self, skill_name: str) -> dict[str, Any] | None:
-        """Recherche locale du fournisseur d'une compétence (utilise la DHT réseau via lookup_skill_distributed)."""
+        """Recherche locale du fournisseur d'une compétence."""
         k = f"skill:{skill_name}"
-        return self.get_local(k)
+        local_val = self.get_local(k)
+        if local_val:
+            return local_val
+        providers = self.get_providers_local(k)
+        return providers[0] if providers else None
+
+    async def provide_distributed(
+        self,
+        key: str,
+        provider_info: dict[str, Any],
+        ttl: float = DEFAULT_TTL,
+        timeout: float = RPC_TIMEOUT,
+    ) -> bool:
+        """Annonce décentralisée (Content Routing Provider Record) auprès des k pairs les plus proches."""
+        self.add_provider_local(key, self.node_id, provider_info, ttl_seconds=ttl)
+        if self._transport is None:
+            return True
+        target_id = key if _is_hex_id(key) else hash_key(key)
+        closest = await self.find_node_distributed(target_id, timeout=timeout)
+        if not closest:
+            return True
+        successes = 0
+        for c in closest[:K_BUCKET_SIZE]:
+            if await self.add_provider_rpc(
+                c, target_id, self.node_id, provider_info, ttl=ttl, timeout=timeout
+            ):
+                successes += 1
+        return successes > 0
+
+    async def find_providers_distributed(
+        self, key: str, timeout: float = RPC_TIMEOUT, max_steps: int = MAX_DHT_HOPS
+    ) -> list[dict[str, Any]]:
+        """Recherche itérative de tous les fournisseurs enregistrés pour une clé de compétence ou ressource."""
+        local = self.get_providers_local(key)
+        providers_found: dict[str, dict[str, Any]] = {}
+        for p in local:
+            pid = str(p.get("node_id") or p.get("name") or p.get("host", ""))
+            providers_found[pid] = p
+
+        if self._transport is None:
+            return list(providers_found.values())
+
+        target_id = key if _is_hex_id(key) else hash_key(key)
+
+        async def _fetch(contact: Contact, t: float) -> tuple[Any, list[Contact]]:
+            provs, closest = await self.get_providers_rpc(contact, key, timeout=t)
+            for p in provs:
+                pid = str(p.get("node_id") or p.get("name") or p.get("host", ""))
+                providers_found[pid] = p
+            return None, closest
+
+        await self._iterative_lookup(target_id, _fetch, timeout=timeout, max_steps=max_steps)
+        return list(providers_found.values())
 
     async def lookup_skill_distributed(
         self, skill_name: str, timeout: float = RPC_TIMEOUT
     ) -> Any | None:
         """Recherche décentralisée du fournisseur d'une compétence sur le réseau DHT."""
         k = f"skill:{skill_name}"
-        local = self.get_local(k)
+        local = self.lookup_skill(skill_name)
         if local is not None:
             return local
         if self._transport is None:
             return None
+
+        # 1. Vérifier les Provider Records distribués
+        providers = await self.find_providers_distributed(k, timeout=timeout)
+        if providers:
+            return providers[0]
+
+        # 2. Fallback valeur brute
         return await self.find_value_distributed(k, timeout=timeout)
 
     async def advertise_skill_distributed(
@@ -781,6 +973,7 @@ class KademliaDHT:
     ) -> bool:
         """Publie une compétence dans le réseau DHT décentralisé (k nœuds les plus proches)."""
         k = f"skill:{skill_name}"
+        await self.provide_distributed(k, endpoint_info)
         return await self.store_distributed(k, endpoint_info)
 
     # ------------------------------------------------------------------ #

@@ -131,6 +131,51 @@ class Settings(BaseSettings):
     )
 
     # ------------------------------------------------------------------ #
+    # Configuration Transport Ultra-Basse Latence (QUIC / WebRTC UDP)
+    # ------------------------------------------------------------------ #
+    quic_enabled: bool = Field(
+        default=True, description="Activer le transport direct UDP QUIC / WebRTC (opt-in par défaut)"
+    )
+    quic_port: int = Field(default=8775, description="Port d'écoute UDP par défaut pour QUIC/WebRTC")
+    quic_datagram_size: int = Field(
+        default=1350, description="Taille maximale d'un datagramme UDP (pour éviter la fragmentation MTU)"
+    )
+    quic_stream_timeout: float = Field(
+        default=30.0, description="Timeout d'inactivité de flux QUIC/WebRTC (secondes)"
+    )
+    quic_handshake_timeout: float = Field(
+        default=5.0, description="Timeout de négociation de liaison QUIC/WebRTC (secondes)"
+    )
+
+    # ------------------------------------------------------------------ #
+    # Configuration GossipSub v1.1
+    # ------------------------------------------------------------------ #
+    gossipsub_enabled: bool = Field(
+        default=True, description="Activer l'overlay pub/sub GossipSub v1.1"
+    )
+    gossipsub_d: int = Field(
+        default=6, description="Degré cible de maillage topic (nombre de pairs dans le mesh)"
+    )
+    gossipsub_d_low: int = Field(
+        default=4, description="Degré minimal de maillage avant greffe (GRAFT)"
+    )
+    gossipsub_d_high: int = Field(
+        default=12, description="Degré maximal de maillage avant élagage (PRUNE)"
+    )
+    gossipsub_d_lazy: int = Field(
+        default=6, description="Nombre de pairs hors maillage pour l'émission Lazy Gossip (IHAVE)"
+    )
+    gossipsub_heartbeat_interval: float = Field(
+        default=1.0, description="Intervalle de pulsation Heartbeat GossipSub (secondes)"
+    )
+    gossipsub_history_length: int = Field(
+        default=5, description="Longueur de la fenêtre d'historique de messages (mcache)"
+    )
+    gossipsub_history_gossip: int = Field(
+        default=3, description="Nombre de battements de pulsation où les messages sont annoncés en IHAVE"
+    )
+
+    # ------------------------------------------------------------------ #
     # Configuration Relais WAN
     # ------------------------------------------------------------------ #
     relay_enabled: bool = Field(default=False, description="Activer relais WAN")

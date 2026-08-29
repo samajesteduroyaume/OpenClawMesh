@@ -67,6 +67,8 @@ class MeshClient:
         self.ssl_context = ssl_context
         self.dht = dht
         self.relay_url = relay_url
+        self.quic_transport: Any | None = None
+        self.gossipsub: Any | None = None
 
         # Une option explicitement fournie doit primer sur la configuration globale.
         discovery_enabled = (
@@ -91,13 +93,36 @@ class MeshClient:
         self._peer_health_cache: dict[str, dict] = {}
         self._rr_cursor: dict[str, int] = {}
 
-    async def start(self) -> None:
-        """Démarre la découverte mDNS si configurée."""
+    async def start(self, enable_quic: bool | None = None) -> None:
+        """Démarre la découverte mDNS et le transport UDP QUIC si configuré."""
         if self.discovery:
             await self.discovery.start(advertise=False)
 
+        use_quic = enable_quic if enable_quic is not None else _settings.quic_enabled
+        if use_quic and self.quic_transport is None:
+            try:
+                from .network.quic_webrtc import QUICWebRTCTransport
+                self.quic_transport = QUICWebRTCTransport(
+                    node_name=self.name,
+                    host="0.0.0.0",
+                    port=0,  # Port UDP éphémère pour le client
+                    psk=self.psk,
+                    identity=self.identity,
+                )
+                await self.quic_transport.start()
+            except Exception as e:
+                logger.debug(f"Transport client QUIC UDP non démarré: {e}")
+
     async def stop(self) -> None:
-        """Ferme toutes les connexions et arrête la découverte."""
+        """Ferme toutes les connexions et arrête la découverte et les transports."""
+        if self.quic_transport:
+            await self.quic_transport.stop()
+            self.quic_transport = None
+
+        if self.gossipsub:
+            await self.gossipsub.stop()
+            self.gossipsub = None
+
         if self.discovery:
             await self.discovery.stop()
 
@@ -399,24 +424,140 @@ class MeshClient:
                 handled_by=target,
             )
 
-    async def delegate(
+    async def call_stream_quic(
         self,
+        target: str | tuple[str, int],
         skill: str,
         payload: dict | None = None,
         on_chunk: Callable[[Any], None] | None = None,
         timeout: float = 60.0,
     ) -> TaskResponse:
         """
+        Envoie une requête via tunnel direct UDP QUIC/WebRTC et consomme les tokens avec latence sub-10ms.
+        """
+        if self.quic_transport is None:
+            await self.start(enable_quic=True)
+            if self.quic_transport is None:
+                raise RuntimeError("Transport QUIC/WebRTC UDP indisponible")
+
+        # Résolution de l'adresse UDP (host, port)
+        if isinstance(target, tuple):
+            peer_addr = target
+            peer_label = f"{peer_addr[0]}:{peer_addr[1]}"
+        else:
+            all_peers = self.list_peers()
+            if target in all_peers:
+                peer = all_peers[target]
+                q_port = getattr(peer, "quic_port", None) or (peer.port + 5 if peer.port != 8770 else _settings.quic_port)
+                peer_addr = (peer.address, q_port)
+                peer_label = target
+            elif ":" in target and not target.startswith("ws"):
+                parts = target.split(":")
+                peer_addr = (parts[0], int(parts[1]))
+                peer_label = target
+            else:
+                raise ValueError(f"Impossible de résoudre l'adresse UDP pour '{target}'")
+
+        req = TaskRequest(
+            skill=skill,
+            payload=payload or {},
+            origin=self.name,
+        )
+        if self.identity:
+            req.sign_ed25519(self.identity)
+        elif self.psk:
+            req.sign(self.psk)
+
+        stream = await self.quic_transport.open_stream(peer_addr, req)
+        final_response: TaskResponse | None = None
+
+        async def _read_stream():
+            nonlocal final_response
+            async for raw_chunk in stream.read_chunks():
+                try:
+                    data = parse_message(raw_chunk.decode("utf-8"))
+                    msg_type = data.get("type")
+                    if msg_type == "task_chunk":
+                        chunk_val = data.get("chunk")
+                        if on_chunk:
+                            if asyncio.iscoroutinefunction(on_chunk):
+                                await on_chunk(chunk_val)
+                            else:
+                                on_chunk(chunk_val)
+                    elif msg_type == "task_response":
+                        final_response = TaskResponse.from_dict(data)
+                except Exception as e:
+                    logger.debug(f"Erreur parsing chunk QUIC: {e}")
+
+        try:
+            await asyncio.wait_for(_read_stream(), timeout=timeout)
+            if final_response:
+                return final_response
+            return TaskResponse(
+                request_id=req.request_id,
+                ok=True,
+                result={"streamed_chunks": stream.token_count, "first_token_latency_ms": stream.first_token_latency_ms},
+                handled_by=peer_label,
+                streamed=True,
+            )
+        except asyncio.TimeoutError:
+            return TaskResponse(
+                request_id=req.request_id,
+                ok=False,
+                error=f"Timeout QUIC streaming ({timeout}s) dépassé sur '{skill}'",
+                handled_by=peer_label,
+            )
+        except Exception as e:
+            return TaskResponse(
+                request_id=req.request_id,
+                ok=False,
+                error=f"Erreur streaming QUIC: {e}",
+                handled_by=peer_label,
+            )
+
+    async def delegate(
+        self,
+        skill: str,
+        payload: dict | None = None,
+        on_chunk: Callable[[Any], None] | None = None,
+        prefer_quic: bool = False,
+        timeout: float = 60.0,
+    ) -> TaskResponse:
+        """
         Routage intelligent : trouve automatiquement le meilleur pair fournissant `skill`
-        et lui délègue l'exécution.
+        (via découverte locale ou Provider Records DHT) et lui délègue l'exécution.
         """
         best_peer = self.find_best_peer_for_skill(skill)
+
+        # Si non trouvé localement et DHT active, chercher via Provider Records DHT
+        if not best_peer and self.dht:
+            try:
+                providers = await self.dht.find_providers_distributed(f"skill:{skill}", timeout=2.0)
+                if providers:
+                    p = providers[0]
+                    pname = p.get("name", "dht-peer")
+                    phost = p.get("host", "127.0.0.1")
+                    pport = int(p.get("port", 8770))
+                    self.add_peer(pname, phost, pport, skills=[skill])
+                    best_peer = pname
+            except Exception as dht_err:
+                logger.debug(f"Recherche providers DHT échouée: {dht_err}")
+
         if not best_peer:
             return TaskResponse(
                 request_id=uuid.uuid4().hex[:8],
                 ok=False,
                 error=f"Aucun pair sur le réseau ne fournit la compétence requise : '{skill}'",
             )
+
+        # Tentative QUIC ultra-basse latence si demandée ou streaming token
+        if prefer_quic and on_chunk:
+            try:
+                return await self.call_stream_quic(
+                    best_peer, skill, payload, on_chunk=on_chunk, timeout=timeout
+                )
+            except Exception as quic_err:
+                logger.debug(f"Fallback WebSocket suite à échec QUIC: {quic_err}")
 
         if on_chunk:
             return await self.call_stream(

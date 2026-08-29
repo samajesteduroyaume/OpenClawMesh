@@ -151,7 +151,11 @@ async def cmd_call(args: argparse.Namespace) -> None:
         target = best
 
     t0 = time.perf_counter()
-    resp = await client.call(target, args.skill, payload, timeout=args.timeout)
+    if getattr(args, "quic", False):
+        await client.start(enable_quic=True)
+        resp = await client.call_stream_quic(target, args.skill, payload, timeout=args.timeout)
+    else:
+        resp = await client.call(target, args.skill, payload, timeout=args.timeout)
     duration_ms = round((time.perf_counter() - t0) * 1000.0, 2)
     await client.stop()
 
@@ -185,7 +189,7 @@ async def cmd_stream(args: argparse.Namespace) -> None:
 
     target = args.peer
     if not target:
-        await client.start()
+        await client.start(enable_quic=getattr(args, "quic", False))
         await asyncio.sleep(args.timeout_discovery)
         best = client.find_best_peer_for_skill(args.skill)
         if not best:
@@ -203,9 +207,15 @@ async def cmd_stream(args: argparse.Namespace) -> None:
             sys.stdout.write(str(chunk_val))
         sys.stdout.flush()
 
-    resp = await client.call_stream(
-        target, args.skill, payload, on_chunk=on_chunk, timeout=args.timeout
-    )
+    if getattr(args, "quic", False):
+        await client.start(enable_quic=True)
+        resp = await client.call_stream_quic(
+            target, args.skill, payload, on_chunk=on_chunk, timeout=args.timeout
+        )
+    else:
+        resp = await client.call_stream(
+            target, args.skill, payload, on_chunk=on_chunk, timeout=args.timeout
+        )
     await client.stop()
     sys.stdout.write("\n")
     sys.stdout.flush()
@@ -261,12 +271,19 @@ async def cmd_serve(args: argparse.Namespace) -> None:
         enable_zeroconf=not args.no_zeroconf,
         enable_wan=getattr(args, "wan", False),
         enable_dht=getattr(args, "dht", False) or getattr(args, "wan", False),
+        enable_quic=not getattr(args, "no_quic", False),
+        enable_gossipsub=not getattr(args, "no_gossipsub", False),
         dht_port=getattr(args, "dht_port", 8780),
+        quic_port=getattr(args, "quic_port", None),
         relay_url=getattr(args, "relay", None),
     )
     print(f"🌐 Nœud OpenClawMesh '{args.name}' actif sur ws://{get_local_ip()}:{args.port}")
+    if node.quic_transport:
+        print(f"⚡ Transport QUIC/WebRTC UDP direct actif sur {node.quic_transport.bound_host}:{node.quic_transport.bound_port}")
     if getattr(args, "wan", False) or getattr(args, "dht", False):
         print(f"🌍 Raccordé à la DHT Kademlia mondiale sur UDP:{getattr(args, 'dht_port', 8780)}")
+    if node.gossipsub:
+        print("📡 Overlay Pub/Sub GossipSub v1.1 actif")
     print(f"📡 Compétences publiées : {', '.join(registry.list_remote_names())}")
     print("Appuyez sur Ctrl+C pour arrêter le serveur...")
 
@@ -458,6 +475,47 @@ async def cmd_dht(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------- #
+# Commande : gossipsub
+# ---------------------------------------------------------------------- #
+async def cmd_gossipsub(args: argparse.Namespace) -> None:
+    import hashlib
+
+    from .network.gossipsub import GossipSubNode
+
+    node = GossipSubNode(
+        node_id=hashlib.sha256(args.name.encode("utf-8")).hexdigest()[:16],
+        node_name=args.name,
+        psk=args.psk,
+    )
+    await node.start()
+
+    if getattr(args, "subscribe", None):
+        def on_msg(m):
+            print(f"\n📩 Message reçu sur topic [{m.topic}] de {m.from_peer}: {m.data}")
+
+        node.subscribe(args.subscribe, handler=on_msg)
+        print(f"📡 Souscription active au topic GossipSub : '{args.subscribe}'")
+
+    if getattr(args, "publish", None) and getattr(args, "topic", None):
+        try:
+            data = json.loads(args.publish)
+        except Exception:
+            data = {"message": args.publish}
+        mid = await node.publish(args.topic, data)
+        print(f"🚀 Message publié sur [{args.topic}] (msg_id: {mid})")
+
+    if getattr(args, "daemon", False):
+        print("En écoute GossipSub (Ctrl+C pour quitter)...")
+        try:
+            while True:
+                await asyncio.sleep(3600)
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            pass
+
+    await node.stop()
+
+
+# ---------------------------------------------------------------------- #
 # Commande : multimodal
 # ---------------------------------------------------------------------- #
 async def cmd_multimodal(args: argparse.Namespace) -> None:
@@ -482,71 +540,73 @@ async def cmd_multimodal(args: argparse.Namespace) -> None:
 # Commande : e2ee
 # ---------------------------------------------------------------------- #
 def cmd_e2ee(args: argparse.Namespace) -> None:
-    from .crypto_e2ee import E2EESession
+    from .crypto_e2ee import E2EESessionManager, generate_x25519_keypair
 
-    session = E2EESession()
-    print("🔐 Session E2EE Initialisée (X25519 & ChaCha20-Poly1305)")
-    print(f"🔓 Clé Publique X25519 (Hex) : {session.public_key_hex}")
+    if args.action == "generate":
+        priv, pub = generate_x25519_keypair()
+        print("🔐 Paire de clés X25519 générée :")
+        print(f"Clé Publique (Hex) : {pub}")
+        print(f"Clé Privée (Hex)   : {priv}")
+    elif args.action == "test":
+        alice = E2EESessionManager("alice")
+        bob = E2EESessionManager("bob")
+        plaintext = b"Message secret OpenClawMesh E2EE"
+        pkg = alice.encrypt_for_peer(bob.local_public_key, plaintext)
+        decrypted = bob.decrypt_from_peer(alice.local_public_key, pkg)
+        print(f"Test E2EE réussi: {decrypted == plaintext} -> '{decrypted.decode()}'")
 
 
 # ---------------------------------------------------------------------- #
-# Parser CLI Principal
+# Point d'Entrée Principal
 # ---------------------------------------------------------------------- #
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="openclaw-mesh",
-        description="OpenClawMesh — Protocole P2P & Skill Décentralisé pour Agents IA OpenClaw",
+        description="OpenClawMesh — Maillage Décentralisé P2P IA & Transport Ultra-Basse Latence",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # 1. discover
-    p_disc = subparsers.add_parser("discover", help="Scanne et liste les pairs du maillage LAN")
-    p_disc.add_argument(
-        "--timeout", type=float, default=2.0, help="Durée du scan en secondes (défaut: 2.0)"
-    )
-    p_disc.add_argument(
-        "--inspect",
-        action="store_true",
-        help="Interroge chaque pair pour son catalogue complet et sa santé",
-    )
-    p_disc.add_argument(
-        "--enable-discovery",
-        action="store_true",
-        help="Autorise explicitement le scan mDNS du réseau local",
-    )
+    p_disc = subparsers.add_parser("discover", help="Recherche les pairs sur le LAN")
+    p_disc.add_argument("--timeout", type=float, default=2.0, help="Durée du scan (secondes)")
     p_disc.add_argument("--json", action="store_true", help="Format de sortie JSON brut")
+    p_disc.add_argument(
+        "--inspect", action="store_true", help="Interroge les compétences et la santé des pairs"
+    )
+    p_disc.add_argument(
+        "--enable-discovery", action="store_true", help="Active la découverte LAN (opt-in)"
+    )
 
     # 2. call
-    p_call = subparsers.add_parser("call", help="Délègue et exécute une compétence sur le maillage")
+    p_call = subparsers.add_parser("call", help="Appel synchrone d'une compétence sur un pair")
     p_call.add_argument(
-        "--skill", required=True, help="Nom de la compétence à exécuter (ex: llm, memory_search)"
+        "--skill", required=True, help="Nom de la compétence (ex: 'generate_text')"
     )
-    p_call.add_argument(
-        "--payload", default="{}", help='Payload JSON d\'entrée (ex: \'{"prompt": "Hello"}\')'
-    )
+    p_call.add_argument("--payload", default="{}", help="Payload JSON d'entrée")
     p_call.add_argument(
         "--peer", help="Nom du pair cible ou URL ws:// (si omis, routage automatique)"
     )
-    p_call.add_argument("--origin", default="openclaw-agent", help="Nom de l'agent appelant")
+    p_call.add_argument("--origin", default="openclaw-cli", help="Nom de l'agent appelant")
     p_call.add_argument("--psk", help="Clé pré-partagée HMAC-SHA256")
     p_call.add_argument("--keyfile", help="Chemin vers le fichier de clé privée Ed25519")
-    p_call.add_argument(
-        "--timeout", type=float, default=60.0, help="Timeout d'exécution (défaut: 60s)"
-    )
+    p_call.add_argument("--timeout", type=float, default=60.0, help="Timeout de l'appel (défaut: 60s)")
     p_call.add_argument(
         "--timeout-discovery",
         type=float,
         default=1.5,
         help="Temps d'attente découverte si --peer omis",
     )
-    p_call.add_argument("--json", action="store_true", help="Format de sortie JSON complet")
+    p_call.add_argument(
+        "--quic", action="store_true", help="Utilise le transport direct UDP QUIC/WebRTC (sub-10ms)"
+    )
+    p_call.add_argument("--json", action="store_true", help="Format de sortie JSON brut")
 
     # 3. stream
     p_stream = subparsers.add_parser(
-        "stream", help="Consomme une compétence en streaming continu (ex: LLM)"
+        "stream", help="Consommation en direct (streaming) de tokens d'une compétence"
     )
     p_stream.add_argument(
-        "--skill", required=True, help="Nom de la compétence de streaming (ex: llm_stream, llm)"
+        "--skill", required=True, help="Nom de la compétence (ex: 'stream_llm')"
     )
     p_stream.add_argument("--payload", default="{}", help="Payload JSON d'entrée")
     p_stream.add_argument(
@@ -563,6 +623,9 @@ def main() -> None:
         type=float,
         default=1.5,
         help="Temps d'attente découverte si --peer omis",
+    )
+    p_stream.add_argument(
+        "--quic", action="store_true", help="Utilise le transport direct UDP QUIC/WebRTC (sub-10ms)"
     )
 
     # 4. ping
@@ -595,6 +658,15 @@ def main() -> None:
         "--dht-port", type=int, default=8780, help="Port d'écoute UDP Kademlia (défaut: 8780)"
     )
     p_serve.add_argument(
+        "--no-quic", action="store_true", help="Désactive l'écoute UDP QUIC ultra-basse latence"
+    )
+    p_serve.add_argument(
+        "--quic-port", type=int, help="Port d'écoute UDP QUIC (défaut: 8775)"
+    )
+    p_serve.add_argument(
+        "--no-gossipsub", action="store_true", help="Désactive l'overlay GossipSub v1.1"
+    )
+    p_serve.add_argument(
         "--relay", help="URL du serveur relais WAN WebSocket (ex: ws://hub.domaine.com:8790)"
     )
 
@@ -623,13 +695,16 @@ def main() -> None:
 
     # 9. dht
     p_dht = subparsers.add_parser(
-        "dht", help="Gestionnaire de table de hachage distribuée Kademlia"
+        "dht", help="Gestionnaire de table de hachage distribuée Kademlia & Content Routing"
     )
     p_dht.add_argument("--name", default="dht-node", help="Nom du nœud")
     p_dht.add_argument("--host", default="127.0.0.1", help="Hôte")
     p_dht.add_argument("--port", type=int, default=8780, help="Port")
     p_dht.add_argument("--advertise", help="Publier une compétence (réseau si --bootstrap fourni)")
     p_dht.add_argument("--lookup", help="Rechercher une compétence dans la DHT")
+    p_dht.add_argument(
+        "--find-providers", help="Recherche les fournisseurs enregistrés (Provider Records) d'une ressource"
+    )
     p_dht.add_argument(
         "--bootstrap",
         action="append",
@@ -638,7 +713,16 @@ def main() -> None:
         help="Pair(s) de départ pour rejoindre le réseau WAN Kademlia (peut être répété)",
     )
 
-    # 10. multimodal
+    # 10. gossipsub
+    p_gsub = subparsers.add_parser("gossipsub", help="Pub/Sub décentralisé par topics GossipSub v1.1")
+    p_gsub.add_argument("--name", default="gossip-node", help="Nom du nœud")
+    p_gsub.add_argument("--topic", help="Nom du topic (ex: 'openclaw/v1/models')")
+    p_gsub.add_argument("--subscribe", help="Topic auquel souscrire")
+    p_gsub.add_argument("--publish", help="Message JSON ou chaîne à publier")
+    p_gsub.add_argument("--psk", help="Clé pré-partagée HMAC-SHA256")
+    p_gsub.add_argument("--daemon", action="store_true", help="Garde le nœud actif en écoute")
+
+    # 11. multimodal
     p_multi = subparsers.add_parser(
         "multimodal", help="Exécute des compétences multi-modales (vision, stt, tts)"
     )
@@ -647,7 +731,7 @@ def main() -> None:
     )
     p_multi.add_argument("--prompt", help="Prompt ou texte d'entrée")
 
-    # 11. e2ee
+    # 12. e2ee
     p_e2ee = subparsers.add_parser(
         "e2ee", help="Génère ou teste les clés de chiffrement de bout en bout"
     )
@@ -678,6 +762,8 @@ def main() -> None:
         asyncio.run(cmd_relay(args))
     elif args.command == "dht":
         asyncio.run(cmd_dht(args))
+    elif args.command == "gossipsub":
+        asyncio.run(cmd_gossipsub(args))
     elif args.command == "multimodal":
         asyncio.run(cmd_multimodal(args))
     elif args.command == "e2ee":

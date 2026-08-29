@@ -95,8 +95,28 @@ Chaque message est `{"txid": "<8 hex>", "type": <type>, "node_id": "<40 hex>", "
 | `find_node` | `target` (`<node_id>`) | `find_node_response` → `{ contacts: [...] }` |
 | `find_value` | `target_key` (`<hash ou clé>`) | `find_value_response` → `{ found: true, value }` ou `{ found: false, closest_nodes: [...] }` |
 | `store` | `key`, `value`, `ttl` | `store_response` → `{ status: "ok" }` |
+| `add_provider` | `target_key`, `provider_info`, `ttl` | `add_provider_response` → `{ status: "ok" }` |
+| `get_providers` | `target_key` | `get_providers_response` → `{ providers: [...], closest_nodes: [...] }` |
 
-### 4.2. Démarrage du transport réseau
+### 4.2. Routage de Contenu & Provider Records (BitTorrent / Libp2p style)
+
+Les compétences et modèles IA peuvent être annoncés par de multiples fournisseurs simultanés via `provide_distributed` et découverts via `find_providers_distributed` :
+
+```python
+# Annoncer la fourniture d'une compétence
+await dht.provide_distributed("skill:llm_streaming", {
+    "node_id": dht.node_id,
+    "host": "198.51.100.42",
+    "port": 8770,
+    "quic_port": 8775,
+    "gpu": "RTX 4090"
+})
+
+# Résoudre tous les fournisseurs enregistrés sur la DHT
+providers = await dht.find_providers_distributed("skill:llm_streaming")
+```
+
+### 4.3. Démarrage du transport réseau
 
 ```python
 from openclaw_mesh.network.dht import KademliaDHT, Contact
@@ -110,7 +130,7 @@ await dht.advertise_skill_distributed("llm", {"host": "10.0.0.5", "port": 8770})
 result = await dht.lookup_skill_distributed("llm")  # FIND_VALUE itératif
 ```
 
-### 4.3. Recherche itérative (alpha-parallèle)
+### 4.4. Recherche itérative (alpha-parallèle)
 
 - `ALPHA = 3` requêtes parallèles par itération, jusqu'à `MAX_DHT_HOPS = 20` itérations.
 - La table de routage (`k`-buckets, `k=20`) est mise à jour à chaque contact reçu.
@@ -138,5 +158,85 @@ le blob sans jamais le déchiffrer.
 }
 ```
 
-- La clé symétrique est dérivée par `HKDF-SHA256` à partir du secret partagé ECDH-X25519.
-- Le nonce est **unique par session** ; le récepteur rejette les rejets via un cache glissant de nonces et un contrôle de fraîcheur d'horodatage (voir §5 de `SECURITY_MODEL.md`).
+---
+
+## 6. Transport Ultra-Basse Latence QUIC / WebRTC UDP
+
+OpenClawMesh implémente un transport direct UDP multiplexé avec cadrage binaire compact (`OCQ1`) pour le streaming de tokens sub-10ms et la traversée NAT automatique.
+
+### 6.1. Cadrage Binaire (`OCQ1`)
+
+Chaque datagramme UDP transporte un en-tête fixe de 24 octets (format struct `!4s B B H Q I`) suivi de la charge utile :
+
+```text
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                       Magic: 'OCQ1' (4B)                      |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|  Type (1B)    |  Flags (1B)   |        Stream ID (2B)         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                        Sequence Number (8B)                   |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         Payload Length (4B)                   |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                        Payload Data (...)                     |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
+
+### 6.2. Types de Paquets
+
+| Type (Hex) | Nom | Description |
+| :--- | :--- | :--- |
+| `0x01` | `SYN` | Demande d'ouverture de session 0-RTT/1-RTT avec handshake sécurisé |
+| `0x02` | `ACK` | Confirmation de session ou d'acquittement de flux |
+| `0x03` | `PING` | Mesure de latence RTT haute précision via `perf_counter_ns()` |
+| `0x04` | `PONG` | Réponse au Ping avec écho d'horodatage |
+| `0x05` | `STREAM_OPEN` | Ouverture d'un flux multiplexé transportant un `TaskRequest` |
+| `0x06` | `STREAM_DATA` | Datagramme de token / chunk en continu (`TaskChunk` / `TaskResponse`) |
+| `0x07` | `STREAM_FIN` | Clôture ordonnée du flux |
+| `0x08` | `STREAM_RESET`| Annulation immédiate en cas d'erreur |
+
+---
+
+## 7. Spécification GossipSub v1.1 Pub/Sub Overlay
+
+Pour la diffusion thématique décentralisée en temps réel (découverte de modèles, métriques de cluster, état des nœuds), OpenClawMesh utilise GossipSub v1.1.
+
+### 7.1. Format Wire JSON
+
+```json
+{
+  "type": "gossipsub_v1",
+  "sender_id": "<node_id>",
+  "sender_name": "worker-gpu-1",
+  "ts": 1740432000.123,
+  "messages": [
+    {
+      "topic": "openclaw/v1/discovery",
+      "data": { "skills": ["llm", "vlm"], "vram_free": 18200 },
+      "from_peer": "<node_id>",
+      "seq": 42,
+      "ts": 1740432000.100,
+      "msg_id": "a9f8b7c6..."
+    }
+  ],
+  "control": {
+    "graft": ["openclaw/v1/discovery"],
+    "prune": [],
+    "ihave": [
+      { "topic": "openclaw/v1/models", "msg_ids": ["msg_1", "msg_2"] }
+    ],
+    "iwant": ["msg_1"]
+  },
+  "sig": "<HMAC-SHA256 ou Ed25519>"
+}
+```
+
+### 7.2. Paramètres de Maillage
+
+- **Degré cible ($D$)** : 6 pairs par topic.
+- **Borne basse ($D_{\text{low}}$)** : 4 pairs (déclenche des requêtes `GRAFT`).
+- **Borne haute ($D_{\text{high}}$)** : 12 pairs (déclenche des `PRUNE` sur les pairs les moins bien notés).
+- **Degré paresseux ($D_{\text{lazy}}$)** : 6 pairs aléatoires hors maillage reçoivent les annonces `IHAVE` périodiques.

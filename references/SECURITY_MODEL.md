@@ -93,3 +93,31 @@ session.decrypt(pkg)  # -> ReplayError (nonce déjà vu)
 Les RPC DHT peuvent être authentifiés en configurant le même `OPENCLAW_PSK` sur
 les nœuds participants. Sans PSK, la DHT doit être considérée comme un mécanisme
 de découverte non fiable.
+
+---
+
+## 4. Sécurité du Transport UDP QUIC / WebRTC
+
+Le transport direct UDP `QUICWebRTCTransport` applique une authentification mutuelle dès le premier échange (0-RTT / 1-RTT) :
+
+1. **Authentification du Handshake (`SYN` / `ACK`)** :
+   - Le paquet `SYN` transmet le `session_id`, `node_id`, `node_name`, et un timestamp `ts`.
+   - Si un `OPENCLAW_PSK` ou une identité Ed25519 est configurée, une signature cryptographique (`auth_tag`) couvre l'ensemble des paramètres de session.
+   - Le récepteur valide la signature et la dérive temporelle avant de générer le paquet `ACK`.
+2. **Isolation des Flux et Contrôle d'Accès** :
+   - Chaque requête `TaskRequest` transportée sur un flux `STREAM_OPEN` est individuellement vérifiée avec le mécanisme Ed25519 / TrustStore ou HMAC.
+   - Les flux non autorisés sont immédiatement réinitialisés par un paquet `STREAM_RESET`.
+
+---
+
+## 5. Sécurité de l'Overlay Pub/Sub GossipSub v1.1
+
+Pour prévenir les attaques par déni de service, le flood de messages ou la falsification de métriques :
+
+1. **Signature et Authentification des Messages Wire** :
+   - Chaque paquet GossipSub (`gossipsub_v1`) comporte un champ `signature` HMAC-SHA256 calculé sur la forme canonique de l'enveloppe.
+   - Tout message altéré ou non authentifié est immédiatement écarté à la réception.
+2. **Scoring des Pairs (Peer Scoring)** :
+   - Chaque pair possède un score de réputation (défaut : 10.0).
+   - Les comportements anormaux (messages invalides, tentatives de spam, latences anormales sur IWANT) entraînent des pénalités sur le score du pair.
+   - Les pairs sous le seuil d'exclusion sont élagués (`PRUNE`) et placés sous une période de backoff strict interdisant leur réintégration dans le maillage.

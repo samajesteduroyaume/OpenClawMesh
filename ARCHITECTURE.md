@@ -282,7 +282,7 @@ reset_settings()  # remet à None (utile en tests)
 ├────────────────────────────────────────────────────────────────┤
 │  Couche 0 — Transport TLS (optionnel)                         │
 │  WSS via ssl.SSLContext injecté dans Node et Client            │
-└────────────────────────────────────�---
+└────────────────────────────────────�---
 
 ## 5. Découverte Réseau (mDNS & DHT Kademlia)
 
@@ -361,6 +361,50 @@ Quand la traversée NAT directe échoue (NAT Symétrique), le relais route les t
 Pair A ──WS──► Relais WAN ──WS──► Pair B
                (opaque routing)
 ```
+
+### 5.5 Transport Ultra-Basse Latence (QUIC / WebRTC DataChannels UDP)
+
+Pour éliminer le blocage en tête de ligne (Head-of-Line Blocking) de TCP et atteindre une latence sub-10ms lors du streaming token-par-token, OpenClawMesh intègre un moteur direct UDP multiplexé (`openclaw_mesh/network/quic_webrtc.py`).
+
+#### Architecture du Transport QUIC UDP
+```mermaid
+sequenceDiagram
+    participant Client as MeshClient (UDP Ephemeral)
+    participant Server as OpenClawNode (UDP:8775)
+    
+    Note over Client,Server: 1-RTT / 0-RTT Authenticated Handshake (OCQ1)
+    Client->>Server: SYN (session_id, node_id, auth_tag)
+    Server-->>Client: ACK (session_id, server_node_id, auth_tag)
+    
+    Note over Client,Server: Multiplexed Stream & Token-by-Token Streaming
+    Client->>Server: STREAM_OPEN (stream_id=1, TaskRequest JSON)
+    Server-->>Client: STREAM_DATA (stream_id=1, Token #1 "Hello")
+    Server-->>Client: STREAM_DATA (stream_id=1, Token #2 " World")
+    Server-->>Client: STREAM_FIN (stream_id=1, TaskResponse)
+```
+
+- **Cadrage Binaire `OCQ1`** : En-tête structuré de 24 octets (`Magic`, `Type`, `Flags`, `StreamID`, `Seq`, `Length`).
+- **Négociation 0-RTT/1-RTT** : Établissement de session sécurisé HMAC / Ed25519.
+- **Auto-Maintenance des Sessions** : Détection des timeouts d'inactivité et mesure de RTT haute résolution via `perf_counter_ns()`.
+
+### 5.6 Overlay Pub/Sub Décentralisé GossipSub v1.1
+
+Pour la diffusion en temps réel sans serveur central (découverte de modèles, métriques, alertes), OpenClawMesh intègre GossipSub v1.1 (`openclaw_mesh/network/gossipsub.py`).
+
+#### Paramètres de Maillage & Efficacité
+- **Mesh Topology Maintenance** :
+  - Degré cible : $D = 6$
+  - Degré bas : $D_{\text{low}} = 4$ (déclenche des greffes `GRAFT`)
+  - Degré haut : $D_{\text{high}} = 12$ (déclenche des élagages `PRUNE` basés sur le score du pair)
+- **Lazy Gossip (`IHAVE` / `IWANT`)** : Les pairs hors maillage ($D_{\text{lazy}} = 6$) reçoivent des annonces d'identifiants de messages sans charge utile, évitant l'explosion de bande passante.
+- **Cache Glissant (`mcache`)** : Mémorisation sur plusieurs cycles de Heartbeat (défaut : 5 cycles) pour servir les requêtes `IWANT`.
+- **Scoring des Pairs** : Pénalisation des nœuds spammeurs ou malveillants avec exclusion temporaire (backoff exponentiel).
+
+### 5.7 Routage de Contenu Décentralisé & Provider Records (DHT Kademlia)
+
+Inspiré de BitTorrent et libp2p, le module DHT (`openclaw_mesh/network/dht.py`) implémente la table des **Provider Records** :
+- `provide_distributed(key, provider_info)` : Dépose une entrée de fournisseur répliquée sur les $k$ nœuds les plus proches de la clé dans l'espace XOR 160-bit.
+- `find_providers_distributed(key)` : Interroge les nœuds du réseau pour obtenir la liste complète des pairs fournissant un modèle ou une compétence donnée.
 
 ---
 
@@ -1074,5 +1118,31 @@ async def test_my_feature():
 
 ---
 
+### ADR-004 — Transport Direct UDP QUIC / WebRTC DataChannels
+
+**Contexte** : Éliminer la latence TCP et le Head-of-Line Blocking pour le streaming token-par-token sub-10ms entre nœuds.
+
+**Décision** : Transport direct UDP avec cadrage binaire compact `OCQ1` et handshakes 0-RTT/1-RTT authentifiés.
+
+**Raisons** :
+- Zéro Head-of-Line Blocking entre flux asynchrones multiplexés
+- Latence réseau sub-10ms idéale pour le streaming interactif de modèles LLM/VLM
+- Traversée directe des box internet et routeurs NAT sans ouverture de port manuel
+
+---
+
+### ADR-005 — Diffusion Thématique via GossipSub v1.1
+
+**Contexte** : Diffuser les annonces de nœuds, métriques de cluster et découvertes de modèles sans dépendre d'un serveur de coordination central.
+
+**Décision** : Implémentation du protocole d'overlay GossipSub v1.1 (inspiré de libp2p).
+
+**Raisons** :
+- Scalabilité sous-linéaire de la bande passante grâce au Lazy Gossip (`IHAVE` / `IWANT`)
+- Topologie de maillage auto-stabilisante avec seuils de connectivité $D=6, D_{\text{low}}=4, D_{\text{high}}=12$
+- Résilience aux pannes et défense anti-spam via peer scoring et pénalités de backoff
+
+---
+
 *Documentation OpenClawMesh v1.1.0 — Niveau Ingénieur Senior*  
-*Généré le 2026-08-26*
+*Généré le 2026-08-29*

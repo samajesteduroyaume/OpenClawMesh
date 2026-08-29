@@ -3,7 +3,18 @@ Modules Réseau Étendus (WAN, Traversée NAT, Kademlia DHT, Relais) pour OpenCl
 """
 
 from .dht import Contact, KademliaDHT, RoutingTable, hash_key, xor_distance
+from .gossip import GossipProtocol, NodeMetrics
+from .gossipsub import ControlMessage, GossipMessage, GossipSubNode, MessageCache
+from .ice import ICECandidate, ICENegotiator
 from .nat_traversal import NATProfile, discover_nat_and_public_ip
+from .quic_webrtc import (
+    PacketFlags,
+    PacketType,
+    QUICPacket,
+    QUICSession,
+    QUICStream,
+    QUICWebRTCTransport,
+)
 from .relay import WANRelayClient, WANRelayServer
 
 __all__ = [
@@ -16,4 +27,18 @@ __all__ = [
     "RoutingTable",
     "hash_key",
     "xor_distance",
+    "GossipProtocol",
+    "NodeMetrics",
+    "GossipSubNode",
+    "GossipMessage",
+    "ControlMessage",
+    "MessageCache",
+    "ICECandidate",
+    "ICENegotiator",
+    "QUICWebRTCTransport",
+    "QUICStream",
+    "QUICSession",
+    "QUICPacket",
+    "PacketType",
+    "PacketFlags",
 ]

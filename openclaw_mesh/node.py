@@ -73,6 +73,8 @@ class OpenClawMeshNode:
         self.dht: Any | None = None
         self._dht_task: asyncio.Task | None = None
         self._nat_profile: Any | None = None
+        self.quic_transport: Any | None = None
+        self.gossipsub: Any | None = None
         self._ws_server = None
         self._active_tasks = 0
         self._task_semaphore = asyncio.Semaphore(max(1, _settings.max_active_tasks))
@@ -87,10 +89,13 @@ class OpenClawMeshNode:
         enable_zeroconf: bool = False,
         enable_wan: bool = False,
         enable_dht: bool = False,
+        enable_quic: bool | None = None,
+        enable_gossipsub: bool | None = None,
         dht_port: int = 8780,
+        quic_port: int | None = None,
         relay_url: str | None = None,
     ) -> None:
-        """Démarre le serveur WebSocket, Zeroconf, DHT Kademlia et la traversée NAT."""
+        """Démarre le serveur WebSocket, QUIC/WebRTC UDP, Zeroconf, DHT Kademlia et GossipSub."""
         if self._running:
             return
         if self.host not in {"127.0.0.1", "::1", "localhost"}:
@@ -118,7 +123,25 @@ class OpenClawMeshNode:
         )
         self._running = True
 
-        # 1. Découverte locale mDNS Zeroconf
+        # 1. Transport Ultra-Basse Latence QUIC / WebRTC DataChannels (UDP)
+        use_quic = enable_quic if enable_quic is not None else _settings.quic_enabled
+        if use_quic:
+            try:
+                from .network.quic_webrtc import QUICWebRTCTransport
+                q_port = quic_port or (self.port + 5 if self.port != 8770 else _settings.quic_port)
+                self.quic_transport = QUICWebRTCTransport(
+                    node_name=self.name,
+                    host=self.host,
+                    port=q_port,
+                    psk=self.psk,
+                    identity=self.identity,
+                )
+                self.quic_transport.set_request_handler(self._handle_quic_request)
+                await self.quic_transport.start()
+            except Exception as e:
+                logger.warning(f"Avertissement démarrage transport QUIC/WebRTC: {e}")
+
+        # 2. Découverte locale mDNS Zeroconf
         if enable_zeroconf:
             skills_list = self.registry.list_remote_names()
             self.discovery = MeshDiscovery(
@@ -129,7 +152,7 @@ class OpenClawMeshNode:
             )
             await self.discovery.start(advertise=True)
 
-        # 2. Découverte & Connexion WAN Universelle
+        # 3. Découverte & Connexion WAN Universelle (DHT Kademlia & GossipSub)
         if enable_wan or enable_dht:
             try:
                 from .network.nat_traversal import discover_nat_and_public_ip
@@ -151,7 +174,7 @@ class OpenClawMeshNode:
                 await self.dht.bootstrap_global()
                 self._dht_task = self.dht.start_auto_refresh(interval_seconds=45.0)
 
-                # Publier nos compétences sur la toile mondiale DHT
+                # Publier nos compétences sur la toile mondiale DHT (Provider Records)
                 for skill_name in self.registry.list_remote_names():
                     await self.dht.advertise_skill_distributed(
                         skill_name,
@@ -159,6 +182,7 @@ class OpenClawMeshNode:
                             "name": self.name,
                             "host": public_host,
                             "port": self.port,
+                            "quic_port": self.quic_transport.bound_port if self.quic_transport else None,
                             "skills": self.registry.list_remote_names(),
                         },
                     )
@@ -166,13 +190,37 @@ class OpenClawMeshNode:
             except Exception as e:
                 logger.warning(f"Avertissement DHT Kademlia WAN: {e}")
 
+        # 4. Overlay Pub/Sub GossipSub v1.1
+        use_gossipsub = enable_gossipsub if enable_gossipsub is not None else _settings.gossipsub_enabled
+        if use_gossipsub:
+            try:
+                import hashlib
+
+                from .network.gossipsub import GossipSubNode
+                self.gossipsub = GossipSubNode(
+                    node_id=hashlib.sha256(self.name.encode("utf-8")).hexdigest()[:16],
+                    node_name=self.name,
+                    psk=self.psk,
+                )
+                await self.gossipsub.start()
+            except Exception as e:
+                logger.warning(f"Avertissement démarrage GossipSub: {e}")
+
         logger.info(f"Nœud OpenClawMesh '{self.name}' démarré sur {self.host}:{self.port}")
 
     async def stop(self) -> None:
-        """Arrête le serveur et la découverte réseau."""
+        """Arrête le serveur et l'ensemble des transports réseau."""
         if not self._running:
             return
         self._running = False
+
+        if self.gossipsub:
+            await self.gossipsub.stop()
+            self.gossipsub = None
+
+        if self.quic_transport:
+            await self.quic_transport.stop()
+            self.quic_transport = None
 
         if self._dht_task:
             self._dht_task.cancel()
@@ -486,5 +534,113 @@ class OpenClawMeshNode:
             async with send_lock:
                 await ws.send(resp.to_json())
         finally:
+            self._active_tasks = max(0, self._active_tasks - 1)
+            self._task_semaphore.release()
+
+    # ------------------------------------------------------------------ #
+    # Traitement des Requêtes Entrantes QUIC / WebRTC Ultra-Basse Latence
+    # ------------------------------------------------------------------ #
+    async def _handle_quic_request(self, req: TaskRequest, stream: Any) -> None:
+        """Traite une TaskRequest arrivant via flux QUIC/WebRTC UDP pour streaming token sub-10ms."""
+        peer_addr = stream.session.peer_addr
+        stream_id = stream.stream_id
+
+        # 1. Vérification d'Authentification HMAC-SHA256
+        if self.psk:
+            if not req.verify(self.psk):
+                resp = TaskResponse(
+                    request_id=req.request_id,
+                    ok=False,
+                    error="Authentification échouée : signature HMAC-SHA256 invalide",
+                    handled_by=self.name,
+                )
+                if self.quic_transport:
+                    await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                    await self.quic_transport.send_stream_fin(peer_addr, stream_id)
+                return
+
+        # 2. Compétences Réservées
+        if req.skill == DESCRIBE_SKILL:
+            desc = self.registry.describe()
+            resp = TaskResponse(request_id=req.request_id, ok=True, result=desc, handled_by=self.name)
+            if self.quic_transport:
+                await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                await self.quic_transport.send_stream_fin(peer_addr, stream_id)
+            return
+
+        if req.skill == HEALTH_SKILL:
+            health_data = {
+                "status": "ok",
+                "active_tasks": self._active_tasks,
+                "uptime_seconds": round(time.time() - self._start_time, 2),
+                "skills_count": len(self.registry.list_names()),
+                "node_name": self.name,
+                "transport": "quic_webrtc_udp",
+            }
+            resp = TaskResponse(request_id=req.request_id, ok=True, result=health_data, handled_by=self.name)
+            if self.quic_transport:
+                await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                await self.quic_transport.send_stream_fin(peer_addr, stream_id)
+            return
+
+        # 3. Exécution de la compétence
+        handler = self.registry.get(req.skill)
+        if handler is None:
+            resp = TaskResponse(
+                request_id=req.request_id,
+                ok=False,
+                error=f"Compétence inconnue sur ce nœud : '{req.skill}'",
+                handled_by=self.name,
+            )
+            if self.quic_transport:
+                await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                await self.quic_transport.send_stream_fin(peer_addr, stream_id)
+            return
+
+        await self._task_semaphore.acquire()
+        self._active_tasks += 1
+        try:
+            if inspect.isasyncgenfunction(handler):
+                idx = 0
+                async for chunk in handler(req.payload):
+                    chunk_msg = TaskChunk(request_id=req.request_id, index=idx, chunk=chunk)
+                    if self.quic_transport:
+                        await self.quic_transport.send_stream_data(peer_addr, stream_id, chunk_msg.to_json().encode("utf-8"))
+                    idx += 1
+                resp = TaskResponse(request_id=req.request_id, ok=True, result={"streamed_chunks": idx}, handled_by=self.name, streamed=True)
+                if self.quic_transport:
+                    await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+
+            elif inspect.isgeneratorfunction(handler):
+                idx = 0
+                for chunk in handler(req.payload):
+                    chunk_msg = TaskChunk(request_id=req.request_id, index=idx, chunk=chunk)
+                    if self.quic_transport:
+                        await self.quic_transport.send_stream_data(peer_addr, stream_id, chunk_msg.to_json().encode("utf-8"))
+                    idx += 1
+                resp = TaskResponse(request_id=req.request_id, ok=True, result={"streamed_chunks": idx}, handled_by=self.name, streamed=True)
+                if self.quic_transport:
+                    await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+
+            elif inspect.iscoroutinefunction(handler):
+                result = await handler(req.payload)
+                resp = TaskResponse(request_id=req.request_id, ok=True, result=result, handled_by=self.name)
+                if self.quic_transport:
+                    await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+
+            else:
+                result = await asyncio.to_thread(handler, req.payload)
+                resp = TaskResponse(request_id=req.request_id, ok=True, result=result, handled_by=self.name)
+                if self.quic_transport:
+                    await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+
+        except Exception as exec_err:
+            logger.error(f"Erreur QUIC execution '{req.skill}': {exec_err}")
+            resp = TaskResponse(request_id=req.request_id, ok=False, error=str(exec_err), handled_by=self.name)
+            if self.quic_transport:
+                await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+        finally:
+            if self.quic_transport:
+                await self.quic_transport.send_stream_fin(peer_addr, stream_id)
             self._active_tasks = max(0, self._active_tasks - 1)
             self._task_semaphore.release()
