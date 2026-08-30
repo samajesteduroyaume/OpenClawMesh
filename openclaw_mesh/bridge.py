@@ -149,18 +149,23 @@ class SkillRegistry:
         tools: list[dict[str, Any]] = []
         for name in desc["skills"]:
             fn_desc = desc["descriptions"].get(name, f"Exécute la compétence {name}")
-            schema = desc["schemas"].get(name, {
-                "type": "object",
-                "properties": {},
-            })
-            tools.append({
-                "type": "function",
-                "function": {
-                    "name": name,
-                    "description": fn_desc,
-                    "parameters": schema,
+            schema = desc["schemas"].get(
+                name,
+                {
+                    "type": "object",
+                    "properties": {},
                 },
-            })
+            )
+            tools.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": name,
+                        "description": fn_desc,
+                        "parameters": schema,
+                    },
+                }
+            )
         return tools
 
     # ------------------------------------------------------------------ #

@@ -115,7 +115,10 @@ class PFSRatchetSession:
 
     def decrypt_message(self, msg: RatchetMessage) -> bytes:
         """Decrypt message under receiving chain and step the ratchet."""
-        if self.remote_ephemeral_pub is not None and msg.sender_ephemeral_pub_b64 != self.remote_ephemeral_pub:
+        if (
+            self.remote_ephemeral_pub is not None
+            and msg.sender_ephemeral_pub_b64 != self.remote_ephemeral_pub
+        ):
             self.remote_ephemeral_pub = msg.sender_ephemeral_pub_b64
             dh_out = derive_shared_key(self.local_priv, self.remote_ephemeral_pub)
             self.root_key, self.receiving_chain_key = kdf_rk(self.root_key, dh_out)

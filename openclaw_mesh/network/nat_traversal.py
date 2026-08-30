@@ -235,7 +235,9 @@ async def discover_nat_and_public_ip(
                             public_port=local_port if upnp_success else xor_port,
                             local_ip=local_ip,
                             local_port=local_port,
-                            nat_type="UPnP Mapped" if upnp_success else "Cone NAT (P2P Traversal Compatible)",
+                            nat_type="UPnP Mapped"
+                            if upnp_success
+                            else "Cone NAT (P2P Traversal Compatible)",
                             is_direct_connectable=True,
                             upnp_mapped=upnp_success,
                         )
@@ -253,4 +255,3 @@ async def discover_nat_and_public_ip(
         is_direct_connectable=False,
         upnp_mapped=False,
     )
-

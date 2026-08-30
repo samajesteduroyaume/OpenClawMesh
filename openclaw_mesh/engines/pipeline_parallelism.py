@@ -85,7 +85,9 @@ class LayerPipelineScheduler:
             device_type=device_type,
         )
         self.registered_blocks.append(block)
-        logger.info(f"Registered Pipeline Block: layers [{start_layer}..{end_layer}] on {node_id} ({device_type})")
+        logger.info(
+            f"Registered Pipeline Block: layers [{start_layer}..{end_layer}] on {node_id} ({device_type})"
+        )
 
     def build_pipeline_chain(self) -> list[LayerBlock] | None:
         """Find an optimal contiguous chain covering [0..total_model_layers - 1]."""
@@ -103,7 +105,7 @@ class LayerPipelineScheduler:
 
         if current_layer < self.total_model_layers:
             logger.warning(
-                f"Incomplete pipeline: covers layers 0..{current_layer-1} but requires {self.total_model_layers}"
+                f"Incomplete pipeline: covers layers 0..{current_layer - 1} but requires {self.total_model_layers}"
             )
             return None
         return chain

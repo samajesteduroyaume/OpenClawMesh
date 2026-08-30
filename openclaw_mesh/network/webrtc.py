@@ -138,7 +138,9 @@ class WebRTCSignalingManager:
         on_message: Callable[[bytes | str], Coroutine[Any, Any, None]] | None = None,
     ) -> WebRTCChannel:
         cid = channel_id or uuid.uuid4().hex[:12]
-        ch = WebRTCChannel(channel_id=cid, label=label, ordered=ordered, on_message_callback=on_message)
+        ch = WebRTCChannel(
+            channel_id=cid, label=label, ordered=ordered, on_message_callback=on_message
+        )
         self._active_channels[cid] = ch
         return ch
 
@@ -168,8 +170,9 @@ class WebRTCSignalingManager:
             "a=sctp-port:5000",
             "a=max-message-size:262144",
         ]
-        for ch in channels:
-            sdp_lines.append(f"a=dcmap:{ch.id or 0} label={ch.label};protocol={ch.protocol}")
+        sdp_lines.extend([
+            f"a=dcmap:{ch.id or 0} label={ch.label};protocol={ch.protocol}" for ch in channels
+        ])
 
         offer = WebRTCSessionDescription(
             sdp_type="offer",

@@ -25,7 +25,7 @@ def render_portal_html(
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:;">
     <title>{portal_title}</title>
     <meta name="description" content="Portail Universel OpenClawMesh — Accédez gratuitement et souverainement à l'inférence IA distribuée et au maillage P2P d'agents autonomes.">
-    
+
     <style>
         :root {{
             --bg-base: #06080e;
@@ -35,7 +35,7 @@ def render_portal_html(
             --border-color: rgba(255, 255, 255, 0.08);
             --border-highlight: rgba(0, 255, 157, 0.35);
             --border-cyan: rgba(0, 240, 255, 0.35);
-            
+
             --primary: #00ff9d;
             --primary-glow: rgba(0, 255, 157, 0.22);
             --cyan: #00f0ff;
@@ -43,11 +43,11 @@ def render_portal_html(
             --purple: #a855f7;
             --amber: #f59e0b;
             --rose: #f43f5e;
-            
+
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --text-dim: #64748b;
-            
+
             --code-bg: #030509;
             --gradient-primary: linear-gradient(135deg, #00ff9d 0%, #00f0ff 50%, #7000ff 100%);
             --gradient-accent: linear-gradient(135deg, #00f0ff 0%, #a855f7 100%);
@@ -72,7 +72,7 @@ def render_portal_html(
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
-            background-image: 
+            background-image:
                 radial-gradient(circle at 10% 15%, rgba(0, 255, 157, 0.05) 0%, transparent 45%),
                 radial-gradient(circle at 90% 80%, rgba(0, 240, 255, 0.05) 0%, transparent 45%),
                 radial-gradient(circle at 50% 50%, rgba(112, 0, 255, 0.03) 0%, transparent 60%);
@@ -718,7 +718,7 @@ def render_portal_html(
         <!-- TAB 1 : VUE D'ENSEMBLE & TOPOLOGIE 3D      -->
         <!-- ========================================== -->
         <div id="tab-overview" class="tab-panel active">
-            
+
             <!-- Hero Banner -->
             <div class="hero-banner">
                 <span class="badge badge-cyan" style="margin-bottom:0.8rem;">🚀 Inférence IA Souveraine & Décentralisée</span>
@@ -771,7 +771,7 @@ def render_portal_html(
                         <button class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="resetCanvasRotation()">Recentrer 3D</button>
                     </div>
                 </div>
-                
+
                 <div style="position:relative; background:#040711; border:1px solid var(--border-color); border-radius:1rem; overflow:hidden; display:flex; justify-content:center;">
                     <canvas id="meshCanvas" width="1200" height="380" style="width:100%; max-height:400px; display:block; cursor:grab;"></canvas>
                     <div style="position:absolute; bottom:12px; left:16px; font-size:0.75rem; color:var(--text-dim); pointer-events:none;">
@@ -992,7 +992,7 @@ def render_portal_html(
                         <div>
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
                                 <strong style="color:var(--amber); font-size:1.1rem;">BitNet b1.58 3B</strong>
-                                <span class="badge badge-amber">Ternaire {-1,0,+1}</span>
+                                <span class="badge badge-amber">Ternaire {-1, 0, +1}</span>
                             </div>
                             <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5; margin-bottom:1rem;">
                                 Modèle révolutionnaire 1.58-bit sans multiplication matricielle. Idéal CPU/NPU.
@@ -1135,34 +1135,53 @@ def render_portal_html(
                 </div>
 
                 <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
-                    <button class="btn btn-secondary active" style="font-size:0.82rem; padding:0.4rem 0.9rem;" onclick="showCodeSnippet('curl')">cURL</button>
-                    <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.4rem 0.9rem;" onclick="showCodeSnippet('python')">Python (OpenAI / Mesh)</button>
+                    <button class="btn btn-secondary active" style="font-size:0.82rem; padding:0.4rem 0.9rem;" onclick="showCodeSnippet('curl')">cURL (OpenAI / Ollama / MCP)</button>
+                    <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.4rem 0.9rem;" onclick="showCodeSnippet('python')">Python (OpenAI / Anthropic)</button>
                     <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.4rem 0.9rem;" onclick="showCodeSnippet('ts')">TypeScript / Node</button>
+                    <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.4rem 0.9rem;" onclick="showCodeSnippet('mcp')">MCP (Claude / Cursor)</button>
                 </div>
 
                 <div id="codeSnippetContainer">
-                    <pre class="code-block" id="snippetCurl"># Inférence Chat Completions (Compatible OpenAI)
+                    <pre class="code-block" id="snippetCurl"># 1. OpenAI Chat Completions
 curl -X POST http://127.0.0.1:8000/v1/chat/completions \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer VOTRE_CLE_API" \\
-  -d '{{
-    "model": "qwen2.5-coder-7b",
-    "messages": [{{"role": "user", "content": "Bonjour OpenClawMesh!"}}]
-  }}'</pre>
+  -d '{{"model": "qwen2.5-coder-7b", "messages": [{{"role": "user", "content": "Bonjour!"}}]}}'
 
-                    <pre class="code-block" id="snippetPython" style="display:none;">from openai import OpenAI
+# 2. OpenAI Embeddings
+curl -X POST http://127.0.0.1:8000/v1/embeddings \\
+  -H "Content-Type: application/json" \\
+  -d '{{"input": "Recherche sémantique décentralisée", "model": "text-embedding-3-small"}}'
 
-client = OpenAI(
-    base_url="http://127.0.0.1:8000/v1",
-    api_key="VOTRE_CLE_API"
-)
+# 3. Anthropic Messages
+curl -X POST http://127.0.0.1:8000/v1/messages \\
+  -H "Content-Type: application/json" \\
+  -d '{{"model": "claude-3-5-sonnet-20241022", "messages": [{{"role": "user", "content": "Hello Claude!"}}]}}'
 
+# 4. Ollama Native Generate
+curl -X POST http://127.0.0.1:8000/api/generate \\
+  -d '{{"model": "qwen2.5-coder:7b", "prompt": "Hello Ollama", "stream": false}}'</pre>
+
+                    <pre class="code-block" id="snippetPython" style="display:none;"># --- OpenAI SDK ---
+from openai import OpenAI
+
+client = OpenAI(base_url="http://127.0.0.1:8000/v1", api_key="VOTRE_CLE_API")
 response = client.chat.completions.create(
     model="qwen2.5-coder-7b",
     messages=[{{"role": "user", "content": "Écris un script d'agent autonome"}}],
-    stream=False
 )
-print(response.choices[0].message.content)</pre>
+print(response.choices[0].message.content)
+
+# --- Anthropic SDK ---
+import anthropic
+
+cl_client = anthropic.Anthropic(base_url="http://127.0.0.1:8000", api_key="VOTRE_CLE_API")
+msg = cl_client.messages.create(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=512,
+    messages=[{{"role": "user", "content": "Hello OpenClawMesh Claude Gateway!"}}]
+)
+print(msg.content[0].text)</pre>
 
                     <pre class="code-block" id="snippetTs" style="display:none;">import OpenAI from 'openai';
 
@@ -1179,6 +1198,19 @@ async function main() {{
   console.log(completion.choices[0].message.content);
 }}
 main();</pre>
+
+                    <pre class="code-block" id="snippetMcp" style="display:none;">// Configuration MCP pour Claude Desktop & Cursor (claude_desktop_config.json)
+{{
+  "mcpServers": {{
+    "openclaw-mesh": {{
+      "command": "openclaw-mesh",
+      "args": ["serve", "--no-zeroconf"]
+    }},
+    "openclaw-mesh-sse": {{
+      "url": "http://127.0.0.1:8000/mcp/sse"
+    }}
+  }}
+}}</pre>
                 </div>
             </div>
         </div>
@@ -1228,10 +1260,10 @@ main();</pre>
         function switchTab(tabId) {{
             document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
+
             const target = document.getElementById('tab-' + tabId);
             if (target) target.classList.add('active');
-            
+
             const btns = document.querySelectorAll('.tab-btn');
             btns.forEach(btn => {{
                 if (btn.getAttribute('onclick').includes(tabId)) {{
@@ -1272,10 +1304,10 @@ main();</pre>
                     const keyVal = data.api_key || data.key;
                     document.getElementById('modalApiKey').value = keyVal;
                     document.getElementById('modalKeyExport').innerText = `export OPENCLAW_API_KEY="${{keyVal}}"`;
-                    
+
                     if (document.getElementById('chatApiKey')) document.getElementById('chatApiKey').value = keyVal;
                     if (document.getElementById('playKey')) document.getElementById('playKey').value = keyVal;
-                    
+
                     document.getElementById('keyModal').style.display = 'flex';
                     showToast('Clé d’accès gratuite générée avec succès !');
                 }} else {{
@@ -1321,7 +1353,7 @@ main();</pre>
                     document.getElementById('wanEndpointVal').value = data.connect_url;
                     document.getElementById('wanPskVal').value = data.psk;
                     document.getElementById('wanCliVal').value = data.cli_command;
-                    
+
                     const badge = document.getElementById('wanBadge');
                     badge.className = 'badge badge-green';
                     badge.innerText = 'Actif · ' + (data.remote_access ? '0.0.0.0 (WAN)' : '127.0.0.1');
@@ -1665,7 +1697,7 @@ main();</pre>
                 const res = await fetch('/api/v1/cluster/status');
                 if (!res.ok) return;
                 const data = await res.json();
-                
+
                 // Update metrics
                 if (document.getElementById('metricLatency')) {{
                     document.getElementById('metricLatency').innerHTML = `${{data.avg_latency_ms || '0.0'}} <span class="metric-unit">ms</span>`;
@@ -1686,7 +1718,7 @@ main();</pre>
                     const chip = data.hardware.accelerator_name || data.hardware.cpu_model || 'Host Machine';
                     document.getElementById('nodeHostStatus').innerText = `127.0.0.1:8000 · ${{chip}}`;
                 }}
-                
+
                 // Update WAN badge if active
                 if (data.wan_node_active) {{
                     const wanBadge = document.getElementById('wanBadge');

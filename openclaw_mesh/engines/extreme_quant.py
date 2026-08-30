@@ -18,8 +18,8 @@ logger = logging.getLogger("openclaw_mesh.engines.extreme_quant")
 
 class QuantizationFormat(str, Enum):
     BITNET_1_58 = "bitnet_1_58"  # Ternary {-1, 0, 1}
-    FP8_E4M3 = "fp8_e4m3"        # 1 sign, 4 exponent, 3 mantissa
-    FP8_E5M2 = "fp8_e5m2"        # 1 sign, 5 exponent, 2 mantissa
+    FP8_E4M3 = "fp8_e4m3"  # 1 sign, 4 exponent, 3 mantissa
+    FP8_E5M2 = "fp8_e5m2"  # 1 sign, 5 exponent, 2 mantissa
     INT8 = "int8"
     INT4_AWQ = "int4_awq"
     FP16 = "fp16"
@@ -92,7 +92,7 @@ class BitNetQuantizer:
                 encoded = 0b00
 
             quantized_vals.append(val)
-            current_byte |= (encoded << shift)
+            current_byte |= encoded << shift
             shift += 2
 
             if shift == 8:
@@ -143,7 +143,9 @@ class FP8Quantizer:
     """Quantizes float weights/activations to FP8 representation."""
 
     @staticmethod
-    def quantize_fp8(weights: list[float], mode: QuantizationFormat = QuantizationFormat.FP8_E4M3) -> QuantizedTensor:
+    def quantize_fp8(
+        weights: list[float], mode: QuantizationFormat = QuantizationFormat.FP8_E4M3
+    ) -> QuantizedTensor:
         """Quantize weights to FP8 with dynamic per-tensor scaling."""
         if not weights:
             return QuantizedTensor([0], mode, 1.0, "", 0.0, 0, 0)

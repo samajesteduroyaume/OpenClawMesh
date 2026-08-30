@@ -128,15 +128,20 @@ class NATPMPClient:
     """NAT-PMP protocol client (Apple / RFC 6886)."""
 
     @staticmethod
-    def create_port_request(internal_port: int, protocol: str = "udp", lifetime: int = 7200) -> bytes:
+    def create_port_request(
+        internal_port: int, protocol: str = "udp", lifetime: int = 7200
+    ) -> bytes:
         version = 0
         opcode = 1 if protocol.lower() == "udp" else 2
         reserved = 0
-        return struct.pack(">BBHHHI", version, opcode, reserved, internal_port, internal_port, lifetime)
-
+        return struct.pack(
+            ">BBHHHI", version, opcode, reserved, internal_port, internal_port, lifetime
+        )
 
     @staticmethod
-    def request_port_mapping(gateway_ip: str, internal_port: int, protocol: str = "udp") -> PortMappingResult:
+    def request_port_mapping(
+        gateway_ip: str, internal_port: int, protocol: str = "udp"
+    ) -> PortMappingResult:
         return PortMappingResult(
             protocol=protocol,
             internal_port=internal_port,

@@ -56,7 +56,6 @@ class OpenClawMeshLLM:
         return f"[OpenClawMesh LLM ({hw.accelerator_type})] {prompt}"
 
 
-
 class OpenClawMeshEmbeddings:
     """LangChain Custom Embeddings wrapper for OpenClawMesh."""
 

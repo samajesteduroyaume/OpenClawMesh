@@ -141,16 +141,13 @@ class GossipProtocol:
         """Retourne les métriques de l'ensemble des nœuds connus du maillage."""
         if include_stale:
             return dict(self._cluster_metrics)
-        return {
-            nid: m
-            for nid, m in self._cluster_metrics.items()
-            if not m.is_stale(_METRICS_TTL)
-        }
+        return {nid: m for nid, m in self._cluster_metrics.items() if not m.is_stale(_METRICS_TTL)}
 
     def get_best_node_for_task(self, required_skill: str | None = None) -> NodeMetrics | None:
         """Sélectionne le nœud le plus optimal (charge CPU/RAM minimale et VRAM disponible)."""
         active = [
-            m for m in self.get_cluster_metrics().values()
+            m
+            for m in self.get_cluster_metrics().values()
             if not required_skill or required_skill in m.skills
         ]
         if not active:
@@ -238,7 +235,9 @@ class GossipProtocol:
             return
         self._running = True
         self._task = asyncio.create_task(self._gossip_loop())
-        logger.info(f"Protocole Gossip démarré pour le nœud '{self.node_name}' (fanout={self.fanout})")
+        logger.info(
+            f"Protocole Gossip démarré pour le nœud '{self.node_name}' (fanout={self.fanout})"
+        )
 
     async def stop(self) -> None:
         """Arrête la boucle Gossip."""

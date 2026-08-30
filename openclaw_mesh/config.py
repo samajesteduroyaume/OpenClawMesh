@@ -134,11 +134,15 @@ class Settings(BaseSettings):
     # Configuration Transport Ultra-Basse Latence (QUIC / WebRTC UDP)
     # ------------------------------------------------------------------ #
     quic_enabled: bool = Field(
-        default=True, description="Activer le transport direct UDP QUIC / WebRTC (opt-in par défaut)"
+        default=True,
+        description="Activer le transport direct UDP QUIC / WebRTC (opt-in par défaut)",
     )
-    quic_port: int = Field(default=8775, description="Port d'écoute UDP par défaut pour QUIC/WebRTC")
+    quic_port: int = Field(
+        default=8775, description="Port d'écoute UDP par défaut pour QUIC/WebRTC"
+    )
     quic_datagram_size: int = Field(
-        default=1350, description="Taille maximale d'un datagramme UDP (pour éviter la fragmentation MTU)"
+        default=1350,
+        description="Taille maximale d'un datagramme UDP (pour éviter la fragmentation MTU)",
     )
     quic_stream_timeout: float = Field(
         default=30.0, description="Timeout d'inactivité de flux QUIC/WebRTC (secondes)"
@@ -172,7 +176,8 @@ class Settings(BaseSettings):
         default=5, description="Longueur de la fenêtre d'historique de messages (mcache)"
     )
     gossipsub_history_gossip: int = Field(
-        default=3, description="Nombre de battements de pulsation où les messages sont annoncés en IHAVE"
+        default=3,
+        description="Nombre de battements de pulsation où les messages sont annoncés en IHAVE",
     )
 
     # ------------------------------------------------------------------ #

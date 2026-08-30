@@ -1,4 +1,3 @@
-
 from openclaw_mesh.engines.kv_cache import SemanticKVCache
 
 
@@ -9,7 +8,11 @@ def test_semantic_kv_cache_put_get_and_hits():
     assert cache.get("Quel est le protocole OpenClaw ?") is None
 
     # 2. Put entry
-    cache.put("Quel est le protocole OpenClaw ?", "OpenClaw est un maillage P2P souverain.", token_count=12)
+    cache.put(
+        "Quel est le protocole OpenClaw ?",
+        "OpenClaw est un maillage P2P souverain.",
+        token_count=12,
+    )
 
     # 3. Hit
     entry = cache.get("Quel est le protocole OpenClaw ?")

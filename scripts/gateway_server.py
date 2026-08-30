@@ -30,8 +30,12 @@ def main():
     print(f"🔑 Génération Clé Locale : http://{args.host}:{args.port}/api/v1/checkout/free-key")
     print(f"⚡ Endpoints OpenAI : http://{args.host}:{args.port}/v1/chat/completions")
     print(f"🛡️  Endpoint Exécution : http://{args.host}:{args.port}/api/v1/execute")
-    print("🔒 [Avis de Sécurité] Écoute locale par défaut (127.0.0.1). L'accès aux outils, mémoire et calcul")
-    print("   exige le consentement explicite de l'opérateur. L'exposition WAN requiert TLS et authentification.\n")
+    print(
+        "🔒 [Avis de Sécurité] Écoute locale par défaut (127.0.0.1). L'accès aux outils, mémoire et calcul"
+    )
+    print(
+        "   exige le consentement explicite de l'opérateur. L'exposition WAN requiert TLS et authentification.\n"
+    )
 
     uvicorn.run(
         "openclaw_mesh.gateway.server:app",

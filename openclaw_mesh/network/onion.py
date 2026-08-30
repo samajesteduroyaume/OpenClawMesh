@@ -70,7 +70,9 @@ class OnionRouter:
         """Register a new circuit route."""
         circuit_id = uuid.uuid4().hex[:16]
         self._circuits[circuit_id] = hops
-        logger.info(f"Built onion circuit [{circuit_id}] with {len(hops)} hops: {[h.node_id for h in hops]}")
+        logger.info(
+            f"Built onion circuit [{circuit_id}] with {len(hops)} hops: {[h.node_id for h in hops]}"
+        )
         return circuit_id
 
     def wrap_onion(

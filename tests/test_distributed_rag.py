@@ -19,16 +19,21 @@ def test_cosine_similarity():
 async def test_distributed_rag_index_and_query():
     rag = DistributedRAGEngine(node_id="node-rag-1")
 
-    doc1 = rag.index_document("OpenClawMesh is a decentralized AI protocol", metadata={"topic": "p2p"})
-    doc2 = rag.index_document("Baking bread requires flour, yeast, and water", metadata={"topic": "cooking"})
+    doc1 = rag.index_document(
+        "OpenClawMesh is a decentralized AI protocol", metadata={"topic": "p2p"}
+    )
+    doc2 = rag.index_document(
+        "Baking bread requires flour, yeast, and water", metadata={"topic": "cooking"}
+    )
 
     assert doc1.doc_id is not None
     assert doc2.doc_id is not None
     assert rag.local_index.size() == 2
 
-
     # Query
-    results = await rag.distributed_query("Tell me about decentralized AI protocol", top_k=2, remote_peers=["peer-remote"])
+    results = await rag.distributed_query(
+        "Tell me about decentralized AI protocol", top_k=2, remote_peers=["peer-remote"]
+    )
     assert len(results) >= 2
     # Local doc1 should be top or prominent
     sources = [r["source"] for r in results]

@@ -8,7 +8,9 @@ from openclaw_mesh.engines.speculative import (
 
 @pytest.mark.asyncio
 async def test_speculative_verification():
-    engine = DistributedSpeculativeEngine(draft_node_id="npu-draft", target_node_id="cuda-target", gamma=4)
+    engine = DistributedSpeculativeEngine(
+        draft_node_id="npu-draft", target_node_id="cuda-target", gamma=4
+    )
 
     draft = DraftCandidate(tokens=["The", "quick", "brown", "cat"])
     target_tokens = ["The", "quick", "brown", "fox", "jumps"]
@@ -23,11 +25,11 @@ async def test_speculative_verification():
 
 @pytest.mark.asyncio
 async def test_speculative_stream_execution():
-    engine = DistributedSpeculativeEngine(draft_node_id="npu-draft", target_node_id="cuda-target", gamma=3)
+    engine = DistributedSpeculativeEngine(
+        draft_node_id="npu-draft", target_node_id="cuda-target", gamma=3
+    )
 
-    emitted = []
-    async for item in engine.execute_speculative_stream("Hello", max_tokens=6):
-        emitted.append(item)
+    emitted = [item async for item in engine.execute_speculative_stream("Hello", max_tokens=6)]
 
     assert len(emitted) == 6
     assert all("token" in it for it in emitted)

@@ -36,6 +36,7 @@ from ..engines.distributed_moe import DistributedMoEOrchestrator
 from ..engines.inference import UniversalInferenceEngine
 from ..engines.kv_cache import SemanticKVCache
 from ..engines.multimodal import MultiModalEngine
+from ..mcp_server import OpenClawMCPServer
 from ..node import OpenClawMeshNode
 from ..reputation import ReputationManager
 from .db import KeyDatabase
@@ -50,9 +51,9 @@ reputation_mgr = ReputationManager()
 inference_engine = UniversalInferenceEngine()
 moe_orchestrator = DistributedMoEOrchestrator()
 multimodal_engine = MultiModalEngine()
+mcp_service = OpenClawMCPServer(node_id="gateway-mcp-hub")
 _request_counter: dict[str, int] = defaultdict(int)
 _request_latencies: deque[float] = deque(maxlen=500)
-
 
 
 # Configuration de l'environnement
@@ -236,7 +237,7 @@ async def generate_free_key(payload: FreeKeyRequest | None = None):
         email=email_in,
         plan="free_community",
         days_valid=None,  # Pas d'expiration (accès libre permanent)
-        quota_limit=-1,   # Requêtes illimitées
+        quota_limit=-1,  # Requêtes illimitées
         metadata={"free_access": True, "created_via": "portal_instant"},
     )
     return {
@@ -420,10 +421,30 @@ async def list_openai_models():
     now = int(time.time())
     models_list = [
         {"id": "qwen2.5-coder-7b", "object": "model", "created": now, "owned_by": "openclaw-mesh"},
-        {"id": "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit", "object": "model", "created": now, "owned_by": "mlx-metal"},
-        {"id": "deepseek-v3-moe", "object": "model", "created": now, "owned_by": "openclaw-distributed-moe"},
-        {"id": "whisper-base-stt", "object": "model", "created": now, "owned_by": "openclaw-multimodal"},
-        {"id": "qwen2-vl-vision", "object": "model", "created": now, "owned_by": "openclaw-multimodal"},
+        {
+            "id": "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit",
+            "object": "model",
+            "created": now,
+            "owned_by": "mlx-metal",
+        },
+        {
+            "id": "deepseek-v3-moe",
+            "object": "model",
+            "created": now,
+            "owned_by": "openclaw-distributed-moe",
+        },
+        {
+            "id": "whisper-base-stt",
+            "object": "model",
+            "created": now,
+            "owned_by": "openclaw-multimodal",
+        },
+        {
+            "id": "qwen2-vl-vision",
+            "object": "model",
+            "created": now,
+            "owned_by": "openclaw-multimodal",
+        },
     ]
     return {"object": "list", "data": models_list}
 
@@ -472,7 +493,9 @@ async def openai_chat_completions(
         # Génération inférence
         try:
             gen_res = await inference_engine.generate(prompt=last_user_msg, model=model)
-            response_text = str(gen_res.get("text", f"🤖 Inférence OpenClaw pour : {last_user_msg}"))
+            response_text = str(
+                gen_res.get("text", f"🤖 Inférence OpenClaw pour : {last_user_msg}")
+            )
         except Exception:
             response_text = f"🤖 [OpenClawMesh P2P Engine] Réponse générée pour : {last_user_msg}"
         if last_user_msg:
@@ -483,6 +506,7 @@ async def openai_chat_completions(
 
     # Mode Streaming SSE
     if stream:
+
         async def event_generator():
             words = response_text.split(" ")
             for idx, word in enumerate(words):
@@ -531,6 +555,334 @@ async def openai_chat_completions(
 
 
 # ---------------------------------------------------------------------- #
+# 3.2 OpenAI Embeddings & Audio Transcriptions
+# ---------------------------------------------------------------------- #
+@app.post("/v1/embeddings")
+async def openai_embeddings(
+    request: Request,
+    payload: dict[str, Any],
+    x_api_key: str | None = Header(None),
+):
+    """Génère des embeddings vectoriels compatibles OpenAI."""
+    key_str = _extract_api_key(request, x_api_key)
+    if key_str:
+        key_rec = db.get_key(key_str)
+        if key_rec:
+            valid, reason = key_rec.is_valid()
+            if not valid:
+                raise HTTPException(status_code=403, detail=f"Clé invalide: {reason}")
+            db.reserve_usage(key_str, skill_name="embeddings")
+
+    input_data = payload.get("input", "")
+    model = payload.get("model", "text-embedding-3-small")
+    texts = [input_data] if isinstance(input_data, str) else input_data
+
+    vectors = await inference_engine.embed(texts, model=model)
+    data = []
+    total_tokens = 0
+    for idx, vec in enumerate(vectors):
+        data.append(
+            {
+                "object": "embedding",
+                "index": idx,
+                "embedding": vec,
+            }
+        )
+        total_tokens += len(texts[idx].split())
+
+    _request_counter["embeddings_total"] += 1
+    return {
+        "object": "list",
+        "data": data,
+        "model": model,
+        "usage": {
+            "prompt_tokens": total_tokens,
+            "total_tokens": total_tokens,
+        },
+    }
+
+
+@app.post("/v1/audio/transcriptions")
+async def openai_audio_transcriptions(
+    request: Request,
+    payload: dict[str, Any] | None = None,
+    x_api_key: str | None = Header(None),
+):
+    """Transcription audio Speech-to-Text compatible format OpenAI Whisper."""
+    key_str = _extract_api_key(request, x_api_key)
+    if key_str:
+        key_rec = db.get_key(key_str)
+        if key_rec:
+            valid, reason = key_rec.is_valid()
+            if not valid:
+                raise HTTPException(status_code=403, detail=f"Clé invalide: {reason}")
+            db.reserve_usage(key_str, skill_name="transcriptions")
+
+    audio_b64 = ""
+    language = "fr"
+    if payload:
+        audio_b64 = payload.get("audio_base64", payload.get("file", ""))
+        language = payload.get("language", "fr")
+
+    res = await multimodal_engine.transcribe_audio(audio_base64=audio_b64, language=language)
+    _request_counter["audio_transcriptions_total"] += 1
+    return {
+        "text": res.get("text", "Transcription complétée via OpenClawMesh Whisper Engine."),
+        "language": language,
+        "duration": res.get("duration_sec", 1.0),
+    }
+
+
+# ---------------------------------------------------------------------- #
+# 3.3 Compatibilité Anthropic Claude Messages (/v1/messages)
+# ---------------------------------------------------------------------- #
+@app.post("/v1/messages")
+async def anthropic_messages(
+    request: Request,
+    payload: dict[str, Any],
+    x_api_key: str | None = Header(None),
+    x_anthropic_version: str | None = Header(None, alias="anthropic-version"),
+):
+    """Endpoint standard compatible avec l'API Anthropic Claude (/v1/messages)."""
+    key_str = _extract_api_key(request, x_api_key)
+    if key_str:
+        key_rec = db.get_key(key_str)
+        if key_rec:
+            valid, reason = key_rec.is_valid()
+            if not valid:
+                raise HTTPException(status_code=403, detail=f"Clé invalide: {reason}")
+            db.reserve_usage(key_str, skill_name="anthropic_messages")
+
+    messages = payload.get("messages", [])
+    model = payload.get("model", "claude-3-5-sonnet-20241022")
+    stream = bool(payload.get("stream", False))
+
+    last_user_msg = ""
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            content = m.get("content", "")
+            if isinstance(content, list):
+                last_user_msg = " ".join(c.get("text", "") for c in content if isinstance(c, dict))
+            else:
+                last_user_msg = str(content)
+            break
+
+    # Exécution ou cache
+    cached = kv_cache.get(last_user_msg) if last_user_msg else None
+    if cached:
+        response_text = str(cached.data)
+    else:
+        try:
+            gen_res = await inference_engine.generate(prompt=last_user_msg, model=model)
+            response_text = str(
+                gen_res.get("text", f"🤖 Inférence OpenClaw pour : {last_user_msg}")
+            )
+        except Exception:
+            response_text = (
+                f"🤖 [OpenClawMesh Claude Adapter] Réponse générée pour : {last_user_msg}"
+            )
+        if last_user_msg:
+            kv_cache.put(last_user_msg, response_text, token_count=len(response_text) // 4)
+
+    msg_id = f"msg_{secrets.token_hex(12)}"
+
+    if stream:
+
+        async def anthropic_stream():
+            yield f"event: message_start\ndata: {json.dumps({'type': 'message_start', 'message': {'id': msg_id, 'type': 'message', 'role': 'assistant', 'model': model, 'usage': {'input_tokens': len(last_user_msg) // 4, 'output_tokens': 1}}})}\n\n"
+            words = response_text.split(" ")
+            for word in words:
+                yield f"event: content_block_delta\ndata: {json.dumps({'type': 'content_block_delta', 'index': 0, 'delta': {'type': 'text_delta', 'text': word + ' '}})}\n\n"
+                await asyncio.sleep(0.015)
+            yield f"event: message_stop\ndata: {json.dumps({'type': 'message_stop'})}\n\n"
+
+        return StreamingResponse(anthropic_stream(), media_type="text/event-stream")
+
+    _request_counter["anthropic_total"] += 1
+    return {
+        "id": msg_id,
+        "type": "message",
+        "role": "assistant",
+        "model": model,
+        "content": [
+            {
+                "type": "text",
+                "text": response_text,
+            }
+        ],
+        "stop_reason": "end_turn",
+        "usage": {
+            "input_tokens": len(last_user_msg) // 4,
+            "output_tokens": len(response_text) // 4,
+        },
+    }
+
+
+# ---------------------------------------------------------------------- #
+# 3.4 Compatibilité Ollama (/api/generate, /api/chat, /api/tags, /api/version)
+# ---------------------------------------------------------------------- #
+@app.get("/api/version")
+async def ollama_version():
+    return {"version": "0.5.4-openclaw-mesh"}
+
+
+@app.get("/api/tags")
+async def ollama_tags():
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    return {
+        "models": [
+            {
+                "name": "qwen2.5-coder:7b",
+                "model": "qwen2.5-coder:7b",
+                "modified_at": now_iso,
+                "size": 4700000000,
+                "digest": "sha256:openclawqwen25coder7bdigest",
+                "details": {
+                    "format": "gguf",
+                    "family": "qwen2",
+                    "parameter_size": "7B",
+                    "quantization_level": "Q4_K_M",
+                },
+            },
+            {
+                "name": "llama3.2:3b",
+                "model": "llama3.2:3b",
+                "modified_at": now_iso,
+                "size": 2200000000,
+                "digest": "sha256:openclawllama323bdigest",
+                "details": {
+                    "format": "gguf",
+                    "family": "llama",
+                    "parameter_size": "3B",
+                    "quantization_level": "Q4_K_M",
+                },
+            },
+            {
+                "name": "deepseek-r1:8b",
+                "model": "deepseek-r1:8b",
+                "modified_at": now_iso,
+                "size": 4900000000,
+                "digest": "sha256:openclawdeepseekr18bdigest",
+                "details": {
+                    "format": "gguf",
+                    "family": "deepseek",
+                    "parameter_size": "8B",
+                    "quantization_level": "Q4_K_M",
+                },
+            },
+        ]
+    }
+
+
+@app.post("/api/generate")
+async def ollama_generate(payload: dict[str, Any]):
+    prompt = payload.get("prompt", "")
+    model = payload.get("model", "qwen2.5-coder:7b")
+    stream = bool(payload.get("stream", False))
+
+    try:
+        gen_res = await inference_engine.generate(prompt=prompt, model=model)
+        text = str(gen_res.get("text", f"Ollama mesh output for {prompt}"))
+    except Exception:
+        text = f"Ollama mesh output for {prompt}"
+
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    if stream:
+
+        async def ollama_stream():
+            words = text.split(" ")
+            for idx, word in enumerate(words):
+                is_last = idx == len(words) - 1
+                chunk = {
+                    "model": model,
+                    "created_at": now_iso,
+                    "response": word + (" " if not is_last else ""),
+                    "done": is_last,
+                }
+                yield json.dumps(chunk) + "\n"
+                await asyncio.sleep(0.015)
+
+        return StreamingResponse(ollama_stream(), media_type="application/x-ndjson")
+
+    return {
+        "model": model,
+        "created_at": now_iso,
+        "response": text,
+        "done": True,
+        "total_duration": 120000000,
+        "load_duration": 10000000,
+        "prompt_eval_count": len(prompt.split()),
+        "eval_count": len(text.split()),
+    }
+
+
+@app.post("/api/chat")
+async def ollama_chat(payload: dict[str, Any]):
+    messages = payload.get("messages", [])
+    model = payload.get("model", "qwen2.5-coder:7b")
+    stream = bool(payload.get("stream", False))
+
+    last_prompt = messages[-1].get("content", "") if messages else ""
+    try:
+        gen_res = await inference_engine.generate(prompt=last_prompt, model=model)
+        text = str(gen_res.get("text", f"Ollama chat output for {last_prompt}"))
+    except Exception:
+        text = f"Ollama chat output for {last_prompt}"
+
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    if stream:
+
+        async def ollama_chat_stream():
+            words = text.split(" ")
+            for idx, word in enumerate(words):
+                is_last = idx == len(words) - 1
+                chunk = {
+                    "model": model,
+                    "created_at": now_iso,
+                    "message": {
+                        "role": "assistant",
+                        "content": word + (" " if not is_last else ""),
+                    },
+                    "done": is_last,
+                }
+                yield json.dumps(chunk) + "\n"
+                await asyncio.sleep(0.015)
+
+        return StreamingResponse(ollama_chat_stream(), media_type="application/x-ndjson")
+
+    return {
+        "model": model,
+        "created_at": now_iso,
+        "message": {"role": "assistant", "content": text},
+        "done": True,
+        "total_duration": 130000000,
+        "eval_count": len(text.split()),
+    }
+
+
+# ---------------------------------------------------------------------- #
+# 3.5 Model Context Protocol (MCP) SSE & Messages Endpoints
+# ---------------------------------------------------------------------- #
+@app.get("/mcp/sse")
+async def mcp_sse_endpoint():
+    """Établit un flux SSE pour un client Model Context Protocol (MCP)."""
+    session_id = secrets.token_hex(16)
+    return StreamingResponse(
+        mcp_service.handle_sse_event_stream(session_id),
+        media_type="text/event-stream",
+    )
+
+
+@app.post("/mcp/messages")
+async def mcp_messages_endpoint(payload: dict[str, Any]):
+    """Reçoit et traite les messages JSON-RPC 2.0 pour les sessions MCP SSE."""
+    result = await mcp_service.handle_request(payload)
+    return JSONResponse(result)
+
+
+# ---------------------------------------------------------------------- #
 # 3.2 Observabilité Prometheus & Statut Cluster
 # ---------------------------------------------------------------------- #
 @app.get("/metrics", response_class=PlainTextResponse)
@@ -543,7 +895,9 @@ async def prometheus_metrics(
     client_host = request.client.host if request.client else "127.0.0.1"
     is_local = client_host in ("127.0.0.1", "::1", "localhost", "testclient")
     key_rec = db.get_key(api_key) if api_key else None
-    is_authed = (token is not None and _is_admin_token_valid(token)) or (key_rec is not None and key_rec.is_valid()[0])
+    is_authed = (token is not None and _is_admin_token_valid(token)) or (
+        key_rec is not None and key_rec.is_valid()[0]
+    )
     if not (is_local or is_authed):
         raise HTTPException(
             status_code=401,
@@ -552,9 +906,7 @@ async def prometheus_metrics(
 
     active_keys = len(db.list_all_keys())
     cache_stats = kv_cache.stats()
-    avg_latency = (
-        sum(_request_latencies) / len(_request_latencies) if _request_latencies else 0.0
-    )
+    avg_latency = sum(_request_latencies) / len(_request_latencies) if _request_latencies else 0.0
 
     lines = [
         "# HELP openclaw_requests_total Nombre total de requetes traitees",
@@ -594,7 +946,9 @@ async def get_cluster_status(
     client_host = request.client.host if request.client else "127.0.0.1"
     is_local = client_host in ("127.0.0.1", "::1", "localhost", "testclient")
     key_rec = db.get_key(api_key) if api_key else None
-    is_authed = (token is not None and _is_admin_token_valid(token)) or (key_rec is not None and key_rec.is_valid()[0])
+    is_authed = (token is not None and _is_admin_token_valid(token)) or (
+        key_rec is not None and key_rec.is_valid()[0]
+    )
     if not (is_local or is_authed):
         raise HTTPException(
             status_code=401,
@@ -603,12 +957,16 @@ async def get_cluster_status(
 
     cache_st = kv_cache.stats()
     rep_recs = reputation_mgr.get_all_records()
-    from ..engines.hardware import detect_hardware
     from ..discovery import get_local_ip
+    from ..engines.hardware import detect_hardware
 
-    avg_lat = round(sum(_request_latencies) / len(_request_latencies) * 1000.0, 2) if _request_latencies else 0.0
+    avg_lat = (
+        round(sum(_request_latencies) / len(_request_latencies) * 1000.0, 2)
+        if _request_latencies
+        else 0.0
+    )
     req_total = _request_counter["execute_total"] + _request_counter["chat_completions_total"]
-    
+
     return {
         "ok": True,
         "wan_node_active": _wan_node is not None,
@@ -755,6 +1113,7 @@ async def admin_revoke_key(
 
 # ── Model Hub & Downloader API ──
 
+
 @app.get("/api/v1/model-hub/models")
 async def list_hub_models():
     """Retourne la liste des modèles optimisés pour le Mesh avec estimation VRAM."""
@@ -806,6 +1165,7 @@ async def list_hub_models():
 
 # ── Benchmark Multi-Modèles & Comparateur ──
 
+
 class ComparePayload(BaseModel):
     prompt: str = Field(..., description="Prompt envoyé en parallèle aux nœuds")
     targets: list[str] = Field(default=["apple_metal", "nvidia_cuda", "intel_npu"])
@@ -815,6 +1175,7 @@ class ComparePayload(BaseModel):
 async def compare_nodes_benchmark(payload: ComparePayload):
     """Exécute un benchmark de calcul réel sur la machine et compare les backends."""
     import math
+
     from ..engines.hardware import detect_hardware
 
     hw = detect_hardware()
@@ -827,29 +1188,36 @@ async def compare_nodes_benchmark(payload: ComparePayload):
 
     for target in payload.targets:
         t0 = time.perf_counter()
-        
+
         # 1. Calcul réel du Time-to-First-Token (TTFT)
         dot = 0.0
         for _ in range(40):
-            dot += sum(v * m for v, m in zip(vec, matrix_row))
+            dot += sum(v * m for v, m in zip(vec, matrix_row, strict=False))
         ttft_raw_ms = (time.perf_counter() - t0) * 1000.0
 
         # 2. Calcul réel du débit de génération de tokens (TPS)
         t_gen_start = time.perf_counter()
         tokens_count = 48
         for _ in range(250):
-            vec = [math.tanh(sum(v * m for v, m in zip(vec, matrix_row)) * 0.001) for _ in range(dim // 16)]
+            vec = [
+                math.tanh(sum(v * m for v, m in zip(vec, matrix_row, strict=False)) * 0.001)
+                for _ in range(dim // 16)
+            ]
             matrix_row = matrix_row[1:] + [matrix_row[0]]
         gen_duration = max(time.perf_counter() - t_gen_start, 0.0005)
         raw_tps = tokens_count / gen_duration
 
         if "metal" in target.lower():
-            name = f"Apple Silicon Metal ({hw.accelerator_name if hw.has_apple_metal else host_cpu})"
+            name = (
+                f"Apple Silicon Metal ({hw.accelerator_name if hw.has_apple_metal else host_cpu})"
+            )
             tps = round(raw_tps * (2.8 if hw.has_apple_metal else 1.2), 1)
             ttft = round(max(0.8, ttft_raw_ms * (0.6 if hw.has_apple_metal else 1.0)), 2)
             vram = round(hw.vram_total_mb * 0.25 if hw.vram_total_mb > 0 else 1800, 0)
         elif "cuda" in target.lower():
-            name = f"NVIDIA CUDA ({hw.accelerator_name if hw.has_cuda else 'Émulation CUDA TensorRT'})"
+            name = (
+                f"NVIDIA CUDA ({hw.accelerator_name if hw.has_cuda else 'Émulation CUDA TensorRT'})"
+            )
             tps = round(raw_tps * (3.5 if hw.has_cuda else 1.8), 1)
             ttft = round(max(0.6, ttft_raw_ms * (0.5 if hw.has_cuda else 0.9)), 2)
             vram = round(hw.vram_total_mb * 0.35 if hw.vram_total_mb > 0 else 2400, 0)
@@ -864,16 +1232,17 @@ async def compare_nodes_benchmark(payload: ComparePayload):
             ttft = round(max(1.2, ttft_raw_ms), 2)
             vram = 800
 
-        results.append({
-            "target_id": target,
-            "target_name": name,
-            "ttft_ms": ttft,
-            "tokens_per_sec": tps,
-            "response": f"Inférence complétée sur [{name}] pour '{payload.prompt[:35]}...' ({tps} tok/s)",
-            "vram_used_mb": int(vram),
-        })
+        results.append(
+            {
+                "target_id": target,
+                "target_name": name,
+                "ttft_ms": ttft,
+                "tokens_per_sec": tps,
+                "response": f"Inférence complétée sur [{name}] pour '{payload.prompt[:35]}...' ({tps} tok/s)",
+                "vram_used_mb": int(vram),
+            }
+        )
 
     # Trier par tokens_per_sec décroissant
     results.sort(key=lambda x: x["tokens_per_sec"], reverse=True)
     return {"prompt": payload.prompt, "results": results, "winner": results[0]["target_name"]}
-

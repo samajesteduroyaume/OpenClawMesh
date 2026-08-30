@@ -102,6 +102,7 @@ class MeshClient:
         if use_quic and self.quic_transport is None:
             try:
                 from .network.quic_webrtc import QUICWebRTCTransport
+
                 self.quic_transport = QUICWebRTCTransport(
                     node_name=self.name,
                     host="0.0.0.0",
@@ -448,7 +449,9 @@ class MeshClient:
             all_peers = self.list_peers()
             if target in all_peers:
                 peer = all_peers[target]
-                q_port = getattr(peer, "quic_port", None) or (peer.port + 5 if peer.port != 8770 else _settings.quic_port)
+                q_port = getattr(peer, "quic_port", None) or (
+                    peer.port + 5 if peer.port != 8770 else _settings.quic_port
+                )
                 peer_addr = (peer.address, q_port)
                 peer_label = target
             elif ":" in target and not target.startswith("ws"):
@@ -496,7 +499,10 @@ class MeshClient:
             return TaskResponse(
                 request_id=req.request_id,
                 ok=True,
-                result={"streamed_chunks": stream.token_count, "first_token_latency_ms": stream.first_token_latency_ms},
+                result={
+                    "streamed_chunks": stream.token_count,
+                    "first_token_latency_ms": stream.first_token_latency_ms,
+                },
                 handled_by=peer_label,
                 streamed=True,
             )

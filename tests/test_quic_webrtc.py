@@ -33,8 +33,12 @@ def test_quic_packet_pack_unpack():
 
 @pytest.mark.asyncio
 async def test_quic_handshake_and_ping():
-    server = QUICWebRTCTransport(node_name="server-quic", host="127.0.0.1", port=8910, psk="secret123")
-    client = QUICWebRTCTransport(node_name="client-quic", host="127.0.0.1", port=8911, psk="secret123")
+    server = QUICWebRTCTransport(
+        node_name="server-quic", host="127.0.0.1", port=8910, psk="secret123"
+    )
+    client = QUICWebRTCTransport(
+        node_name="client-quic", host="127.0.0.1", port=8911, psk="secret123"
+    )
 
     s_host, s_port = await server.start()
     c_host, c_port = await client.start()
@@ -65,13 +69,30 @@ async def test_quic_token_streaming_sub_10ms():
 
     async def handle_stream_req(req: TaskRequest, stream):
         # Émettre 10 tokens en streaming direct UDP
-        tokens = ["Bonjour", " le", " maillage", " décentralisé", " OpenClaw", " ultra", " rapide", " sub-10ms", " !", " FIN"]
+        tokens = [
+            "Bonjour",
+            " le",
+            " maillage",
+            " décentralisé",
+            " OpenClaw",
+            " ultra",
+            " rapide",
+            " sub-10ms",
+            " !",
+            " FIN",
+        ]
         for idx, tok in enumerate(tokens):
             chunk = TaskChunk(request_id=req.request_id, index=idx, chunk=tok)
-            await server.send_stream_data(stream.session.peer_addr, stream.stream_id, chunk.to_json().encode("utf-8"))
+            await server.send_stream_data(
+                stream.session.peer_addr, stream.stream_id, chunk.to_json().encode("utf-8")
+            )
         # Réponse finale
-        resp = TaskResponse(request_id=req.request_id, ok=True, result={"tokens": len(tokens)}, streamed=True)
-        await server.send_stream_data(stream.session.peer_addr, stream.stream_id, resp.to_json().encode("utf-8"))
+        resp = TaskResponse(
+            request_id=req.request_id, ok=True, result={"tokens": len(tokens)}, streamed=True
+        )
+        await server.send_stream_data(
+            stream.session.peer_addr, stream.stream_id, resp.to_json().encode("utf-8")
+        )
         await server.send_stream_fin(stream.session.peer_addr, stream.stream_id)
 
     server.set_request_handler(handle_stream_req)
@@ -83,8 +104,7 @@ async def test_quic_token_streaming_sub_10ms():
         req = TaskRequest(skill="stream_test", payload={"prompt": "test"})
         stream = await client.open_stream((s_host, s_port), req)
 
-        async for chunk_bytes in stream.read_chunks():
-            received_tokens.append(chunk_bytes)
+        received_tokens.extend([chunk_bytes async for chunk_bytes in stream.read_chunks()])
 
         assert len(received_tokens) == 11  # 10 chunks + 1 response
         assert stream.token_count == 11

@@ -20,7 +20,7 @@ logger = logging.getLogger("openclaw_mesh.kv_cache")
 
 _DEFAULT_MAX_ENTRIES = 1000
 _DEFAULT_MAX_BYTES = 512 * 1024 * 1024  # 512 Mo max par défaut
-_DEFAULT_TTL_SECONDS = 3600.0           # 1 heure de validité
+_DEFAULT_TTL_SECONDS = 3600.0  # 1 heure de validité
 
 
 @dataclass
@@ -165,9 +165,7 @@ class SemanticKVCache:
     def _ensure_capacity(self, new_data_size: int) -> None:
         """Évince les entrées les plus anciennes (FIFO/LRU) pour libérer de l'espace."""
         # 1. Évincer les éléments expirés
-        expired_keys = [
-            k for k, v in self._cache.items() if v.is_expired(self.default_ttl)
-        ]
+        expired_keys = [k for k, v in self._cache.items() if v.is_expired(self.default_ttl)]
         for k in expired_keys:
             self._remove_entry(k)
 

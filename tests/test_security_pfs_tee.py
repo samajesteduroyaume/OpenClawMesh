@@ -38,8 +38,12 @@ def test_tee_attestation_and_execution():
 
 def test_pfs_double_ratchet_session():
     shared_master = b"\x01" * 32
-    alice = PFSRatchetSession(session_id="sess-1", initial_shared_secret=shared_master, is_initiator=True)
-    bob = PFSRatchetSession(session_id="sess-1", initial_shared_secret=shared_master, is_initiator=False)
+    alice = PFSRatchetSession(
+        session_id="sess-1", initial_shared_secret=shared_master, is_initiator=True
+    )
+    bob = PFSRatchetSession(
+        session_id="sess-1", initial_shared_secret=shared_master, is_initiator=False
+    )
 
     # Alice sends message 1
     msg1 = alice.encrypt_message("Hello Bob from Alice with PFS")

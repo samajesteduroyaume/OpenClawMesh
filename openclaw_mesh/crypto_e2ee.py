@@ -406,4 +406,3 @@ def derive_shared_key(
         info=b"openclaw_mesh_e2ee_session_key",
     )
     return hkdf.derive(raw_secret)
-

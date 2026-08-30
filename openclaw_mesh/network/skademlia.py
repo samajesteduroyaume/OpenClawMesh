@@ -16,15 +16,15 @@ from dataclasses import dataclass
 logger = logging.getLogger("openclaw_mesh.network.skademlia")
 
 # Default difficulty parameters
-DEFAULT_STATIC_DIFFICULTY = 12   # Leading zero bits required for Node ID creation
-DEFAULT_DYNAMIC_DIFFICULTY = 8   # Leading zero bits for dynamic challenge response
+DEFAULT_STATIC_DIFFICULTY = 12  # Leading zero bits required for Node ID creation
+DEFAULT_DYNAMIC_DIFFICULTY = 8  # Leading zero bits for dynamic challenge response
 
 
 @dataclass
 class SKademliaIdentity:
-    public_key: str          # Ed25519 or X25519 public key in hex/b64
-    static_nonce: int        # Nonce solving the static crypto puzzle
-    node_id_hex: str         # Generated 160-bit node ID (40 hex chars)
+    public_key: str  # Ed25519 or X25519 public key in hex/b64
+    static_nonce: int  # Nonce solving the static crypto puzzle
+    node_id_hex: str  # Generated 160-bit node ID (40 hex chars)
     created_at: float
 
     def to_dict(self) -> dict:

@@ -68,7 +68,9 @@ class LocalVectorIndex:
     def delete(self, doc_id: str) -> bool:
         return self.documents.pop(doc_id, None) is not None
 
-    def search(self, query_vector: list[float], top_k: int = 5, score_threshold: float = -1.0) -> list[tuple[VectorDocument, float]]:
+    def search(
+        self, query_vector: list[float], top_k: int = 5, score_threshold: float = -1.0
+    ) -> list[tuple[VectorDocument, float]]:
         """Search top-k most similar documents."""
         scores = []
         for doc in self.documents.values():
@@ -149,21 +151,22 @@ class DistributedRAGEngine:
             for doc, score in local_results
         ]
 
-
         # Simulate or perform remote peer query if peers provided
         if remote_peers:
             for peer_id in remote_peers:
                 # Synthetic simulated peer knowledge
                 await asyncio.sleep(0.002)
                 simulated_score = round(0.85 + 0.1 * (hash(query + peer_id) % 100) / 1000.0, 4)
-                aggregated.append({
-                    "doc_id": f"rem_{uuid.uuid4().hex[:8]}",
-                    "content": f"[From Peer {peer_id}] Collective memory match for query: '{query}'",
-                    "score": simulated_score,
-                    "owner_node_id": peer_id,
-                    "metadata": {"peer_query": True},
-                    "source": "remote_p2p",
-                })
+                aggregated.append(
+                    {
+                        "doc_id": f"rem_{uuid.uuid4().hex[:8]}",
+                        "content": f"[From Peer {peer_id}] Collective memory match for query: '{query}'",
+                        "score": simulated_score,
+                        "owner_node_id": peer_id,
+                        "metadata": {"peer_query": True},
+                        "source": "remote_p2p",
+                    }
+                )
 
         # Sort aggregated results by score descending
         aggregated.sort(key=lambda x: x["score"], reverse=True)

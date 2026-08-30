@@ -14,7 +14,9 @@ def test_ipv6_detector():
 
 def test_pcp_and_nat_pmp_packet_construction():
     # PCP RFC 6887 packet framing
-    pcp_packet = PCPClient.create_map_request(internal_port=8765, protocol="udp", requested_lifetime=3600)
+    pcp_packet = PCPClient.create_map_request(
+        internal_port=8765, protocol="udp", requested_lifetime=3600
+    )
     assert len(pcp_packet) >= 60
     assert pcp_packet[0] == 2  # PCP version 2
     assert pcp_packet[1] == 1  # Opcode 1 (MAP)

@@ -33,25 +33,27 @@ _settings = get_settings()
 
 MAGIC_HEADER = b"OCQ1"  # OpenClaw QUIC v1 Header Magic (4 bytes)
 MAX_DATAGRAM_SIZE = _settings.quic_datagram_size
-HEADER_STRUCT = struct.Struct("!4s B B H Q I")  # magic(4), type(1), flags(1), stream_id(2), seq(8), length(4)
+HEADER_STRUCT = struct.Struct(
+    "!4s B B H Q I"
+)  # magic(4), type(1), flags(1), stream_id(2), seq(8), length(4)
 HEADER_SIZE = HEADER_STRUCT.size
 
 
 class PacketType(IntEnum):
     """Types de paquets du protocole binaire QUIC/WebRTC."""
 
-    SYN = 0x01           # Négociation initiale de session (0-RTT/1-RTT)
-    ACK = 0x02           # Acquittement de session ou de paquet
-    PING = 0x03          # Mesure RTT haute précision
-    PONG = 0x04          # Réponse de mesure RTT
-    CLOSE = 0x05         # Fermeture propre de session
+    SYN = 0x01  # Négociation initiale de session (0-RTT/1-RTT)
+    ACK = 0x02  # Acquittement de session ou de paquet
+    PING = 0x03  # Mesure RTT haute précision
+    PONG = 0x04  # Réponse de mesure RTT
+    CLOSE = 0x05  # Fermeture propre de session
 
-    STREAM_OPEN = 0x10   # Ouverture d'un flux de tâche
-    STREAM_DATA = 0x11   # Données / chunk token streaming
-    STREAM_FIN = 0x12    # Fin de flux / transmission complète
+    STREAM_OPEN = 0x10  # Ouverture d'un flux de tâche
+    STREAM_DATA = 0x11  # Données / chunk token streaming
+    STREAM_FIN = 0x12  # Fin de flux / transmission complète
     STREAM_RESET = 0x13  # Annulation de flux d'urgence
 
-    WEBRTC_DCEP = 0x20   # Encapsulation WebRTC DataChannel DCEP
+    WEBRTC_DCEP = 0x20  # Encapsulation WebRTC DataChannel DCEP
 
 
 class PacketFlags(IntEnum):
@@ -238,9 +240,7 @@ class QUICWebRTCTransport:
         if not self._bound_event.is_set():
             self._bound_event.set()
 
-    def set_request_handler(
-        self, handler: Callable[[TaskRequest, QUICStream], Any]
-    ) -> None:
+    def set_request_handler(self, handler: Callable[[TaskRequest, QUICStream], Any]) -> None:
         """Définit le gestionnaire pour les requêtes de tâches arrivant via flux QUIC."""
         self._request_handler = handler
 
@@ -459,7 +459,9 @@ class QUICWebRTCTransport:
                 ok=False,
                 error=str(e),
             )
-            await self.send_stream_data(session.peer_addr, stream.stream_id, err_resp.to_json().encode("utf-8"))
+            await self.send_stream_data(
+                session.peer_addr, stream.stream_id, err_resp.to_json().encode("utf-8")
+            )
             await self.send_stream_fin(session.peer_addr, stream.stream_id)
 
     def _handle_stream_data(self, packet: QUICPacket, session: QUICSession | None) -> None:
@@ -530,7 +532,9 @@ class QUICWebRTCTransport:
             return session
         except asyncio.TimeoutError:
             self._handshake_futures.pop(session_id, None)
-            raise ConnectionError(f"Échec de connexion UDP QUIC avec {peer_addr} (Timeout {timeout}s)") from None
+            raise ConnectionError(
+                f"Échec de connexion UDP QUIC avec {peer_addr} (Timeout {timeout}s)"
+            ) from None
 
     async def ping_peer(self, peer_addr: tuple[str, int], timeout: float = 2.0) -> float:
         """Mesure la latence RTT avec le pair en millisecondes."""

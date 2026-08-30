@@ -2,6 +2,11 @@
 Moteurs d'Inférence, Modèles, Parallélisme Distribué et Multi-Modal pour OpenClawMesh.
 """
 
+from .distributed_cluster import (
+    ClusterPipelineTopology,
+    MultiMachineClusterOrchestrator,
+    NodeLayerAllocation,
+)
 from .distributed_moe import DistributedMoEOrchestrator, PipelineStage
 from .distributed_rag import (
     DistributedRAGEngine,
@@ -9,7 +14,9 @@ from .distributed_rag import (
     VectorDocument,
     cosine_similarity,
 )
+from .distributed_vector_store import CRDTDistributedVectorStore
 from .extreme_quant import BitNetQuantizer, FP8Quantizer, QuantizationFormat, QuantizedTensor
+from .federated_lora import FederatedLoRAOrchestrator, FederatedRoundReport, LoRAWeightDelta
 from .hardware import HardwareProfile, detect_hardware
 from .inference import UniversalInferenceEngine
 from .kv_cache import SemanticKVCache
@@ -22,6 +29,8 @@ from .speculative import (
     SpeculativeStats,
     VerificationResult,
 )
+from .video_stream import RealTimeVideoProcessor, VideoFrame, VideoStreamSummary
+from .voice_pipeline import RealTimeVoicePipeline, VoiceStreamConfig
 
 __all__ = [
     "detect_hardware",
@@ -48,5 +57,16 @@ __all__ = [
     "LocalVectorIndex",
     "VectorDocument",
     "cosine_similarity",
+    "MultiMachineClusterOrchestrator",
+    "ClusterPipelineTopology",
+    "NodeLayerAllocation",
+    "RealTimeVoicePipeline",
+    "VoiceStreamConfig",
+    "CRDTDistributedVectorStore",
+    "FederatedLoRAOrchestrator",
+    "LoRAWeightDelta",
+    "FederatedRoundReport",
+    "RealTimeVideoProcessor",
+    "VideoFrame",
+    "VideoStreamSummary",
 ]
-

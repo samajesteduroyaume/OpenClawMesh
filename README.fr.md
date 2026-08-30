@@ -12,7 +12,7 @@
 
 ### Protocole P2P d'Agents IA · Inférence Universelle Multi-Matériels · 100% Gratuit & Souverain
 
-[🇬🇧 Read in English](README.md) · [📐 Architecture](ARCHITECTURE.md) · [📜 Spécification du Protocole](references/PROTOCOL_SPEC.md) · [🌐 Portail Gateway](http://localhost:8000)
+[🇬🇧 Read in English](README.md) · [📜 Livre Blanc (Whitepaper)](WHITEPAPER.md) · [📘 Manuel d'Utilisation (Notice)](docs/MANUAL.md) · [📐 Architecture](ARCHITECTURE.md) · [🌐 Portail Gateway](http://localhost:8000)
 
 ---
 
@@ -20,7 +20,8 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
 [![Accès: 100% Gratuit](https://img.shields.io/badge/Acc%C3%A8s-100%25%20Gratuit-00ff88.svg?style=flat-square)](LICENSE.fr)
 [![JarvisMesh](https://img.shields.io/badge/JarvisMesh-100%25%20Compatible-cyan.svg?style=flat-square)](#-compatibilit%C3%A9-avec-jarvismesh)
-[![Tests](https://img.shields.io/badge/Tests-99%20passing-brightgreen.svg?style=flat-square)](file:///Users/selim/Desktop/OpenClawMesh/tests)
+[![Tests](https://img.shields.io/badge/Tests-134%20passing-brightgreen.svg?style=flat-square)](file:///Users/selim/Desktop/OpenClawMesh/tests)
+[![PQC](https://img.shields.io/badge/S%C3%A9curit%C3%A9-PQC%20ML--KEM--768-purple.svg?style=flat-square)](WHITEPAPER.md)
 
 [![Matériel](https://img.shields.io/badge/Mat%C3%A9riel-NVIDIA%20%7C%20AMD%20%7C%20Intel%20%7C%20Apple-8a2be2.svg?style=flat-square)](#-acc%C3%A9l%C3%A9ration-mat%C3%A9rielle-universelle)
 

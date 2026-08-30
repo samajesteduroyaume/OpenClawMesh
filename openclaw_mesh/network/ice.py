@@ -23,9 +23,9 @@ logger = logging.getLogger("openclaw_mesh.ice")
 _settings = get_settings()
 
 # Priorités standards ICE
-PRIORITY_HOST = 2130706431      # 2^24 * 126 + ...
-PRIORITY_SRFLX = 1694498815     # 2^24 * 100 + ...
-PRIORITY_RELAY = 16777215       # 2^24 * 0 + ...
+PRIORITY_HOST = 2130706431  # 2^24 * 126 + ...
+PRIORITY_SRFLX = 1694498815  # 2^24 * 100 + ...
+PRIORITY_RELAY = 16777215  # 2^24 * 0 + ...
 
 
 @dataclass
@@ -34,11 +34,11 @@ class ICECandidate:
 
     foundation: str
     component: int  # 1 = RTP/Data
-    protocol: str   # "udp" ou "tcp"
+    protocol: str  # "udp" ou "tcp"
     priority: int
     ip: str
     port: int
-    type: str       # "host", "srflx", "prflx", "relay"
+    type: str  # "host", "srflx", "prflx", "relay"
     related_address: str | None = None
     related_port: int | None = None
 
@@ -185,7 +185,11 @@ class ICENegotiator:
         for local_c in self.candidates:
             for remote_c in remote_candidates:
                 # Éviter les combinaisons incompatibles (ex: host loopback avec host publique)
-                if local_c.type == "host" and local_c.ip == "127.0.0.1" and remote_c.ip != "127.0.0.1":
+                if (
+                    local_c.type == "host"
+                    and local_c.ip == "127.0.0.1"
+                    and remote_c.ip != "127.0.0.1"
+                ):
                     continue
                 pair = ICECandidatePair(local=local_c, remote=remote_c)
                 pairs.append(pair)

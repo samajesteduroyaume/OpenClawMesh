@@ -1,4 +1,3 @@
-
 from openclaw_mesh.network.gossip import GossipProtocol, NodeMetrics
 
 
@@ -42,7 +41,9 @@ def test_gossip_metrics_packaging_and_signature():
 
 def test_gossip_best_node_selection():
     gossip = GossipProtocol(node_name="orchestrator", node_id="orch_0")
-    gossip.update_local_metrics(cpu_percent=80.0, vram_free_mb=0, active_tasks=5, capacity=5, skills=["llm"])
+    gossip.update_local_metrics(
+        cpu_percent=80.0, vram_free_mb=0, active_tasks=5, capacity=5, skills=["llm"]
+    )
 
     # Simuler deux pairs découverts
     gossip._cluster_metrics["gpu_node_1"] = NodeMetrics(

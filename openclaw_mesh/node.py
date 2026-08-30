@@ -128,6 +128,7 @@ class OpenClawMeshNode:
         if use_quic:
             try:
                 from .network.quic_webrtc import QUICWebRTCTransport
+
                 q_port = quic_port or (self.port + 5 if self.port != 8770 else _settings.quic_port)
                 self.quic_transport = QUICWebRTCTransport(
                     node_name=self.name,
@@ -156,7 +157,10 @@ class OpenClawMeshNode:
         if enable_wan or enable_dht:
             try:
                 from .network.nat_traversal import discover_nat_and_public_ip
-                self._nat_profile = await discover_nat_and_public_ip(local_port=self.port, enabled=True, try_upnp=True)
+
+                self._nat_profile = await discover_nat_and_public_ip(
+                    local_port=self.port, enabled=True, try_upnp=True
+                )
                 public_host = self._nat_profile.public_ip or self.advertise_ip
             except Exception as e:
                 logger.debug(f"Découverte NAT: {e}")
@@ -164,6 +168,7 @@ class OpenClawMeshNode:
 
             try:
                 from .network.dht import KademliaDHT
+
                 self.dht = KademliaDHT(
                     host="0.0.0.0",
                     port=dht_port,
@@ -182,21 +187,28 @@ class OpenClawMeshNode:
                             "name": self.name,
                             "host": public_host,
                             "port": self.port,
-                            "quic_port": self.quic_transport.bound_port if self.quic_transport else None,
+                            "quic_port": self.quic_transport.bound_port
+                            if self.quic_transport
+                            else None,
                             "skills": self.registry.list_remote_names(),
                         },
                     )
-                logger.info(f"✓ Nœud '{self.name}' raccordé à la DHT Kademlia mondiale (UDP:{dht_port})")
+                logger.info(
+                    f"✓ Nœud '{self.name}' raccordé à la DHT Kademlia mondiale (UDP:{dht_port})"
+                )
             except Exception as e:
                 logger.warning(f"Avertissement DHT Kademlia WAN: {e}")
 
         # 4. Overlay Pub/Sub GossipSub v1.1
-        use_gossipsub = enable_gossipsub if enable_gossipsub is not None else _settings.gossipsub_enabled
+        use_gossipsub = (
+            enable_gossipsub if enable_gossipsub is not None else _settings.gossipsub_enabled
+        )
         if use_gossipsub:
             try:
                 import hashlib
 
                 from .network.gossipsub import GossipSubNode
+
                 self.gossipsub = GossipSubNode(
                     node_id=hashlib.sha256(self.name.encode("utf-8")).hexdigest()[:16],
                     node_name=self.name,
@@ -555,16 +567,22 @@ class OpenClawMeshNode:
                     handled_by=self.name,
                 )
                 if self.quic_transport:
-                    await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                    await self.quic_transport.send_stream_data(
+                        peer_addr, stream_id, resp.to_json().encode("utf-8")
+                    )
                     await self.quic_transport.send_stream_fin(peer_addr, stream_id)
                 return
 
         # 2. Compétences Réservées
         if req.skill == DESCRIBE_SKILL:
             desc = self.registry.describe()
-            resp = TaskResponse(request_id=req.request_id, ok=True, result=desc, handled_by=self.name)
+            resp = TaskResponse(
+                request_id=req.request_id, ok=True, result=desc, handled_by=self.name
+            )
             if self.quic_transport:
-                await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                await self.quic_transport.send_stream_data(
+                    peer_addr, stream_id, resp.to_json().encode("utf-8")
+                )
                 await self.quic_transport.send_stream_fin(peer_addr, stream_id)
             return
 
@@ -577,9 +595,13 @@ class OpenClawMeshNode:
                 "node_name": self.name,
                 "transport": "quic_webrtc_udp",
             }
-            resp = TaskResponse(request_id=req.request_id, ok=True, result=health_data, handled_by=self.name)
+            resp = TaskResponse(
+                request_id=req.request_id, ok=True, result=health_data, handled_by=self.name
+            )
             if self.quic_transport:
-                await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                await self.quic_transport.send_stream_data(
+                    peer_addr, stream_id, resp.to_json().encode("utf-8")
+                )
                 await self.quic_transport.send_stream_fin(peer_addr, stream_id)
             return
 
@@ -593,7 +615,9 @@ class OpenClawMeshNode:
                 handled_by=self.name,
             )
             if self.quic_transport:
-                await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                await self.quic_transport.send_stream_data(
+                    peer_addr, stream_id, resp.to_json().encode("utf-8")
+                )
                 await self.quic_transport.send_stream_fin(peer_addr, stream_id)
             return
 
@@ -605,40 +629,72 @@ class OpenClawMeshNode:
                 async for chunk in handler(req.payload):
                     chunk_msg = TaskChunk(request_id=req.request_id, index=idx, chunk=chunk)
                     if self.quic_transport:
-                        await self.quic_transport.send_stream_data(peer_addr, stream_id, chunk_msg.to_json().encode("utf-8"))
+                        await self.quic_transport.send_stream_data(
+                            peer_addr, stream_id, chunk_msg.to_json().encode("utf-8")
+                        )
                     idx += 1
-                resp = TaskResponse(request_id=req.request_id, ok=True, result={"streamed_chunks": idx}, handled_by=self.name, streamed=True)
+                resp = TaskResponse(
+                    request_id=req.request_id,
+                    ok=True,
+                    result={"streamed_chunks": idx},
+                    handled_by=self.name,
+                    streamed=True,
+                )
                 if self.quic_transport:
-                    await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                    await self.quic_transport.send_stream_data(
+                        peer_addr, stream_id, resp.to_json().encode("utf-8")
+                    )
 
             elif inspect.isgeneratorfunction(handler):
                 idx = 0
                 for chunk in handler(req.payload):
                     chunk_msg = TaskChunk(request_id=req.request_id, index=idx, chunk=chunk)
                     if self.quic_transport:
-                        await self.quic_transport.send_stream_data(peer_addr, stream_id, chunk_msg.to_json().encode("utf-8"))
+                        await self.quic_transport.send_stream_data(
+                            peer_addr, stream_id, chunk_msg.to_json().encode("utf-8")
+                        )
                     idx += 1
-                resp = TaskResponse(request_id=req.request_id, ok=True, result={"streamed_chunks": idx}, handled_by=self.name, streamed=True)
+                resp = TaskResponse(
+                    request_id=req.request_id,
+                    ok=True,
+                    result={"streamed_chunks": idx},
+                    handled_by=self.name,
+                    streamed=True,
+                )
                 if self.quic_transport:
-                    await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                    await self.quic_transport.send_stream_data(
+                        peer_addr, stream_id, resp.to_json().encode("utf-8")
+                    )
 
             elif inspect.iscoroutinefunction(handler):
                 result = await handler(req.payload)
-                resp = TaskResponse(request_id=req.request_id, ok=True, result=result, handled_by=self.name)
+                resp = TaskResponse(
+                    request_id=req.request_id, ok=True, result=result, handled_by=self.name
+                )
                 if self.quic_transport:
-                    await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                    await self.quic_transport.send_stream_data(
+                        peer_addr, stream_id, resp.to_json().encode("utf-8")
+                    )
 
             else:
                 result = await asyncio.to_thread(handler, req.payload)
-                resp = TaskResponse(request_id=req.request_id, ok=True, result=result, handled_by=self.name)
+                resp = TaskResponse(
+                    request_id=req.request_id, ok=True, result=result, handled_by=self.name
+                )
                 if self.quic_transport:
-                    await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                    await self.quic_transport.send_stream_data(
+                        peer_addr, stream_id, resp.to_json().encode("utf-8")
+                    )
 
         except Exception as exec_err:
             logger.error(f"Erreur QUIC execution '{req.skill}': {exec_err}")
-            resp = TaskResponse(request_id=req.request_id, ok=False, error=str(exec_err), handled_by=self.name)
+            resp = TaskResponse(
+                request_id=req.request_id, ok=False, error=str(exec_err), handled_by=self.name
+            )
             if self.quic_transport:
-                await self.quic_transport.send_stream_data(peer_addr, stream_id, resp.to_json().encode("utf-8"))
+                await self.quic_transport.send_stream_data(
+                    peer_addr, stream_id, resp.to_json().encode("utf-8")
+                )
         finally:
             if self.quic_transport:
                 await self.quic_transport.send_stream_fin(peer_addr, stream_id)

@@ -7,9 +7,13 @@ def test_multipath_router_selection():
     router = MultipathRouter(local_node_id="node-alice")
 
     # Register 3 candidate paths
-    router.register_path(target_node_id="node-bob", endpoint="192.168.1.50:8765", initial_rtt_ms=12.0)
+    router.register_path(
+        target_node_id="node-bob", endpoint="192.168.1.50:8765", initial_rtt_ms=12.0
+    )
     router.register_path(target_node_id="node-bob", endpoint="10.0.0.80:8765", initial_rtt_ms=45.0)
-    router.register_path(target_node_id="node-bob", endpoint="relay.openclaw.io:8765", initial_rtt_ms=80.0)
+    router.register_path(
+        target_node_id="node-bob", endpoint="relay.openclaw.io:8765", initial_rtt_ms=80.0
+    )
 
     best = router.select_best_path(target_node_id="node-bob")
     assert best is not None

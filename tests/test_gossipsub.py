@@ -61,7 +61,9 @@ async def test_gossipsub_publish_and_receive():
 
     try:
         # Alice publie un message
-        msg_id = await alice.publish("openclaw/v1/discovery", {"status": "online", "skills": ["vision", "llm"]})
+        msg_id = await alice.publish(
+            "openclaw/v1/discovery", {"status": "online", "skills": ["vision", "llm"]}
+        )
         assert msg_id
 
         # Vérification de réception

@@ -115,9 +115,7 @@ class MessageCache:
         """Retourne les identifiants de messages dans la fenêtre de gossip pour ce topic."""
         ids: list[str] = []
         for i in range(min(self.gossip_window, len(self.history))):
-            for msg in self.history[i].values():
-                if msg.topic == topic:
-                    ids.append(msg.msg_id)
+            ids.extend([msg.msg_id for msg in self.history[i].values() if msg.topic == topic])
         return ids
 
     def shift(self) -> None:
@@ -383,9 +381,9 @@ class GossipSubNode:
         for item in ctrl.ihave:
             topic = item.get("topic", "")
             if topic in self.subscriptions:
-                for mid in item.get("msg_ids", []):
-                    if mid not in self.seen_messages:
-                        missing_ids.append(mid)
+                missing_ids.extend([
+                    mid for mid in item.get("msg_ids", []) if mid not in self.seen_messages
+                ])
 
         if missing_ids:
             # Répondre par IWANT
@@ -463,8 +461,7 @@ class GossipSubNode:
                     - {self.node_id}
                 )
                 valid_candidates = [
-                    c for c in candidates
-                    if self.prune_backoff.get((topic, c), 0) < now
+                    c for c in candidates if self.prune_backoff.get((topic, c), 0) < now
                 ]
                 valid_candidates.sort(key=lambda p: self.peer_scores[p], reverse=True)
                 needed = self.d - len(current_mesh)

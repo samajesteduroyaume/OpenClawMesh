@@ -33,12 +33,18 @@ class QuantizedTensorBuffer:
     min_val: float = 0.0
 
     @classmethod
-    def from_floats(cls, values: list[float], shape: list[int] | None = None, dtype: str = "float16") -> QuantizedTensorBuffer:
+    def from_floats(
+        cls, values: list[float], shape: list[int] | None = None, dtype: str = "float16"
+    ) -> QuantizedTensorBuffer:
         """Encode une liste de flottants en buffer binaire optimisé."""
         actual_shape = shape or [1, len(values)]
         if dtype == "float32":
             raw_bytes = struct.pack(f"<{len(values)}f", *values)
-            return cls(shape=actual_shape, dtype=dtype, data_b64=base64.b64encode(raw_bytes).decode("ascii"))
+            return cls(
+                shape=actual_shape,
+                dtype=dtype,
+                data_b64=base64.b64encode(raw_bytes).decode("ascii"),
+            )
         elif dtype == "int8":
             if not values:
                 return cls(shape=actual_shape, dtype="int8", data_b64="", scale=1.0, min_val=0.0)
@@ -60,7 +66,11 @@ class QuantizedTensorBuffer:
             except struct.error:
                 raw_bytes = struct.pack(f"<{len(values)}f", *values)
                 dtype = "float32"
-            return cls(shape=actual_shape, dtype=dtype, data_b64=base64.b64encode(raw_bytes).decode("ascii"))
+            return cls(
+                shape=actual_shape,
+                dtype=dtype,
+                data_b64=base64.b64encode(raw_bytes).decode("ascii"),
+            )
 
     def to_floats(self) -> list[float]:
         """Décompresse le buffer en liste de flottants."""
@@ -68,15 +78,15 @@ class QuantizedTensorBuffer:
             return []
         raw_bytes = base64.b64decode(self.data_b64.encode("ascii"))
         if self.dtype == "float32":
-            return list(struct.unpack(f"<{len(raw_bytes)//4}f", raw_bytes))
+            return list(struct.unpack(f"<{len(raw_bytes) // 4}f", raw_bytes))
         elif self.dtype == "int8":
             unpacked_int8 = struct.unpack(f"<{len(raw_bytes)}b", raw_bytes)
             return [(b + 128) * self.scale + self.min_val for b in unpacked_int8]
         else:  # float16
             try:
-                return list(struct.unpack(f"<{len(raw_bytes)//2}e", raw_bytes))
+                return list(struct.unpack(f"<{len(raw_bytes) // 2}e", raw_bytes))
             except struct.error:
-                return list(struct.unpack(f"<{len(raw_bytes)//4}f", raw_bytes))
+                return list(struct.unpack(f"<{len(raw_bytes) // 4}f", raw_bytes))
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -131,7 +141,9 @@ class DistributedMoEOrchestrator:
                 )
             )
 
-    def route_experts(self, token_embeddings: list[float], available_experts: list[int]) -> list[int]:
+    def route_experts(
+        self, token_embeddings: list[float], available_experts: list[int]
+    ) -> list[int]:
         """Sélectionne dynamiquement les Top-K experts les plus adaptés."""
         if not available_experts:
             return []
@@ -140,10 +152,13 @@ class DistributedMoEOrchestrator:
         # Hachage déterministe de similarité pour simuler le softmax de routage
         scored = []
         for e_id in available_experts:
-            score = sum(token_embeddings[i % len(token_embeddings)] * (e_id + 1) for i in range(min(8, len(token_embeddings))))
+            score = sum(
+                token_embeddings[i % len(token_embeddings)] * (e_id + 1)
+                for i in range(min(8, len(token_embeddings)))
+            )
             scored.append((score, e_id))
         scored.sort(reverse=True)
-        return [e[1] for e in scored[:self.top_k_experts]]
+        return [e[1] for e in scored[: self.top_k_experts]]
 
     def update_cluster_nodes(self, nodes: list[str]) -> None:
         """Met à jour les nœuds disponibles et recalcule le partitionnement."""
@@ -207,8 +222,12 @@ class DistributedMoEOrchestrator:
                 # Calcul direct / transformation de tenseur local
                 await asyncio.sleep(0.015)
                 # Appliquer transformation linéaire sur le tenseur d'activation
-                tensor_dict = current_activation.get("tensor") if isinstance(current_activation, dict) else {}
-                curr_floats = QuantizedTensorBuffer.from_dict(tensor_dict if isinstance(tensor_dict, dict) else {}).to_floats()
+                tensor_dict = (
+                    current_activation.get("tensor") if isinstance(current_activation, dict) else {}
+                )
+                curr_floats = QuantizedTensorBuffer.from_dict(
+                    tensor_dict if isinstance(tensor_dict, dict) else {}
+                ).to_floats()
                 transformed = [(v * 1.05 + 0.01 * (stage.stage_id + 1)) for v in curr_floats]
                 next_tensor = QuantizedTensorBuffer.from_floats(
                     transformed,
@@ -221,7 +240,9 @@ class DistributedMoEOrchestrator:
 
             stage_duration = (time.perf_counter() - stage_t0) * 1000.0
             stage.latency_ms = round(stage_duration, 2)
-            tensor_obj = current_activation.get("tensor") if isinstance(current_activation, dict) else {}
+            tensor_obj = (
+                current_activation.get("tensor") if isinstance(current_activation, dict) else {}
+            )
             tensor_data_dict = tensor_obj if isinstance(tensor_obj, dict) else {}
             stage_traces.append(
                 {
@@ -235,7 +256,9 @@ class DistributedMoEOrchestrator:
             )
 
         total_duration_ms = (time.perf_counter() - t0) * 1000.0
-        final_tensor = current_activation.get("tensor") if isinstance(current_activation, dict) else {}
+        final_tensor = (
+            current_activation.get("tensor") if isinstance(current_activation, dict) else {}
+        )
         final_shape = final_tensor.get("shape") if isinstance(final_tensor, dict) else None
 
         return {

@@ -553,7 +553,12 @@ class KademliaDHT:
             self._reply(
                 addr,
                 txid,
-                {"type": "add_provider_response", "node_id": self.node_id, "name": self.name, **resp},
+                {
+                    "type": "add_provider_response",
+                    "node_id": self.node_id,
+                    "name": self.name,
+                    **resp,
+                },
             )
         elif msg_type == "get_providers":
             result = self.rpc_get_providers(sender, msg.get("key", ""))
@@ -979,9 +984,7 @@ class KademliaDHT:
     # ------------------------------------------------------------------ #
     # Amorçage Global & Découverte WAN Automatisée
     # ------------------------------------------------------------------ #
-    async def bootstrap_global(
-        self, seeds: list[tuple[str, int]] | None = None
-    ) -> int:
+    async def bootstrap_global(self, seeds: list[tuple[str, int]] | None = None) -> int:
         """
         Amorce automatiquement le nœud sur la toile mondiale DHT en contactant les serveurs seeds
         et en effectuant un lookup itératif pour peupler les k-buckets.
@@ -1046,4 +1049,3 @@ class KademliaDHT:
                 await asyncio.sleep(interval_seconds)
 
         return asyncio.create_task(_loop())
-

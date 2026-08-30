@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import sys
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from openclaw_mesh.engines.distributed_rag import DistributedRAGEngine
@@ -34,9 +35,19 @@ MCP_TOOLS_MANIFEST = [
             "type": "object",
             "properties": {
                 "prompt": {"type": "string", "description": "The user prompt or query"},
-                "model": {"type": "string", "description": "Preferred model name (e.g. llama-3, qwen-2.5)"},
-                "max_tokens": {"type": "integer", "description": "Max tokens to generate", "default": 256},
-                "preferred_backend": {"type": "string", "description": "Preferred hardware (cuda, metal, npu, cpu)"},
+                "model": {
+                    "type": "string",
+                    "description": "Preferred model name (e.g. llama-3, qwen-2.5)",
+                },
+                "max_tokens": {
+                    "type": "integer",
+                    "description": "Max tokens to generate",
+                    "default": 256,
+                },
+                "preferred_backend": {
+                    "type": "string",
+                    "description": "Preferred hardware (cuda, metal, npu, cpu)",
+                },
             },
             "required": ["prompt"],
         },
@@ -163,7 +174,6 @@ class OpenClawMCPServer:
                 "latency_ms": 14.2,
             }
 
-
         elif name == "mesh_memory_query":
             query = args.get("query", "")
             top_k = args.get("top_k", 5)
@@ -207,3 +217,17 @@ class OpenClawMCPServer:
                 sys.stdout.flush()
             except Exception as e:
                 logger.error(f"Error handling MCP stdio line: {e}")
+
+    async def handle_sse_event_stream(self, session_id: str) -> AsyncGenerator[str, None]:
+        """Produce standard MCP SSE stream for HTTP-connected clients."""
+        # Initial endpoint discovery event
+        endpoint_event = {
+            "type": "endpoint",
+            "uri": f"/mcp/messages?sessionId={session_id}",
+        }
+        yield f"event: endpoint\ndata: {json.dumps(endpoint_event)}\n\n"
+
+        while True:
+            await asyncio.sleep(15)
+            # Keepalive ping
+            yield "event: ping\ndata: {}\n\n"

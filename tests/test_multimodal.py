@@ -10,7 +10,10 @@ def test_multimodal_vision():
 
     async def _run():
         # Test valid base64 payload
-        res = await engine.analyze_image("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", prompt="Describe this UI component")
+        res = await engine.analyze_image(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+            prompt="Describe this UI component",
+        )
         assert "text" in res
         assert "backend" in res
         assert res["duration_ms"] >= 0
@@ -27,7 +30,10 @@ def test_multimodal_stt_and_tts():
 
     async def _run():
         # 1. STT Whisper
-        stt_res = await engine.transcribe_audio(audio_base64="UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=", language="fr")
+        stt_res = await engine.transcribe_audio(
+            audio_base64="UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=",
+            language="fr",
+        )
         assert "transcript" in stt_res
         assert stt_res["language"] == "fr"
 

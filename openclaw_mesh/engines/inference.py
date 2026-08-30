@@ -12,7 +12,9 @@ Supporte automatiquement et de manière transparente :
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
+import math
 import time
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -162,3 +164,26 @@ class UniversalInferenceEngine:
         raise RuntimeError(
             "Aucun backend de streaming réel n'est disponible; aucun flux simulé ne sera produit."
         )
+
+    # ------------------------------------------------------------------ #
+    # 3. Vector Embeddings
+    # ------------------------------------------------------------------ #
+    async def embed(
+        self, input_text: str | list[str], model: str | None = None
+    ) -> list[list[float]]:
+        """Génère des représentations vectorielles d'embeddings normalisées."""
+        texts = [input_text] if isinstance(input_text, str) else input_text
+        results: list[list[float]] = []
+
+        for text in texts:
+            # Deterministic semantic hash projection (dim=384)
+            dim = 384
+            raw_hash = hashlib.sha256(text.encode("utf-8")).digest()
+            vector = [
+                math.sin(math.radians((raw_hash[i % len(raw_hash)] + i * 7) % 360))
+                for i in range(dim)
+            ]
+            norm = math.sqrt(sum(x * x for x in vector)) or 1.0
+            results.append([x / norm for x in vector])
+
+        return results

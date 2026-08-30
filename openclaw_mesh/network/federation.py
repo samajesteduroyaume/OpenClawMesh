@@ -56,7 +56,9 @@ class FederationBridge:
         self.federated_domains[domain_id] = domain
         for skill in allowed_skills:
             self.cross_domain_routes[skill] = domain_id
-        logger.info(f"Registered Federated Mesh Domain '{name}' ({domain_id}) with skills: {allowed_skills}")
+        logger.info(
+            f"Registered Federated Mesh Domain '{name}' ({domain_id}) with skills: {allowed_skills}"
+        )
         return domain
 
     def check_access(self, source_domain_id: str, skill_name: str) -> bool:

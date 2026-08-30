@@ -122,7 +122,9 @@ class FECDecoder:
     def decode(self) -> bytes:
         """Decode and reconstruct original payload."""
         if len(self.received_blocks) < self.k:
-            raise ValueError(f"Need at least {self.k} blocks to decode, got {len(self.received_blocks)}")
+            raise ValueError(
+                f"Need at least {self.k} blocks to decode, got {len(self.received_blocks)}"
+            )
 
         # Check if all original data blocks [0..k-1] were received directly
         have_all_data = all(i in self.received_blocks for i in range(self.k))

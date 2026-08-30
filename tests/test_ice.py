@@ -5,8 +5,12 @@ from openclaw_mesh.network.ice import ICECandidate, ICENegotiator
 
 @pytest.mark.asyncio
 async def test_ice_candidate_gathering_and_pairing():
-    neg_a = ICENegotiator(local_name="peer-a", local_port=8771, relay_url="wss://relay.openclaw.mesh")
-    neg_b = ICENegotiator(local_name="peer-b", local_port=8772, relay_url="wss://relay.openclaw.mesh")
+    neg_a = ICENegotiator(
+        local_name="peer-a", local_port=8771, relay_url="wss://relay.openclaw.mesh"
+    )
+    neg_b = ICENegotiator(
+        local_name="peer-b", local_port=8772, relay_url="wss://relay.openclaw.mesh"
+    )
 
     cands_a = await neg_a.gather_candidates()
     cands_b = await neg_b.gather_candidates()

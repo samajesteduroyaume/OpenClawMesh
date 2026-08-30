@@ -44,7 +44,9 @@ class MultipathRouter:
         self.routes: dict[str, list[PathMetrics]] = {}  # target_node_id -> list of paths
         self._round_robin_counters: dict[str, int] = {}
 
-    def register_path(self, target_node_id: str, endpoint: str, initial_rtt_ms: float = 25.0) -> PathMetrics:
+    def register_path(
+        self, target_node_id: str, endpoint: str, initial_rtt_ms: float = 25.0
+    ) -> PathMetrics:
         """Register or update a path candidate."""
         if target_node_id not in self.routes:
             self.routes[target_node_id] = []
@@ -62,7 +64,9 @@ class MultipathRouter:
             rtt_ms=initial_rtt_ms,
         )
         self.routes[target_node_id].append(new_path)
-        logger.info(f"Registered path: {self.local_node_id} -> {target_node_id} via {endpoint} ({initial_rtt_ms}ms)")
+        logger.info(
+            f"Registered path: {self.local_node_id} -> {target_node_id} via {endpoint} ({initial_rtt_ms}ms)"
+        )
         return new_path
 
     def update_metrics(
@@ -100,7 +104,9 @@ class MultipathRouter:
         healthy.sort(key=lambda p: p.score)
         return healthy[0]
 
-    def select_multipath_bundle(self, target_node_id: str, bundle_size: int = 2) -> list[PathMetrics]:
+    def select_multipath_bundle(
+        self, target_node_id: str, bundle_size: int = 2
+    ) -> list[PathMetrics]:
         """Select the top N paths for multi-path striping."""
         paths = self.routes.get(target_node_id, [])
         healthy = [p for p in paths if p.is_healthy]
@@ -126,7 +132,9 @@ class SelfHealingController:
         self.active_sessions[session_id] = endpoint
         return endpoint
 
-    async def handle_link_failure(self, session_id: str, target_node_id: str, failed_endpoint: str) -> str:
+    async def handle_link_failure(
+        self, session_id: str, target_node_id: str, failed_endpoint: str
+    ) -> str:
         """Execute rapid failover when a link fails."""
         t0 = time.perf_counter()
         # Mark path failure
@@ -147,5 +155,7 @@ class SelfHealingController:
             "timestamp": time.time(),
         }
         self.failover_events.append(event)
-        logger.warning(f"Self-healing failover executed in {elapsed_ms:.2f}ms: {failed_endpoint} -> {new_endpoint}")
+        logger.warning(
+            f"Self-healing failover executed in {elapsed_ms:.2f}ms: {failed_endpoint} -> {new_endpoint}"
+        )
         return new_endpoint

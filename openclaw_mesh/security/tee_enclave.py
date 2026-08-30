@@ -85,7 +85,9 @@ class ConfidentialEnclave:
 
     def generate_attestation_report(self, client_nonce: str) -> AttestationReport:
         """Produce a cryptographically signed hardware attestation quote."""
-        report_payload = f"{self.enclave_type.value}:{self.measurement}:{client_nonce}:{self.pub_key}"
+        report_payload = (
+            f"{self.enclave_type.value}:{self.measurement}:{client_nonce}:{self.pub_key}"
+        )
         sig = hashlib.sha256(f"{self.priv_key}:{report_payload}".encode()).hexdigest()
 
         return AttestationReport(
@@ -113,7 +115,9 @@ class ConfidentialEnclave:
         plain_prompt = chacha.decrypt(nonce, ciphertext, None).decode("utf-8")
 
         # Simulated isolated compute
-        result_text = f"[Enclave-Protected Output ({self.enclave_type.value})] Processed: {plain_prompt}"
+        result_text = (
+            f"[Enclave-Protected Output ({self.enclave_type.value})] Processed: {plain_prompt}"
+        )
 
         # Re-encrypt inside enclave
         res_bytes = result_text.encode("utf-8")

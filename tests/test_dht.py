@@ -190,7 +190,12 @@ def test_dht_save_and_load_state(tmp_path):
 
     for i in range(5):
         dht1.routing_table.add_contact(
-            Contact(node_id=hash_key(f"peer_saved_{i}"), host="192.168.1.50", port=8770 + i, name=f"p{i}")
+            Contact(
+                node_id=hash_key(f"peer_saved_{i}"),
+                host="192.168.1.50",
+                port=8770 + i,
+                name=f"p{i}",
+            )
         )
     assert dht1.routing_table.count_contacts() == 5
 
@@ -220,7 +225,12 @@ def test_dht_provider_records_and_content_routing():
         await node_a.bootstrap([contact_b])
 
         # A annonce être fournisseur pour la compétence 'embed_dense'
-        info_a = {"node_id": node_a.node_id, "host": "127.0.0.1", "port": port_a, "name": "provider-a"}
+        info_a = {
+            "node_id": node_a.node_id,
+            "host": "127.0.0.1",
+            "port": port_a,
+            "name": "provider-a",
+        }
         ok = await node_a.provide_distributed("skill:embed_dense", info_a)
         assert ok is True
 
@@ -233,4 +243,3 @@ def test_dht_provider_records_and_content_routing():
         await node_b.stop_network()
 
     asyncio.run(_run())
-

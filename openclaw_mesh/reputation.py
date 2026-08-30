@@ -17,6 +17,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .compute_economy import ComputeReceipt, PeerComputeCreditLedger
+
 logger = logging.getLogger("openclaw_mesh.reputation")
 
 _DEFAULT_MIN_ELIGIBLE_SCORE = 0.4
@@ -68,7 +70,9 @@ class ReputationManager:
             self._records[node_id] = NodeReputationRecord(node_id=node_id, node_name=node_name)
         return self._records[node_id]
 
-    def record_success(self, node_id: str, latency_ms: float = 50.0, node_name: str = "unknown") -> float:
+    def record_success(
+        self, node_id: str, latency_ms: float = 50.0, node_name: str = "unknown"
+    ) -> float:
         """Enregistre un appel réussi et met à jour positivement le score."""
         rec = self.get_record(node_id, node_name)
         rec.successful_calls += 1
@@ -83,22 +87,30 @@ class ReputationManager:
         rec.last_updated = time.time()
         return rec.score
 
-    def record_failure(self, node_id: str, reason: str = "timeout", node_name: str = "unknown") -> float:
+    def record_failure(
+        self, node_id: str, reason: str = "timeout", node_name: str = "unknown"
+    ) -> float:
         """Pénalise un nœud suite à un échec d'exécution ou timeout."""
         rec = self.get_record(node_id, node_name)
         rec.failed_calls += 1
         rec.score = max(0.0, rec.score - _PENALTY_FAILURE)
         rec.last_updated = time.time()
-        logger.warning(f"Pénalité réputation pour '{rec.node_name}' ({node_id[:8]}) : {rec.score:.2f} [{reason}]")
+        logger.warning(
+            f"Pénalité réputation pour '{rec.node_name}' ({node_id[:8]}) : {rec.score:.2f} [{reason}]"
+        )
         return rec.score
 
-    def record_dispute(self, node_id: str, reason: str = "signature_mismatch", node_name: str = "unknown") -> float:
+    def record_dispute(
+        self, node_id: str, reason: str = "signature_mismatch", node_name: str = "unknown"
+    ) -> float:
         """Pénalise lourdement un nœud en cas de tricherie ou falsification cryptographique."""
         rec = self.get_record(node_id, node_name)
         rec.dispute_count += 1
         rec.score = max(0.0, rec.score - _PENALTY_DISPUTE)
         rec.last_updated = time.time()
-        logger.error(f"DISPUTE enregistrée pour '{rec.node_name}' ({node_id[:8]}) : nouveau score={rec.score:.2f} [{reason}]")
+        logger.error(
+            f"DISPUTE enregistrée pour '{rec.node_name}' ({node_id[:8]}) : nouveau score={rec.score:.2f} [{reason}]"
+        )
         return rec.score
 
     def is_eligible(self, node_id: str) -> bool:
@@ -142,3 +154,11 @@ class ReputationManager:
         except Exception as exc:
             logger.warning(f"Impossible de charger la réputation depuis {path}: {exc}")
             return 0
+
+
+__all__ = [
+    "ReputationManager",
+    "NodeReputationRecord",
+    "PeerComputeCreditLedger",
+    "ComputeReceipt",
+]

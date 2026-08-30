@@ -48,8 +48,12 @@ def test_skademlia_dynamic_puzzle():
     challenge = "random_network_challenge_123"
     difficulty = 6
 
-    nonce = SKademliaPuzzleSolver.solve_dynamic_puzzle(node_id_hex, challenge, difficulty=difficulty)
-    valid = SKademliaPuzzleSolver.verify_dynamic_puzzle(node_id_hex, challenge, nonce, difficulty=difficulty)
+    nonce = SKademliaPuzzleSolver.solve_dynamic_puzzle(
+        node_id_hex, challenge, difficulty=difficulty
+    )
+    valid = SKademliaPuzzleSolver.verify_dynamic_puzzle(
+        node_id_hex, challenge, nonce, difficulty=difficulty
+    )
     assert valid is True
 
 

@@ -53,6 +53,7 @@ class MultiModalEngine:
         if self.hardware.has_apple_metal:
             try:
                 import importlib
+
                 importlib.import_module("mlx_vlm")
                 model_name = model or "mlx-community/Qwen2-VL-7B-Instruct-4bit"
                 return {
@@ -68,6 +69,7 @@ class MultiModalEngine:
         if self.hardware.has_cuda:
             try:
                 import importlib
+
                 importlib.import_module("transformers")
                 model_name = model or "Qwen/Qwen2-VL-7B-Instruct"
                 return {
@@ -112,6 +114,7 @@ class MultiModalEngine:
         # 1. Tentative faster-whisper
         try:
             import importlib
+
             importlib.import_module("faster_whisper")
             return {
                 "transcript": f"Flux audio ({len(raw_audio)} octets) validé pour faster-whisper ({model_size}).",
@@ -125,6 +128,7 @@ class MultiModalEngine:
         # 2. Tentative openai-whisper
         try:
             import importlib
+
             importlib.import_module("whisper")
             return {
                 "transcript": f"Flux audio ({len(raw_audio)} octets) validé pour OpenAI Whisper ({model_size}).",
@@ -175,7 +179,7 @@ class MultiModalEngine:
             sample_rate,
             sample_rate * 2,
             2,  # Block align
-            16, # Bits per sample
+            16,  # Bits per sample
             b"data",
             len(audio_data),
         )

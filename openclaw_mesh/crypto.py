@@ -135,7 +135,12 @@ def verify_ed25519_signature(
     """
     if not _HAS_CRYPTO:
         return False
-    if not public_key_hex or not signature_hex or not request_id or not isinstance(ts, (int, float)):
+    if (
+        not public_key_hex
+        or not signature_hex
+        or not request_id
+        or not isinstance(ts, (int, float))
+    ):
         return False
 
     # Protection anti-rejeu par horodatage (tolérance +/- max_drift_seconds)

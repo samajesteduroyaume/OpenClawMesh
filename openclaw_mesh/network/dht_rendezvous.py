@@ -70,7 +70,9 @@ class DHTRendezvousManager:
             ttl_seconds=ttl_seconds,
         )
         self._local_records[self.node_id] = record
-        logger.info(f"Created DHT Rendezvous record for {self.node_id} with {len(public_endpoints)} endpoints")
+        logger.info(
+            f"Created DHT Rendezvous record for {self.node_id} with {len(public_endpoints)} endpoints"
+        )
         return record
 
     def store_remote_record(self, record: RendezvousRecord) -> None:
@@ -85,7 +87,9 @@ class DHTRendezvousManager:
             return record
         return None
 
-    def plan_hole_punch(self, target_node_id: str, lead_time_ms: int = 500) -> dict[str, Any] | None:
+    def plan_hole_punch(
+        self, target_node_id: str, lead_time_ms: int = 500
+    ) -> dict[str, Any] | None:
         """Coordinate synchronized UDP punch timestamp between both NAT endpoints."""
         target_rec = self.get_record(target_node_id)
         if not target_rec:

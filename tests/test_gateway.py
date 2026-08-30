@@ -305,4 +305,3 @@ def test_cluster_status_endpoint():
     assert "hardware" in data
     assert "kv_cache" in data
     assert "reputation" in data
-

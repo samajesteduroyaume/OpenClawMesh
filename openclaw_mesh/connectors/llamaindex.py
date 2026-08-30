@@ -45,7 +45,6 @@ class OpenClawLlamaIndexLLM:
         }
 
 
-
 class OpenClawMeshRetriever:
     """LlamaIndex Custom Retriever connecting to OpenClawMesh Distributed RAG."""
 
