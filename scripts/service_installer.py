@@ -24,7 +24,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User={user}
-ExecStart={bin_path} serve --port {port} --wan
+ExecStart={bin_path} serve --port {port} --host 0.0.0.0 --wan
 Restart=always
 RestartSec=5s
 LimitNOFILE=65535
@@ -50,6 +50,8 @@ def generate_launchd_plist(bin_path: str = "/usr/local/bin/openclaw-mesh", port:
         <string>serve</string>
         <string>--port</string>
         <string>{port}</string>
+        <string>--host</string>
+        <string>0.0.0.0</string>
         <string>--wan</string>
     </array>
     <key>RunAtLoad</key>
@@ -86,7 +88,7 @@ services:
     working_dir: /app
     volumes:
       - .:/app
-    command: bash -c "pip install -e . && openclaw-mesh serve --port 8770 --host 0.0.0.0"
+    command: bash -c "pip install -e . && openclaw-mesh serve --port 8770 --host 0.0.0.0 --wan"
     ports:
       - "8770:8770"
     restart: unless-stopped

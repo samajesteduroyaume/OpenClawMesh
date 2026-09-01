@@ -166,16 +166,48 @@ async def auto_map_upnp_port(
     return await loop.run_in_executor(None, _sync_upnp_map)
 
 
+async def auto_map_all_wan_ports(
+    tcp_ports: list[int] | None = None,
+    udp_ports: list[int] | None = None,
+    description: str = "OpenClawMesh P2P",
+) -> dict[str, Any]:
+    """
+    Ouvre et mappe automatiquement tous les ports du maillage (TCP et UDP)
+    sur la passerelle réseau via UPnP IGD, PCP et NAT-PMP.
+    """
+    tcp_ports = tcp_ports or []
+    udp_ports = udp_ports or []
+    results: dict[str, Any] = {"tcp": {}, "udp": {}}
+
+    tasks = []
+    for port in tcp_ports:
+        tasks.append(("tcp", port, auto_map_upnp_port(port, port, protocol="TCP", description=description)))
+    for port in udp_ports:
+        tasks.append(("udp", port, auto_map_upnp_port(port, port, protocol="UDP", description=description)))
+
+    for proto, port, coro in tasks:
+        try:
+            ok = await coro
+            results[proto][port] = ok
+        except Exception as e:
+            logger.debug(f"Mappage WAN port {port}/{proto} échoué: {e}")
+            results[proto][port] = False
+
+    return results
+
+
 async def discover_nat_and_public_ip(
     local_port: int = 8770,
     stun_servers: list[tuple[str, int]] = DEFAULT_STUN_SERVERS,
     timeout: float = 2.0,
-    enabled: bool = False,
-    try_upnp: bool = False,
+    enabled: bool = True,
+    try_upnp: bool = True,
+    extra_tcp_ports: list[int] | None = None,
+    extra_udp_ports: list[int] | None = None,
 ) -> NATProfile:
     """
-    Envoie une requête STUN Binding (RFC 5389) et teste UPnP pour déterminer l'IP publique et le port mappé.
-    Cette fonction est strictement opt-in (désactivée par défaut) et requiert le consentement explicite.
+    Envoie une requête STUN Binding (RFC 5389) et configure automatiquement l'ouverture WAN
+    via UPnP IGD, PCP et NAT-PMP pour obtenir une connectivité mondiale P2P instantanée.
     """
     local_ip = "127.0.0.1"
     if not enabled:
@@ -184,7 +216,7 @@ async def discover_nat_and_public_ip(
             public_port=None,
             local_ip=local_ip,
             local_port=local_port,
-            nat_type="Local Only (LAN default)",
+            nat_type="Local Only (LAN isolation requested)",
             is_direct_connectable=False,
             upnp_mapped=False,
         )
@@ -198,7 +230,10 @@ async def discover_nat_and_public_ip(
 
     upnp_success = False
     if try_upnp:
-        upnp_success = await auto_map_upnp_port(local_port=local_port, external_port=local_port)
+        tcp_list = [local_port] + (extra_tcp_ports or [])
+        udp_list = extra_udp_ports or []
+        res = await auto_map_all_wan_ports(tcp_ports=tcp_list, udp_ports=udp_list)
+        upnp_success = res["tcp"].get(local_port, False)
 
     for host, port in stun_servers:
         try:
@@ -253,5 +288,5 @@ async def discover_nat_and_public_ip(
         local_port=local_port,
         nat_type="Symmetric / Firewall (Relay Required)",
         is_direct_connectable=False,
-        upnp_mapped=False,
+        upnp_mapped=upnp_success,
     )

@@ -31,10 +31,20 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, description="Mode debug")
 
     # ------------------------------------------------------------------ #
-    # Configuration Réseau
+    # Configuration Réseau & Ouverture WAN
     # ------------------------------------------------------------------ #
-    default_host: str = Field(default="127.0.0.1", description="Hôte par défaut")
+    default_host: str = Field(default="0.0.0.0", description="Hôte par défaut (0.0.0.0 pour écoute sur toutes les interfaces LAN/WAN)")
     default_port: int = Field(default=8770, description="Port par défaut")
+    wan_enabled: bool = Field(
+        default=True,
+        description="Ouvrir et activer automatiquement le WAN (UPnP IGD, PCP RFC 6887, STUN, DHT) à l'installation",
+    )
+    upnp_enabled: bool = Field(
+        default=True, description="Activer le mappage de ports automatique UPnP IGD"
+    )
+    pcp_enabled: bool = Field(
+        default=True, description="Activer le protocole de contrôle de ports PCP (RFC 6887) / NAT-PMP"
+    )
 
     # Timeouts réseau (en secondes)
     websocket_timeout: float = Field(default=60.0, description="Timeout WebSocket par défaut")
@@ -43,7 +53,7 @@ class Settings(BaseSettings):
     ping_timeout: float = Field(default=3.0, description="Timeout ping")
 
     # Configuration mDNS
-    mdns_enabled: bool = Field(default=False, description="Activer découverte mDNS (opt-in)")
+    mdns_enabled: bool = Field(default=True, description="Activer découverte mDNS locale")
     mdns_service_types: list[str] = Field(
         default=["_jarvismesh._tcp.local.", "_openclawmesh._tcp.local."],
         description="Types de services mDNS",
@@ -112,7 +122,7 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------ #
     # Configuration DHT Kademlia
     # ------------------------------------------------------------------ #
-    dht_enabled: bool = Field(default=False, description="Activer DHT Kademlia (opt-in)")
+    dht_enabled: bool = Field(default=True, description="Activer DHT Kademlia mondiale")
     dht_id_bits: int = Field(default=160, description="Nombre de bits pour les IDs DHT")
     dht_k_bucket_size: int = Field(default=20, description="Taille des k-buckets Kademlia")
     dht_alpha: int = Field(default=3, description="Paramètre alpha Kademlia (lookups parallèles)")
@@ -185,7 +195,7 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------ #
     relay_enabled: bool = Field(default=False, description="Activer relais WAN")
     relay_host: str = Field(
-        default="127.0.0.1", description="Hôte du relais (WAN explicitement configuré)"
+        default="0.0.0.0", description="Hôte du relais (écoute sur toutes les interfaces)"
     )
     relay_port: int = Field(default=8790, description="Port du relais")
     relay_name: str = Field(default="openclaw-wan-relay", description="Nom du relais")
@@ -242,7 +252,7 @@ class Settings(BaseSettings):
     gateway_db_path: Path = Field(
         default=Path("openclaw_keys.db"), description="Chemin base de données clés"
     )
-    gateway_host: str = Field(default="127.0.0.1", description="Hôte passerelle")
+    gateway_host: str = Field(default="0.0.0.0", description="Hôte passerelle (0.0.0.0 par défaut)")
     gateway_port: int = Field(default=8000, description="Port passerelle")
 
     # Rate limiting

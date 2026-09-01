@@ -29,15 +29,15 @@
 
 ---
 
-**OpenClawMesh** est un protocole pair-à-pair souverain et un Skill modulaire pour les agents IA **OpenClaw**. La connectivité locale (LAN) est le mode d'exécution sécurisé par défaut ; les extensions WAN (DHT, relais, GossipSub et traversée STUN) sont strictement optionnelles et soumises au consentement explicite de l'utilisateur.
+**OpenClawMesh** est un protocole pair-à-pair souverain et un Skill modulaire pour les agents IA **OpenClaw**. L'ouverture WAN et la traversée NAT automatique (UPnP IGD, PCP RFC 6887, STUN, DHT) sont activées par défaut dès l'installation, tout en restant désactivables avec `--no-wan` pour les déploiements LAN isolés.
 
-Les agents se découvrent sur le réseau local, délèguent du calcul, exploitent les GPU/NPU locaux, routent des charges utiles chiffrées de bout en bout, diffusent en streaming ultra-rapide UDP sub-10ms et partagent une mémoire vectorielle — **100% Libre, Open-Source et Souverain**.
+Les agents se découvrent sur le réseau local et mondial, délèguent du calcul, exploitent les GPU/NPU locaux, routent des charges utiles chiffrées de bout en bout, diffusent en streaming ultra-rapide UDP sub-10ms et partagent une mémoire vectorielle — **100% Libre, Open-Source et Souverain**.
 
 > [!IMPORTANT]
-> **Sécurité, Données & Consentement Opérateur :**
-> - **LAN-First par défaut** : Aucune communication WAN (Internet, STUN, DHT, UPnP) n'est engagée sans demande explicite de l'opérateur.
-> - **Contrôle des flux** : La délégation de calculs, prompts, fichiers, audio/images ou résultats d'outils vers un pair distant requiert l'autorisation de l'utilisateur.
-> - **Exposition WAN Sécurisée** : Tout accès externe requiert obligatoirement le chiffrement TLS et une clé PSK ou TrustStore Ed25519.
+> **Sécurité, Accès WAN & Confidentialité Opérateur :**
+> - **Ouverture WAN Automatique** : Configuration automatique des mappages de ports routeurs/box via UPnP IGD, PCP (RFC 6887), NAT-PMP et découverte STUN.
+> - **Mode Isolation Privée LAN** : Utilisez `--no-wan` ou `OPENCLAW_WAN_ENABLED=false` pour restreindre le trafic strictement au réseau local / localhost.
+> - **Exposition WAN Sécurisée** : Tout accès externe s'appuie sur le chiffrement de bout en bout (TLS, ChaCha20-Poly1305, PQC ML-KEM-768) et l'authentification Ed25519.
 
 ---
 
@@ -47,11 +47,11 @@ Les agents se découvrent sur le réseau local, délèguent du calcul, exploiten
 <tr>
 <td width="50%">
 
-**🌐 Découverte Locale & Routage P2P**
+**🌐 Découverte Globale & Routage P2P**
 - Découverte LAN sans configuration via **mDNS Zeroconf** (JarvisMesh & OpenClawMesh)
-- Routage WAN via **DHT Kademlia 160-bit** avec **Content Routing & Provider Records**
-- Traversée NAT **STUN RFC 5389** & **Relais E2EE** (strictement opt-in)
-- Mappage de port optionnel **UPnP IGD** sur demande explicite
+- Routage mondial WAN via **DHT Kademlia 160-bit** avec **Content Routing & Provider Records**
+- Traversée NAT automatique **STUN RFC 5389** & **Relais E2EE**
+- Mappage de ports automatique **UPnP IGD** et **PCP RFC 6887 / NAT-PMP** à l'installation
 
 **⚡ Transport Ultra-Basse Latence (QUIC / WebRTC UDP)**
 - Tunnels UDP directs pour streaming token-par-token sub-10ms

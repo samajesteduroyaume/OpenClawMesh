@@ -30,15 +30,15 @@
 
 ---
 
-**OpenClawMesh** is a sovereign peer-to-peer framework and modular Skill for **OpenClaw** AI agents. LAN connectivity is the default, secure execution mode; WAN features (DHT, relay, GossipSub, and STUN traversal) are strictly optional and subject to explicit user consent.
+**OpenClawMesh** is a sovereign peer-to-peer framework and modular Skill for **OpenClaw** AI agents. WAN connectivity and NAT port opening (UPnP IGD, PCP RFC 6887, STUN, DHT) are automated upon installation, while LAN-isolated private modes remain accessible via `--no-wan`.
 
-Agents discover each other on the local network, delegate compute, leverage local GPU/NPU hardware, route end-to-end encrypted payloads, stream tokens over sub-10ms UDP tunnels, and share episodic memory — **100% Free, Open-Source & Sovereign**.
+Agents discover each other on the local network and across the Internet, delegate compute, leverage local GPU/NPU hardware, route end-to-end encrypted payloads, stream tokens over sub-10ms UDP tunnels, and share episodic memory — **100% Free, Open-Source & Sovereign**.
 
 > [!IMPORTANT]
-> **Security, Data Privacy & Operator Consent:**
-> - **LAN-First by default**: No WAN communication (Internet, STUN, DHT, UPnP) is initiated without explicit operator request.
-> - **Flow Control**: Delegating compute, prompts, files, audio/images, or tool outputs to a remote peer requires operator approval.
-> - **Secured WAN Exposure**: Any external access strictly requires TLS encryption and a shared PSK or Ed25519 TrustStore.
+> **Security, WAN Access & Operator Privacy:**
+> - **Automated WAN Port Opening**: Auto-configures router port mappings via UPnP IGD, PCP (RFC 6887), NAT-PMP & STUN discovery.
+> - **Private LAN Isolation Mode**: Run with `--no-wan` or `OPENCLAW_WAN_ENABLED=false` to restrict traffic strictly to localhost / private LAN.
+> - **Secured WAN Exposure**: External access uses end-to-end encryption (TLS, ChaCha20-Poly1305, ML-KEM-768 PQC) and Ed25519 authentication.
 
 ---
 
@@ -48,11 +48,11 @@ Agents discover each other on the local network, delegate compute, leverage loca
 <tr>
 <td width="50%">
 
-**🌐 Local Discovery & P2P Routing**
+**🌐 Global Discovery & P2P Routing**
 - Zero-config LAN discovery via **mDNS Zeroconf** (JarvisMesh & OpenClawMesh)
-- Optional WAN routing via **Kademlia DHT 160-bit** with **Content Routing & Provider Records**
-- **STUN RFC 5389** NAT traversal & **E2EE Relay** (strictly opt-in)
-- Optional **UPnP IGD** port mapping upon explicit operator activation
+- Global WAN routing via **Kademlia DHT 160-bit** with **Content Routing & Provider Records**
+- Automated **STUN RFC 5389** NAT traversal & **E2EE Relay**
+- Automated **UPnP IGD** and **PCP RFC 6887 / NAT-PMP** port opening upon installation
 
 **⚡ Ultra-Low Latency UDP Transport (QUIC / WebRTC)**
 - Direct UDP tunnels with sub-10ms token-by-token streaming

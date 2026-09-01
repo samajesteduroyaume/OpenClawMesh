@@ -87,9 +87,9 @@ class OpenClawMeshNode:
 
     async def start(
         self,
-        enable_zeroconf: bool = False,
-        enable_wan: bool = False,
-        enable_dht: bool = False,
+        enable_zeroconf: bool = True,
+        enable_wan: bool | None = None,
+        enable_dht: bool | None = None,
         enable_quic: bool | None = None,
         enable_gossipsub: bool | None = None,
         dht_port: int = 8780,
@@ -99,7 +99,7 @@ class OpenClawMeshNode:
         """Démarre le serveur WebSocket, QUIC/WebRTC UDP, Zeroconf, DHT Kademlia et GossipSub."""
         if self._running:
             return
-        if self.host not in {"127.0.0.1", "::1", "localhost"}:
+        if self.host not in {"0.0.0.0", "127.0.0.1", "::1", "localhost", "::"}:
             if not self.ssl_context:
                 try:
                     from .crypto import create_ephemeral_ssl_context
@@ -126,11 +126,11 @@ class OpenClawMeshNode:
 
         # 1. Transport Ultra-Basse Latence QUIC / WebRTC DataChannels (UDP)
         use_quic = enable_quic if enable_quic is not None else _settings.quic_enabled
+        q_port = quic_port or (self.port + 5 if self.port != 8770 else _settings.quic_port)
         if use_quic:
             try:
                 from .network.quic_webrtc import QUICWebRTCTransport
 
-                q_port = quic_port or (self.port + 5 if self.port != 8770 else _settings.quic_port)
                 self.quic_transport = QUICWebRTCTransport(
                     node_name=self.name,
                     host=self.host,
@@ -154,17 +154,23 @@ class OpenClawMeshNode:
             )
             await self.discovery.start(advertise=True)
 
-        # 3. Découverte & Connexion WAN Universelle (DHT Kademlia & GossipSub)
-        if enable_wan or enable_dht:
+        # 3. Découverte & Ouverture WAN Universelle (UPnP IGD, PCP, DHT Kademlia)
+        use_wan = enable_wan if enable_wan is not None else _settings.wan_enabled
+        use_dht = enable_dht if enable_dht is not None else _settings.dht_enabled
+
+        if use_wan or use_dht:
             try:
                 from .network.nat_traversal import discover_nat_and_public_ip
 
                 self._nat_profile = await discover_nat_and_public_ip(
-                    local_port=self.port, enabled=True, try_upnp=True
+                    local_port=self.port,
+                    enabled=True,
+                    try_upnp=_settings.upnp_enabled,
+                    extra_udp_ports=[q_port, dht_port],
                 )
                 public_host = self._nat_profile.public_ip or self.advertise_ip
             except Exception as e:
-                logger.debug(f"Découverte NAT: {e}")
+                logger.debug(f"Découverte & ouverture NAT WAN: {e}")
                 public_host = self.advertise_ip
 
             try:
@@ -195,7 +201,7 @@ class OpenClawMeshNode:
                         },
                     )
                 logger.info(
-                    f"✓ Nœud '{self.name}' raccordé à la DHT Kademlia mondiale (UDP:{dht_port})"
+                    f"✓ Nœud '{self.name}' raccordé au WAN et à la DHT Kademlia mondiale (UDP:{dht_port})"
                 )
             except Exception as e:
                 logger.warning(f"Avertissement DHT Kademlia WAN: {e}")

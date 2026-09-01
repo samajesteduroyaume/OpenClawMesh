@@ -267,10 +267,13 @@ async def cmd_serve(args: argparse.Namespace) -> None:
         trust_store=trust_store,
     )
 
+    enable_wan = not getattr(args, "no_wan", False)
+    enable_dht = (getattr(args, "dht", False) or enable_wan) and not getattr(args, "no_dht", False)
+
     await node.start(
         enable_zeroconf=not args.no_zeroconf,
-        enable_wan=getattr(args, "wan", False),
-        enable_dht=getattr(args, "dht", False) or getattr(args, "wan", False),
+        enable_wan=enable_wan,
+        enable_dht=enable_dht,
         enable_quic=not getattr(args, "no_quic", False),
         enable_gossipsub=not getattr(args, "no_gossipsub", False),
         dht_port=getattr(args, "dht_port", 8780),
@@ -282,8 +285,8 @@ async def cmd_serve(args: argparse.Namespace) -> None:
         print(
             f"⚡ Transport QUIC/WebRTC UDP direct actif sur {node.quic_transport.bound_host}:{node.quic_transport.bound_port}"
         )
-    if getattr(args, "wan", False) or getattr(args, "dht", False):
-        print(f"🌍 Raccordé à la DHT Kademlia mondiale sur UDP:{getattr(args, 'dht_port', 8780)}")
+    if enable_wan or enable_dht:
+        print(f"🌍 Raccordé au WAN et à la DHT Kademlia mondiale sur UDP:{getattr(args, 'dht_port', 8780)}")
     if node.gossipsub:
         print("📡 Overlay Pub/Sub GossipSub v1.1 actif")
     print(f"📡 Compétences publiées : {', '.join(registry.list_remote_names())}")
@@ -754,7 +757,7 @@ def main() -> None:
     p_serve.add_argument(
         "--port", type=int, default=8770, help="Port d'écoute WebSocket (défaut: 8770)"
     )
-    p_serve.add_argument("--host", default="127.0.0.1", help="Hôte d'écoute (défaut: localhost)")
+    p_serve.add_argument("--host", default="0.0.0.0", help="Hôte d'écoute (défaut: 0.0.0.0 pour écoute globale)")
     p_serve.add_argument("--psk", help="Clé pré-partagée HMAC-SHA256 requise")
     p_serve.add_argument("--keyfile", help="Chemin vers la clé privée Ed25519 de ce nœud")
     p_serve.add_argument("--trustfile", help="Chemin vers le TrustStore des clés autorisées")
@@ -762,10 +765,19 @@ def main() -> None:
     p_serve.add_argument(
         "--wan",
         action="store_true",
-        help="Active la découverte WAN globale (DHT 160-bit, STUN, UPnP)",
+        default=True,
+        help="Active l'ouverture WAN automatique (UPnP, PCP RFC 6887, STUN, DHT) [Actif par défaut]",
     )
     p_serve.add_argument(
-        "--dht", action="store_true", help="Active le nœud d'indexation Kademlia DHT 160-bit"
+        "--no-wan",
+        action="store_true",
+        help="Désactive l'ouverture WAN et restreint le nœud au réseau local (LAN isolé)",
+    )
+    p_serve.add_argument(
+        "--dht", action="store_true", default=True, help="Active le nœud d'indexation Kademlia DHT 160-bit [Actif par défaut]"
+    )
+    p_serve.add_argument(
+        "--no-dht", action="store_true", help="Désactive l'indexation DHT Kademlia"
     )
     p_serve.add_argument(
         "--dht-port", type=int, default=8780, help="Port d'écoute UDP Kademlia (défaut: 8780)"
