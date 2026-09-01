@@ -75,6 +75,7 @@ class OpenClawMeshNode:
         self._nat_profile: Any | None = None
         self.quic_transport: Any | None = None
         self.gossipsub: Any | None = None
+        self.freebox_client: Any | None = None
         self._ws_server = None
         self._active_tasks = 0
         self._task_semaphore = asyncio.Semaphore(max(1, _settings.max_active_tasks))
@@ -218,6 +219,33 @@ class OpenClawMeshNode:
             except Exception as e:
                 logger.warning(f"Avertissement démarrage GossipSub: {e}")
 
+        # 5. Enregistrement automatique & Annonce d'adresses IP au Guichet Unique Freebox Ultra
+        if _settings.freebox_guichet_enabled:
+            try:
+                from .network.freebox_guichet import FreeboxGuichetClient
+
+                nid = getattr(self.identity, "node_id", None) or f"node-{self.name.lower().replace(' ', '-')}-{self.port}"
+                self.freebox_client = FreeboxGuichetClient(
+                    guichet_url=_settings.freebox_guichet_url,
+                    node_id=nid,
+                    name=self.name,
+                    port=self.port,
+                    dht_port=dht_port,
+                    skills=self.registry.list_remote_names(),
+                    pubkey=getattr(self.identity, "public_key_hex", None) if self.identity else None,
+                )
+                pub_ip = self._nat_profile.public_ip if self._nat_profile else None
+                nat_type = self._nat_profile.nat_type if self._nat_profile else "Full-Cone"
+                reg_res = await self.freebox_client.register(public_ip=pub_ip, nat_type=nat_type)
+                if reg_res and self.dht and "bootstrap_peers" in reg_res:
+                    for peer in reg_res.get("bootstrap_peers", []):
+                        p_host = peer.get("public_ip") or peer.get("local_ip")
+                        p_dht_port = peer.get("dht_port", 8780)
+                        if p_host and p_dht_port:
+                            asyncio.create_task(self.dht.ping_node(p_host, p_dht_port))
+            except Exception as e:
+                logger.debug(f"Auto-enregistrement Freebox Guichet: {e}")
+
         logger.info(f"Nœud OpenClawMesh '{self.name}' démarré sur {self.host}:{self.port}")
 
     async def stop(self) -> None:
@@ -225,6 +253,10 @@ class OpenClawMeshNode:
         if not self._running:
             return
         self._running = False
+
+        if self.freebox_client:
+            self.freebox_client.stop_heartbeat()
+            self.freebox_client = None
 
         if self.gossipsub:
             await self.gossipsub.stop()

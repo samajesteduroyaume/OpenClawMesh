@@ -288,6 +288,20 @@ class Settings(BaseSettings):
     test_host: str = Field(default="127.0.0.1", description="Hôte pour tests")
     test_port_base: int = Field(default=8900, description="Base port pour tests")
 
+    # ------------------------------------------------------------------ #
+    # Configuration Freebox Ultra Guichet Unique & Ancre Mondiale
+    # ------------------------------------------------------------------ #
+    freebox_guichet_enabled: bool = Field(
+        default=True, description="Activer l'enregistrement automatique sur le Guichet Freebox"
+    )
+    freebox_guichet_url: str = Field(
+        default="http://mafreebox.freebox.fr:8790",
+        description="URL du Guichet Unique Freebox Ultra",
+    )
+    freebox_guichet_heartbeat_interval: float = Field(
+        default=30.0, description="Intervalle de battement de cœur en secondes"
+    )
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:

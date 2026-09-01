@@ -862,6 +862,21 @@ def main() -> None:
     )
     p_doc.add_argument("--json", action="store_true", help="Format de sortie JSON brut")
 
+    # 14. guichet
+    p_guichet = subparsers.add_parser(
+        "guichet", help="Interroge ou s'enregistre auprès du Guichet Unique Freebox Ultra"
+    )
+    p_guichet.add_argument(
+        "action",
+        choices=["ips", "nodes", "register", "status"],
+        default="ips",
+        nargs="?",
+        help="Action : ips (annuaire mondial), nodes (détails), register (s'enregistrer), status (santé)",
+    )
+    p_guichet.add_argument(
+        "--url", help="URL personnalisée du Guichet Freebox (défaut: auto-détection)"
+    )
+
     args = parser.parse_args()
 
     if args.command == "keygen":
@@ -890,6 +905,43 @@ def main() -> None:
         cmd_e2ee(args)
     elif args.command == "doctor":
         cmd_doctor(args)
+    elif args.command == "guichet":
+        asyncio.run(cmd_guichet(args))
+
+
+async def cmd_guichet(args: argparse.Namespace) -> None:
+    """Gère les requêtes CLI avec le Guichet Unique Freebox Ultra."""
+    from .network.freebox_guichet import FreeboxGuichetClient
+    import json
+
+    client = FreeboxGuichetClient(guichet_url=args.url)
+    endpoint = await client.detect_guichet_endpoint()
+    if not endpoint:
+        print("❌ Guichet Unique Freebox Ultra non joignable sur le réseau.")
+        return
+
+    print(f"⚡ Guichet Freebox détecté sur : {endpoint}")
+
+    if args.action == "status":
+        print("✓ Guichet opérationnel et prêt pour l'amorçage mondial.")
+    elif args.action == "ips":
+        data = await client.fetch_global_ip_directory()
+        if not data:
+            print("[-] Impossible de récupérer l'annuaire d'adresses IP.")
+            return
+        print(f"\n📋 Annuaire Universel des Machines ({data.get('total_machines', 0)} machines, {data.get('online_machines', 0)} en ligne) :")
+        print("-" * 75)
+        for row in data.get("directory", []):
+            st = "🟢" if row.get("status") == "online" else "🔴"
+            print(f"{st} {row.get('name', 'Node'):<24} | WAN: {row.get('public_ip', '—'):<15} | LAN: {row.get('local_ip', '—'):<15} | Port: {row.get('port')}")
+        print("-" * 75)
+    elif args.action == "register":
+        res = await client.register()
+        if res:
+            print("✓ Enregistrement réussi auprès du Guichet Freebox.")
+            print(f"🌍 Pairs reçus pour amorçage : {res.get('mesh_peer_count', 0)}")
+        else:
+            print("[-] Échec de l'enregistrement.")
 
 
 if __name__ == "__main__":
