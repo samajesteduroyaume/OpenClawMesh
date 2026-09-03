@@ -78,6 +78,15 @@ class MeshClient:
             MeshDiscovery(node_name=self.name) if discovery_enabled else None
         )
         self.static_peers: dict[str, PeerInfo] = {}
+        self.guichet_peers: dict[str, PeerInfo] = {}
+        self.freebox_client: Any | None = None
+        if _settings.freebox_guichet_enabled:
+            from .network.freebox_guichet import FreeboxGuichetClient
+
+            self.freebox_client = FreeboxGuichetClient(
+                guichet_url=_settings.freebox_guichet_url,
+                name=self.name,
+            )
 
         # Pool de connexions WebSockets persistantes {endpoint_key: WebSocketClientProtocol}
         self._pool: dict[str, Any] = {}
@@ -93,10 +102,62 @@ class MeshClient:
         self._peer_health_cache: dict[str, dict] = {}
         self._rr_cursor: dict[str, int] = {}
 
+    async def sync_guichet_peers(self) -> dict[str, PeerInfo]:
+        """Interroge le Guichet Unique Freebox pour découvrir et mettre à jour tous les pairs actifs."""
+        if not self.freebox_client:
+            return {}
+        try:
+            data = await self.freebox_client.fetch_global_ip_directory()
+            if not data or "directory" not in data:
+                return {}
+
+            for item in data.get("directory", []):
+                pname = item.get("name")
+                status = item.get("status", "offline")
+                if not pname or status != "online":
+                    continue
+                if pname == self.name:
+                    continue
+
+                local_ip = item.get("local_ip")
+                pub_ip = item.get("public_ip")
+                port = item.get("port", 8770)
+                skills = item.get("skills", [])
+
+                # Déterminer la meilleure IP joignable
+                if local_ip and not local_ip.startswith("127.") and not local_ip.startswith("fe80:"):
+                    addr = local_ip
+                else:
+                    addr = pub_ip or local_ip or "127.0.0.1"
+
+                peer = PeerInfo(
+                    name=pname,
+                    address=addr,
+                    port=port,
+                    skills=skills,
+                    service_type="freebox_guichet",
+                    last_seen=time.time(),
+                )
+                self.guichet_peers[pname] = peer
+                nid = item.get("node_id")
+                if nid:
+                    self.guichet_peers[nid] = peer
+
+            return self.guichet_peers
+        except Exception as e:
+            logger.debug(f"Synchronisation Guichet Freebox: {e}")
+            return {}
+
     async def start(self, enable_quic: bool | None = None) -> None:
-        """Démarre la découverte mDNS et le transport UDP QUIC si configuré."""
+        """Démarre la découverte mDNS, la synchronisation Freebox Guichet et le transport UDP QUIC."""
         if self.discovery:
             await self.discovery.start(advertise=False)
+
+        if _settings.freebox_guichet_enabled and self.freebox_client:
+            try:
+                await self.sync_guichet_peers()
+            except Exception as e:
+                logger.debug(f"Sync initial Guichet Freebox: {e}")
 
         use_quic = enable_quic if enable_quic is not None else _settings.quic_enabled
         if use_quic and self.quic_transport is None:
@@ -156,8 +217,9 @@ class MeshClient:
         return peer
 
     def list_peers(self) -> dict[str, PeerInfo]:
-        """Retourne l'ensemble des pairs connus (mDNS + statiques)."""
+        """Retourne l'ensemble des pairs connus (mDNS + Guichet Freebox + statiques)."""
         peers = dict(self.static_peers)
+        peers.update(self.guichet_peers)
         if self.discovery:
             peers.update(self.discovery.list_peers())
         return peers
@@ -212,7 +274,7 @@ class MeshClient:
     # ------------------------------------------------------------------ #
     # Connexion & Transport WebSocket
     # ------------------------------------------------------------------ #
-    def _resolve_endpoint(self, target: str) -> tuple[str, str]:
+    async def _resolve_endpoint(self, target: str) -> tuple[str, str]:
         """Résout un nom de pair ou une URL directe en (endpoint_key, ws_url)."""
         if target.startswith("ws://") or target.startswith("wss://"):
             return target, target
@@ -221,6 +283,14 @@ class MeshClient:
         if target in all_peers:
             peer = all_peers[target]
             return target, peer.ws_url
+
+        # Tenter une synchronisation avec le Guichet Unique Freebox si non trouvé localement
+        if self.freebox_client:
+            await self.sync_guichet_peers()
+            all_peers = self.list_peers()
+            if target in all_peers:
+                peer = all_peers[target]
+                return target, peer.ws_url
 
         # Format host:port direct
         if ":" in target and not target.startswith("http"):
@@ -328,7 +398,7 @@ class MeshClient:
         Envoie une requête d'exécution synchrone à un pair.
         target : Nom du pair (ex: 'mac-m3') ou URL ('ws://192.168.1.50:8765').
         """
-        endpoint_key, ws_url = self._resolve_endpoint(target)
+        endpoint_key, ws_url = await self._resolve_endpoint(target)
         ws = await self._get_connection(endpoint_key, ws_url)
 
         req = TaskRequest(
@@ -380,7 +450,7 @@ class MeshClient:
         """
         Envoie une requête et consomme les chunks intermédiaires au fil de l'eau.
         """
-        endpoint_key, ws_url = self._resolve_endpoint(target)
+        endpoint_key, ws_url = await self._resolve_endpoint(target)
         ws = await self._get_connection(endpoint_key, ws_url)
 
         req = TaskRequest(
@@ -531,11 +601,20 @@ class MeshClient:
     ) -> TaskResponse:
         """
         Routage intelligent : trouve automatiquement le meilleur pair fournissant `skill`
-        (via découverte locale ou Provider Records DHT) et lui délègue l'exécution.
+        (via découverte locale mDNS, Guichet Unique Freebox ou Provider Records DHT)
+        et lui délègue l'exécution.
         """
         best_peer = self.find_best_peer_for_skill(skill)
 
-        # Si non trouvé localement et DHT active, chercher via Provider Records DHT
+        # Fallback 1 : Si non trouvé, synchroniser avec le Guichet Unique Freebox
+        if not best_peer and self.freebox_client:
+            try:
+                await self.sync_guichet_peers()
+                best_peer = self.find_best_peer_for_skill(skill)
+            except Exception as ex_g:
+                logger.debug(f"Recherche compétence Guichet Freebox: {ex_g}")
+
+        # Fallback 2 : Si non trouvé et DHT active, chercher via Provider Records DHT Kademlia
         if not best_peer and self.dht:
             try:
                 providers = await self.dht.find_providers_distributed(f"skill:{skill}", timeout=2.0)

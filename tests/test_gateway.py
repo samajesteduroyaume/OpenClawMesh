@@ -206,8 +206,7 @@ async def test_admin_wan_toggle_100_percent_confidence(monkeypatch):
     from openclaw_mesh.config import get_settings
 
     # Patch du port par défaut pour éviter le conflit avec le daemon local sur 8770.
-    _settings = get_settings()
-    monkeypatch.setattr(_settings, "default_port", 9870)
+    monkeypatch.setattr(gateway_server._settings, "default_port", 9870)
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
