@@ -85,6 +85,20 @@ class OpenClawMeshNode:
         self._start_time = time.time()
         self._running = False
 
+    @staticmethod
+    def _try_acquire(sem: asyncio.Semaphore) -> bool:
+        """Acquisition non-bloquante et atomique d'un asyncio.Semaphore.
+
+        Evite le TOCTOU du pattern locked()+acquire() séparés en lisant
+        et décrémentant directement le compteur interne dans un seul appel
+        synchrone (opération atomique dans la boucle d'événements asyncio
+        car Python n'est pas réentrant au niveau d'une instruction).
+        """
+        if sem._value > 0:  # noqa: SLF001
+            sem._value -= 1  # noqa: SLF001
+            return True
+        return False
+
     async def start(
         self,
         enable_zeroconf: bool = True,
@@ -306,12 +320,26 @@ class OpenClawMeshNode:
         send_lock = asyncio.Lock()
         try:
             async for raw in ws:
-                if not self._queue_semaphore.locked():
-                    await self._queue_semaphore.acquire()
+                # Acquisition atomique sans TOCTOU via _try_acquire.
+                if self._try_acquire(self._queue_semaphore):
                     asyncio.create_task(self._process_message_with_timeout(ws, raw, send_lock))
                 else:
-                    await ws.close(code=1013, reason="Capacité du nœud atteinte")
-                    break
+                    # File pleine — rejeter cette requête sans fermer la connexion.
+                    try:
+                        import json as _json
+                        data = _json.loads(raw)
+                        req_id = data.get("request_id", "unknown")
+                    except Exception:
+                        req_id = "unknown"
+                    from .protocol import TaskResponse as _TR
+                    err = _TR(
+                        request_id=req_id,
+                        ok=False,
+                        error="Capacité du nœud atteinte — réessayez plus tard",
+                        handled_by=self.name,
+                    )
+                    async with send_lock:
+                        await ws.send(err.to_json())
         except (asyncio.CancelledError, websockets.ConnectionClosed):
             pass
         except Exception as e:
@@ -489,7 +517,8 @@ class OpenClawMeshNode:
                 await ws.send(resp.to_json())
             return
 
-        if self._task_semaphore.locked():
+        # Acquisition atomique sans TOCTOU via _try_acquire.
+        if not self._try_acquire(self._task_semaphore):
             resp = TaskResponse(
                 request_id=req.request_id,
                 ok=False,
@@ -499,7 +528,6 @@ class OpenClawMeshNode:
             async with send_lock:
                 await ws.send(resp.to_json())
             return
-        await self._task_semaphore.acquire()
         self._active_tasks += 1
         output_bytes = 0
         try:

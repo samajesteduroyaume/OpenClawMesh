@@ -10,12 +10,24 @@ from __future__ import annotations
 
 import argparse
 import platform
+import subprocess
+import sys
 from pathlib import Path
 
 
+def get_default_exec_args(port: int = 8770) -> list[str]:
+    root_dir = Path(__file__).resolve().parent.parent
+    cli_path = root_dir / "scripts" / "mesh_cli.py"
+    py_exec = sys.executable
+    return [py_exec, str(cli_path), "serve", "--port", str(port), "--host", "0.0.0.0", "--wan"]
+
+
 def generate_systemd_service(
-    user: str = "root", port: int = 8000, bin_path: str = "/usr/local/bin/openclaw-mesh"
+    user: str = "root", port: int = 8770, exec_cmd: str | None = None
 ) -> str:
+    if not exec_cmd:
+        args = get_default_exec_args(port)
+        exec_cmd = " ".join(f'"{a}"' if " " in a else a for a in args)
     return f"""[Unit]
 Description=OpenClawMesh Autonomous P2P Agent Mesh & Gateway Daemon
 After=network.target network-online.target
@@ -24,7 +36,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User={user}
-ExecStart={bin_path} serve --port {port} --host 0.0.0.0 --wan
+ExecStart={exec_cmd}
 Restart=always
 RestartSec=5s
 LimitNOFILE=65535
@@ -37,7 +49,10 @@ WantedBy=multi-user.target
 """
 
 
-def generate_launchd_plist(bin_path: str = "/usr/local/bin/openclaw-mesh", port: int = 8000) -> str:
+def generate_launchd_plist(port: int = 8770, exec_args: list[str] | None = None) -> str:
+    if not exec_args:
+        exec_args = get_default_exec_args(port)
+    args_xml = "\n        ".join(f"<string>{arg}</string>" for arg in exec_args)
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -46,13 +61,7 @@ def generate_launchd_plist(bin_path: str = "/usr/local/bin/openclaw-mesh", port:
     <string>com.openclaw.mesh</string>
     <key>ProgramArguments</key>
     <array>
-        <string>{bin_path}</string>
-        <string>serve</string>
-        <string>--port</string>
-        <string>{port}</string>
-        <string>--host</string>
-        <string>0.0.0.0</string>
-        <string>--wan</string>
+        {args_xml}
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -71,26 +80,17 @@ def generate_docker_compose() -> str:
     return """version: '3.8'
 
 services:
-  openclaw-gateway:
+  openclaw-mesh-node:
     image: python:3.11-slim
-    container_name: openclaw_gateway
+    container_name: openclaw_node
     working_dir: /app
     volumes:
       - .:/app
-    command: bash -c "pip install -e . && uvicorn openclaw_mesh.gateway.server:app --host 0.0.0.0 --port 8000"
-    ports:
-      - "8000:8000"
-    restart: unless-stopped
-
-  openclaw-mesh-node-1:
-    image: python:3.11-slim
-    container_name: openclaw_node_1
-    working_dir: /app
-    volumes:
-      - .:/app
-    command: bash -c "pip install -e . && openclaw-mesh serve --port 8770 --host 0.0.0.0 --wan"
+    command: bash -c "pip install -e . && python scripts/mesh_cli.py serve --port 8770 --host 0.0.0.0 --wan"
     ports:
       - "8770:8770"
+      - "8780:8780/udp"
+      - "8775:8775/udp"
     restart: unless-stopped
 """
 
@@ -99,7 +99,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="OpenClawMesh Service & Daemon Installer")
     parser.add_argument("--type", choices=["systemd", "launchd", "docker", "auto"], default="auto")
     parser.add_argument("--out", help="Chemin du fichier de sortie")
-    parser.add_argument("--port", type=int, default=8000, help="Port d'écoute")
+    parser.add_argument("--port", type=int, default=8770, help="Port d'écoute (défaut: 8770)")
+    parser.add_argument("--install", action="store_true", help="Installe et active immédiatement le service au démarrage")
     args = parser.parse_args()
 
     os_type = platform.system().lower()
@@ -116,6 +117,28 @@ def main() -> None:
     else:
         content = generate_docker_compose()
         out_path = Path(args.out or "docker-compose.mesh.yml")
+
+    if args.install:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(content, encoding="utf-8")
+        print(f"✅ Service enregistré dans : {out_path}")
+
+        if target_type == "launchd":
+            subprocess.run(["launchctl", "unload", str(out_path)], check=False, stderr=subprocess.DEVNULL)
+            res = subprocess.run(["launchctl", "load", "-w", str(out_path)], check=False)
+            if res.returncode == 0:
+                print("🚀 OpenClawMesh est maintenant ACTIF en arrière-plan et démarrera tout seul à chaque allumage de la machine !")
+                print("📋 Logs disponibles dans : /tmp/openclaw_mesh.log")
+            else:
+                print(f"⚠️ Erreur chargement launchctl ({res.returncode})")
+        elif target_type == "systemd":
+            subprocess.run(["systemctl", "daemon-reload"], check=False)
+            res = subprocess.run(["systemctl", "enable", "--now", out_path.name], check=False)
+            if res.returncode == 0:
+                print("🚀 Service systemd OpenClawMesh activé avec succès au démarrage !")
+            else:
+                print(f"⚠️ Erreur systemctl ({res.returncode}) - vérifiez vos droits sudo.")
+        return
 
     print(f"Generated {target_type} configuration for OpenClawMesh:")
     print("-" * 50)

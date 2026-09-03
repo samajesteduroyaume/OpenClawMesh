@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import socket
 import ssl
 import sys
 import time
@@ -287,6 +288,9 @@ async def cmd_serve(args: argparse.Namespace) -> None:
         )
     if enable_wan or enable_dht:
         print(f"🌍 Raccordé au WAN et à la DHT Kademlia mondiale sur UDP:{getattr(args, 'dht_port', 8780)}")
+    if node.freebox_client and node.freebox_client.is_registered:
+        print(f"⚡ Raccordé automatiquement au Guichet Unique Freebox : {node.freebox_client.discovered_guichet_url}")
+        print(f"🌟 Nœud enregistré et actif sur le maillage mondial ({len(node.freebox_client.active_bootstrap_peers)} pairs reçus)")
     if node.gossipsub:
         print("📡 Overlay Pub/Sub GossipSub v1.1 actif")
     print(f"📡 Compétences publiées : {', '.join(registry.list_remote_names())}")
@@ -753,7 +757,11 @@ def main() -> None:
 
     # 5. serve
     p_serve = subparsers.add_parser("serve", help="Démarre un nœud serveur OpenClawMesh")
-    p_serve.add_argument("--name", default="openclaw-node", help="Nom de ce nœud sur le réseau")
+    p_serve.add_argument(
+        "--name",
+        default=socket.gethostname(),
+        help="Nom de ce nœud sur le réseau (défaut: nom d'hôte de la machine)",
+    )
     p_serve.add_argument(
         "--port", type=int, default=8770, help="Port d'écoute WebSocket (défaut: 8770)"
     )
@@ -889,6 +897,19 @@ def main() -> None:
         "--url", help="URL personnalisée du Guichet Freebox (défaut: auto-détection)"
     )
 
+    # 15. daemon
+    p_daemon = subparsers.add_parser(
+        "daemon", help="Gère le service d'arrière-plan autonome OpenClawMesh (LaunchAgent/systemd)"
+    )
+    p_daemon.add_argument(
+        "action",
+        choices=["install", "status", "start", "stop"],
+        default="install",
+        nargs="?",
+        help="Action : install (active au démarrage), status, start, stop",
+    )
+    p_daemon.add_argument("--port", type=int, default=8770, help="Port d'écoute du nœud")
+
     args = parser.parse_args()
 
     if args.command == "keygen":
@@ -919,12 +940,90 @@ def main() -> None:
         cmd_doctor(args)
     elif args.command == "guichet":
         asyncio.run(cmd_guichet(args))
+    elif args.command == "daemon":
+        cmd_daemon(args)
+
+
+def cmd_daemon(args: argparse.Namespace) -> None:
+    """Gère le démon de service autonome d'OpenClawMesh."""
+    import importlib.util
+    import platform
+    import subprocess
+    from pathlib import Path
+
+    is_mac = "darwin" in platform.system().lower()
+    plist_path = Path.home() / "Library/LaunchAgents/com.openclaw.mesh.plist"
+    service_path = Path("/etc/systemd/system/openclaw-mesh.service")
+
+    if args.action == "install":
+        # Import direct depuis le chemin absolu du fichier (scripts/ n'est pas un package Python)
+        _installer_path = Path(__file__).resolve().parent.parent / "scripts" / "service_installer.py"
+        spec = importlib.util.spec_from_file_location("service_installer", _installer_path)
+        _mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+
+        os_type = platform.system().lower()
+        target_type = "launchd" if "darwin" in os_type else "systemd"
+
+        if target_type == "launchd":
+            content = _mod.generate_launchd_plist(port=args.port)
+            out_path = plist_path
+        else:
+            content = _mod.generate_systemd_service(port=args.port)
+            out_path = service_path
+
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(content, encoding="utf-8")
+        print(f"✅ Service enregistré dans : {out_path}")
+
+        if target_type == "launchd":
+            subprocess.run(["launchctl", "unload", str(out_path)], check=False, stderr=subprocess.DEVNULL)
+            res = subprocess.run(["launchctl", "load", "-w", str(out_path)], check=False)
+            if res.returncode == 0:
+                print("🚀 OpenClawMesh est maintenant ACTIF en arrière-plan et démarrera tout seul à chaque allumage !")
+                print("📋 Logs disponibles dans : /tmp/openclaw_mesh.log")
+            else:
+                print(f"⚠️ Erreur chargement launchctl ({res.returncode})")
+        elif target_type == "systemd":
+            subprocess.run(["systemctl", "daemon-reload"], check=False)
+            res = subprocess.run(["systemctl", "enable", "--now", out_path.name], check=False)
+            if res.returncode == 0:
+                print("🚀 Service systemd OpenClawMesh activé avec succès au démarrage !")
+            else:
+                print(f"⚠️ Erreur systemctl ({res.returncode}) - vérifiez vos droits sudo.")
+
+    elif args.action == "status":
+        if is_mac:
+            res = subprocess.run(["launchctl", "list"], capture_output=True, text=True)
+            if "com.openclaw.mesh" in res.stdout:
+                print("🟢 Service OpenClawMesh ACTIF en tâche de fond (LaunchAgent).")
+            else:
+                print("🔴 Service OpenClawMesh NON ACTIF.")
+        else:
+            res = subprocess.run(["systemctl", "is-active", "openclaw-mesh"], capture_output=True, text=True)
+            if res.stdout.strip() == "active":
+                print("🟢 Service OpenClawMesh ACTIF en tâche de fond (systemd).")
+            else:
+                print(f"🔴 Service OpenClawMesh ({res.stdout.strip()}).")
+    elif args.action == "stop":
+        if is_mac:
+            subprocess.run(["launchctl", "unload", str(plist_path)], check=False)
+            print("🛑 Service arrêté.")
+        else:
+            subprocess.run(["systemctl", "stop", "openclaw-mesh"], check=False)
+            print("🛑 Service arrêté.")
+    elif args.action == "start":
+        if is_mac:
+            subprocess.run(["launchctl", "load", "-w", str(plist_path)], check=False)
+            print("🚀 Service démarré.")
+        else:
+            subprocess.run(["systemctl", "start", "openclaw-mesh"], check=False)
+            print("🚀 Service démarré.")
 
 
 async def cmd_guichet(args: argparse.Namespace) -> None:
     """Gère les requêtes CLI avec le Guichet Unique Freebox Ultra."""
     from .network.freebox_guichet import FreeboxGuichetClient
-    import json
 
     client = FreeboxGuichetClient(guichet_url=args.url)
     endpoint = await client.detect_guichet_endpoint()

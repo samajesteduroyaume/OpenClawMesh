@@ -305,7 +305,7 @@ class Settings(BaseSettings):
         default=True, description="Activer l'enregistrement automatique sur le Guichet Freebox"
     )
     freebox_guichet_url: str = Field(
-        default="http://mafreebox.freebox.fr:8790",
+        default="http://82.67.166.90:8790",
         description="URL du Guichet Unique Freebox Ultra",
     )
     freebox_guichet_heartbeat_interval: float = Field(

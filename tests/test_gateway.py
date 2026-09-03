@@ -201,37 +201,48 @@ def test_admin_key_management_flow():
 
 
 @pytest.mark.asyncio
-async def test_admin_wan_toggle_100_percent_confidence():
+async def test_admin_wan_toggle_100_percent_confidence(monkeypatch):
     import httpx
+    from openclaw_mesh.config import get_settings
+
+    # Patch du port par défaut pour éviter le conflit avec le daemon local sur 8770.
+    _settings = get_settings()
+    monkeypatch.setattr(_settings, "default_port", 9870)
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        # 1. Activer le nœud WAN en 100% Confiance sans PSK préexistante
-        activate_resp = await client.post(
-            "/api/v1/admin/wan/toggle",
-            headers={"X-Admin-Token": ADMIN_TOKEN},
-            json={"remote_access": True},
-        )
-        assert activate_resp.status_code == 200
-        act_data = activate_resp.json()
-        assert act_data["ok"] is True
-        assert act_data["active"] is True
-        assert act_data["host"] == "0.0.0.0"
-        assert "psk" in act_data
-        assert "connect_url" in act_data
-        assert "cli_command" in act_data
+        try:
+            # 1. Activer le nœud WAN en 100% Confiance sans PSK préexistante
+            activate_resp = await client.post(
+                "/api/v1/admin/wan/toggle",
+                headers={"X-Admin-Token": ADMIN_TOKEN},
+                json={"remote_access": True},
+            )
+            assert activate_resp.status_code == 200
+            act_data = activate_resp.json()
+            assert act_data["ok"] is True
+            assert act_data["active"] is True
+            assert act_data["host"] == "0.0.0.0"
+            assert "psk" in act_data
+            assert "connect_url" in act_data
+            assert "cli_command" in act_data
 
-        # 2. Désactiver le nœud WAN (retour en local)
-        deactivate_resp = await client.post(
-            "/api/v1/admin/wan/toggle",
-            headers={"X-Admin-Token": ADMIN_TOKEN},
-            json={"remote_access": False},
-        )
-        assert deactivate_resp.status_code == 200
-        deact_data = deactivate_resp.json()
-        assert deact_data["ok"] is True
-        assert deact_data["active"] is False
+            # 2. Désactiver le nœud WAN (retour en local)
+            deactivate_resp = await client.post(
+                "/api/v1/admin/wan/toggle",
+                headers={"X-Admin-Token": ADMIN_TOKEN},
+                json={"remote_access": False},
+            )
+            assert deactivate_resp.status_code == 200
+            deact_data = deactivate_resp.json()
+            assert deact_data["ok"] is True
+            assert deact_data["active"] is False
+        finally:
+            # Nettoyage : s'assurer que le nœud WAN du test est bien arrêté
+            if gateway_server._wan_node is not None:
+                await gateway_server._wan_node.stop()
+                gateway_server._wan_node = None
 
 
 def test_prometheus_metrics_endpoint():

@@ -16,6 +16,7 @@ import struct
 import urllib.request
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger("openclaw_mesh.nat")
 

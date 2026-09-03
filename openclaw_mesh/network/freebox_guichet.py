@@ -26,6 +26,8 @@ logger = logging.getLogger("openclaw_mesh.freebox_guichet")
 
 DEFAULT_CANDIDATE_URLS = [
     os.getenv("OPENCLAW_FREEBOX_GUICHET_URL"),
+    "http://192.168.1.15:8790",
+    "http://82.67.166.90:8790",
     "http://127.0.0.1:8790",
     "http://mafreebox.freebox.fr:8790",
     "http://192.168.1.254:8790",
@@ -63,21 +65,26 @@ class FreeboxGuichetClient:
         self._heartbeat_task: asyncio.Task | None = None
 
     async def detect_guichet_endpoint(self) -> str | None:
-        """Trouve l'adresse accessible du Guichet Unique Freebox Ultra."""
+        """Trouve l'adresse accessible du Guichet Unique Freebox Ultra (test parallèle rapide)."""
+        candidates: list[str] = []
         if self.guichet_url:
-            if await self._check_health(self.guichet_url):
-                self.discovered_guichet_url = self.guichet_url.rstrip("/")
-                return self.discovered_guichet_url
+            candidates.append(self.guichet_url.rstrip("/"))
+        for c in DEFAULT_CANDIDATE_URLS:
+            if c:
+                clean = c.rstrip("/")
+                if clean not in candidates:
+                    candidates.append(clean)
 
-        loop = asyncio.get_running_loop()
+        async def _check(url: str) -> tuple[str, bool]:
+            ok = await self._check_health(url)
+            return url, ok
 
-        for candidate in DEFAULT_CANDIDATE_URLS:
-            if not candidate:
-                continue
-            cand_clean = candidate.rstrip("/")
-            if await self._check_health(cand_clean):
-                self.discovered_guichet_url = cand_clean
-                logger.info(f"✓ Guichet Unique Freebox Ultra détecté sur : {cand_clean}")
+        tasks = [_check(cand) for cand in candidates]
+        for coro in asyncio.as_completed(tasks):
+            url, ok = await coro
+            if ok:
+                self.discovered_guichet_url = url
+                logger.info(f"✓ Guichet Unique Freebox Ultra détecté sur : {url}")
                 return self.discovered_guichet_url
 
         return None
