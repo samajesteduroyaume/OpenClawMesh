@@ -661,10 +661,102 @@ def render_portal_html(
             align-items: center;
         }}
 
+        /* ── Guichet Unique & Mesh Live Banner ── */
+        .guichet-banner {{
+            background: linear-gradient(90deg, rgba(0, 255, 157, 0.08) 0%, rgba(0, 240, 255, 0.06) 50%, rgba(168, 85, 247, 0.08) 100%);
+            border-bottom: 1px solid rgba(0, 255, 157, 0.25);
+            padding: 0.65rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.84rem;
+            backdrop-filter: blur(12px);
+            z-index: 80;
+        }}
+
+        .guichet-banner-content {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }}
+
+        .guichet-status-group {{
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }}
+
+        .guichet-indicator {{
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ffcc00;
+            box-shadow: 0 0 10px #ffcc00;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }}
+
+        .guichet-indicator.online {{
+            background: var(--primary);
+            box-shadow: 0 0 12px var(--primary);
+        }}
+
+        .guichet-indicator.offline {{
+            background: var(--rose);
+            box-shadow: 0 0 10px var(--rose);
+        }}
+
+        .guichet-details-group {{
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }}
+
+        .guichet-detail-item {{
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }}
+
+        .mesh-table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }}
+
+        .mesh-table th {{
+            text-align: left;
+            padding: 0.85rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+        }}
+
+        .mesh-table td {{
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+        }}
+
+        .mesh-table tr:hover td {{
+            background: rgba(255, 255, 255, 0.03);
+        }}
+
         /* Responsive */
         @media (max-width: 768px) {{
             header {{ padding: 0.8rem 1rem; }}
             .status-strip {{ display: none; }}
+            .guichet-banner {{ padding: 0.6rem 1rem; font-size: 0.78rem; }}
+            .guichet-details-group {{ gap: 0.6rem; }}
             .tabs-nav-wrapper {{ padding: 0.4rem 1rem; top: 54px; }}
             main {{ padding: 1.25rem 1rem 4rem; }}
             .hero-banner {{ padding: 1.5rem; }}
@@ -711,6 +803,35 @@ def render_portal_html(
         </div>
     </div>
 
+    <!-- Guichet Unique & Mesh Sovereign Live Banner -->
+    <div class="guichet-banner" id="guichetBanner">
+        <div class="guichet-banner-content">
+            <div class="guichet-status-group">
+                <span class="guichet-indicator" id="guichetIndicator"></span>
+                <span style="font-weight:700; color:var(--text-main);">⚡ Guichet Unique Freebox :</span>
+                <span id="guichetUrlText" style="color:var(--primary); font-family:monospace; font-weight:600;">Détection en cours...</span>
+                <span class="badge badge-green" id="guichetBadge">Accès Gratuit &amp; Souverain</span>
+            </div>
+            <div class="guichet-details-group">
+                <div class="guichet-detail-item">
+                    <span>IP WireGuard :</span>
+                    <strong id="guichetIpText" style="color:var(--cyan); font-family:monospace;">-</strong>
+                </div>
+                <div class="guichet-detail-item">
+                    <span>Latence RTT :</span>
+                    <strong id="guichetRttText" style="color:var(--amber);">-</strong>
+                </div>
+                <div class="guichet-detail-item">
+                    <span>Machines Maillage :</span>
+                    <strong id="guichetPeersCountText" style="color:var(--purple); font-weight:700;">0 active(s)</strong>
+                </div>
+                <button class="btn btn-secondary" onclick="promptReconnectGuichet()" style="padding:0.35rem 0.8rem; font-size:0.75rem; border-radius:0.5rem;">
+                    🔄 Reconnexion
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
     <main>
 
@@ -754,6 +875,47 @@ def render_portal_html(
                     <div class="metric-label">Nœuds Connectés (Mesh) <span>🕸️</span></div>
                     <div class="metric-val" id="metricNodes">6 <span class="metric-unit">pairs</span></div>
                     <div class="metric-sub">✓ DHT Kademlia 160-bit & mDNS</div>
+                </div>
+            </div>
+
+            <!-- Répertoire en direct des machines du Maillage P2P -->
+            <div class="card" style="margin-bottom:2rem;">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">🌐 Répertoire des Machines du Maillage P2P (Découvertes via le Guichet Unique)</div>
+                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">
+                            Machines souveraines actives prêtes pour la délégation de calcul IA (LLM, Vision, Code).
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <span class="badge badge-cyan" id="meshPeersBadge">0 Machines</span>
+                        <button class="btn btn-secondary" onclick="fetchMeshPeers(true)" style="padding:0.4rem 0.8rem; font-size:0.8rem;">
+                            🔄 Actualiser
+                        </button>
+                    </div>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="mesh-table" id="meshPeersTable">
+                        <thead>
+                            <tr>
+                                <th>Machine / Nœud</th>
+                                <th>Rôle &amp; Statut</th>
+                                <th>Adresse IP (Mesh / LAN)</th>
+                                <th>Matériel &amp; Accélérateur</th>
+                                <th>Compétences IA</th>
+                                <th>Latence</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="meshPeersBody">
+                            <tr>
+                                <td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.5rem;">
+                                    Chargement de l'annuaire mondial du maillage...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -881,11 +1043,11 @@ def render_portal_html(
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:1rem; margin-bottom:1rem;">
                     <div>
                         <label class="form-label">Modèle IA Sélectionné</label>
                         <select id="chatModel" class="form-control" style="background:#070a12;">
-                            <option value="qwen2.5-coder-7b">Qwen 2.5 Coder 7B (Inférence Rapide & Code)</option>
+                            <option value="qwen2.5-coder-7b">Qwen 2.5 Coder 7B (Inférence Rapide &amp; Code)</option>
                             <option value="deepseek-v3-moe">DeepSeek-V3 MoE (Pipeline Distribué)</option>
                             <option value="mlx-community/Qwen2.5-Coder-7B-Instruct-4bit">Apple Silicon Metal MLX (4-bit Local)</option>
                             <option value="whisper-base-stt">Whisper Base (Audio Speech-to-Text)</option>
@@ -893,8 +1055,14 @@ def render_portal_html(
                         </select>
                     </div>
                     <div>
-                        <label class="form-label">Clé d'API (Optionnelle en mode local)</label>
-                        <input type="text" id="chatApiKey" class="form-control font-mono" placeholder="sk_claw_... (auto-rempli)">
+                        <label class="form-label">Routage du Calcul IA</label>
+                        <select id="chatTargetNode" class="form-control" style="background:#070a12;">
+                            <option value="auto">🌐 Maillage Intelligent (Orchestrateur Guichet Unique)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Clé d'API (Optionnelle en mode gratuit)</label>
+                        <input type="text" id="chatApiKey" class="form-control font-mono" placeholder="sk_claw_... (auto-rempli en mode gratuit)">
                     </div>
                 </div>
 
@@ -904,7 +1072,7 @@ def render_portal_html(
                         <div class="chat-bubble bot">
                             <div class="chat-avatar">⚡</div>
                             <div class="chat-text">
-                                Bienvenue sur <strong>OpenClawMesh</strong> ! Le maillage d'inférence est actif. Posez une question ou demandez du code pour tester le pipeline distribué en temps réel.
+                                Bienvenue sur <strong>OpenClawMesh</strong> ! Votre application est configurée pour les <strong>utilisateurs gratuits</strong> et connectée au <strong>Guichet Unique Freebox</strong>. Vos requêtes sont distribuées de manière souveraine sur les machines GPU/NPU du maillage.
                             </div>
                         </div>
                     </div>
@@ -1429,6 +1597,7 @@ main();</pre>
             if (!prompt) return;
 
             const model = document.getElementById('chatModel').value;
+            const targetNode = document.getElementById('chatTargetNode') ? document.getElementById('chatTargetNode').value : 'auto';
             const apiKey = document.getElementById('chatApiKey').value;
             const chatBox = document.getElementById('chatMessages');
             const latencyBadge = document.getElementById('chatLatencyBadge');
@@ -1447,7 +1616,7 @@ main();</pre>
             botBubble.className = 'chat-bubble bot';
             const botText = document.createElement('div');
             botText.className = 'chat-text';
-            botText.innerHTML = '<em>⚡ Inférence distribuée en cours...</em>';
+            botText.innerHTML = '<em>⚡ Inférence distribuée sur le maillage en cours...</em>';
             botBubble.innerHTML = `<div class="chat-avatar">⚡</div>`;
             botBubble.appendChild(botText);
             chatBox.appendChild(botBubble);
@@ -1458,29 +1627,52 @@ main();</pre>
                 const headers = {{ 'Content-Type': 'application/json' }};
                 if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
 
-                const res = await fetch('/v1/chat/completions', {{
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify({{
-                        model: model,
-                        messages: [{{ role: 'user', content: prompt }}],
-                        stream: false
-                    }})
-                }});
-                const data = await res.json();
-                const duration = Math.round(performance.now() - t0);
-                latencyBadge.textContent = duration + ' ms';
-
-                if (data.kv_cache_hit) {{
-                    kvBadge.style.display = 'inline-flex';
+                if (targetNode !== 'auto') {{
+                    // Routage direct vers un pair précis
+                    const res = await fetch('/api/v1/mesh/dispatch', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{
+                            skill: 'llm',
+                            prompt: prompt,
+                            target_peer: targetNode,
+                            params: {{ model: model }}
+                        }})
+                    }});
+                    const data = await res.json();
+                    const duration = Math.round(performance.now() - t0);
+                    latencyBadge.textContent = duration + ' ms';
+                    if (res.ok && data.ok) {{
+                        const text = data.result && data.result.text ? data.result.text : JSON.stringify(data.result);
+                        botText.innerHTML = `<span class="badge badge-purple" style="margin-bottom:0.4rem; font-size:0.7rem;">⚡ Nœud Mesh : ${{escapeHtml(data.target_node || targetNode)}}</span><br>` + escapeHtml(text).replace(/\n/g, '<br>');
+                    }} else {{
+                        botText.innerText = 'Erreur maillage : ' + (data.message || JSON.stringify(data));
+                    }}
                 }} else {{
-                    kvBadge.style.display = 'none';
-                }}
+                    const res = await fetch('/v1/chat/completions', {{
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({{
+                            model: model,
+                            messages: [{{ role: 'user', content: prompt }}],
+                            stream: false
+                        }})
+                    }});
+                    const data = await res.json();
+                    const duration = Math.round(performance.now() - t0);
+                    latencyBadge.textContent = duration + ' ms';
 
-                if (res.ok && data.choices && data.choices[0]) {{
-                    botText.innerText = data.choices[0].message.content;
-                }} else {{
-                    botText.innerText = 'Erreur : ' + (data.detail || JSON.stringify(data));
+                    if (data.kv_cache_hit) {{
+                        kvBadge.style.display = 'inline-flex';
+                    }} else {{
+                        kvBadge.style.display = 'none';
+                    }}
+
+                    if (res.ok && data.choices && data.choices[0]) {{
+                        botText.innerHTML = escapeHtml(data.choices[0].message.content).replace(/\n/g, '<br>');
+                    }} else {{
+                        botText.innerText = 'Erreur : ' + (data.detail || JSON.stringify(data));
+                    }}
                 }}
             }} catch (err) {{
                 botText.innerText = 'Erreur réseau : ' + err;
@@ -1711,7 +1903,7 @@ main();</pre>
                     document.getElementById('metricKv').innerHTML = `${{hitRate}} <span class="metric-unit">%</span>`;
                 }}
                 if (document.getElementById('metricNodes')) {{
-                    const activeCount = 1 + (data.wan_node_active ? 1 : 0);
+                    const activeCount = data.connected_peers_count || (1 + (data.wan_node_active ? 1 : 0));
                     document.getElementById('metricNodes').innerHTML = `${{activeCount}} <span class="metric-unit">pairs</span>`;
                 }}
                 if (document.getElementById('nodeHostStatus') && data.hardware) {{
@@ -1732,10 +1924,165 @@ main();</pre>
             }}
         }}
 
+        let currentGuichetUrl = '';
+
+        async function fetchGuichetStatus() {{
+            try {{
+                const res = await fetch('/api/v1/guichet/status');
+                if (!res.ok) return;
+                const data = await res.json();
+                const indicator = document.getElementById('guichetIndicator');
+                const urlText = document.getElementById('guichetUrlText');
+                const ipText = document.getElementById('guichetIpText');
+                const rttText = document.getElementById('guichetRttText');
+                const peersCountText = document.getElementById('guichetPeersCountText');
+                const badge = document.getElementById('guichetBadge');
+
+                if (data.connected) {{
+                    if (indicator) indicator.className = 'guichet-indicator online';
+                    currentGuichetUrl = data.guichet_url || '';
+                    if (urlText) urlText.innerText = currentGuichetUrl;
+                    if (ipText) ipText.innerText = data.assigned_ip || '10.88.0.x (Alloué)';
+                    if (rttText) rttText.innerText = (data.rtt_ms !== null && data.rtt_ms !== undefined ? data.rtt_ms + ' ms' : '< 1 ms');
+                    const count = data.bootstrap_peers_count || data.known_peers_count || 1;
+                    if (peersCountText) peersCountText.innerText = `${{count}} active(s)`;
+                    if (badge) {{
+                        badge.className = 'badge badge-green';
+                        badge.innerText = 'Raccordé · 100% Gratuit';
+                    }}
+                }} else if (data.guichet_url) {{
+                    if (indicator) indicator.className = 'guichet-indicator';
+                    if (urlText) urlText.innerText = data.guichet_url;
+                    if (badge) {{
+                        badge.className = 'badge badge-cyan';
+                        badge.innerText = 'Connexion en cours...';
+                    }}
+                }} else {{
+                    if (indicator) indicator.className = 'guichet-indicator offline';
+                    if (urlText) urlText.innerText = 'Non connecté (Mode Local)';
+                    if (badge) {{
+                        badge.className = 'badge badge-amber';
+                        badge.innerText = 'Hors-ligne Guichet';
+                    }}
+                }}
+            }} catch (e) {{
+                // Ignore transient errors
+            }}
+        }}
+
+        async function promptReconnectGuichet() {{
+            const url = prompt("Entrez l'URL du Guichet Unique Freebox (ex: http://127.0.0.1:8790 ou http://82.67.166.90:8790) :", currentGuichetUrl || "http://127.0.0.1:8790");
+            if (!url) return;
+            try {{
+                const res = await fetch('/api/v1/guichet/connect', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ guichet_url: url.trim() }})
+                }});
+                const data = await res.json();
+                showToast(data.message || (data.ok ? 'Raccordement réussi !' : 'Échec de connexion'));
+                fetchGuichetStatus();
+                fetchMeshPeers();
+            }} catch (err) {{
+                showToast('Erreur réseau lors de la reconnexion : ' + err, false);
+            }}
+        }}
+
+        async function fetchMeshPeers(manualAlert = false) {{
+            try {{
+                const res = await fetch('/api/v1/mesh/peers');
+                if (!res.ok) return;
+                const data = await res.json();
+                const peers = data.peers || [];
+                const badge = document.getElementById('meshPeersBadge');
+                if (badge) badge.innerText = `${{peers.length}} Machine(s)`;
+
+                const tbody = document.getElementById('meshPeersBody');
+                const targetSelect = document.getElementById('chatTargetNode');
+
+                if (targetSelect) {{
+                    const currentVal = targetSelect.value;
+                    targetSelect.innerHTML = '<option value="auto">🌐 Maillage Intelligent (Orchestrateur Guichet Unique · Meilleur GPU)</option>';
+                    peers.forEach(p => {{
+                        const opt = document.createElement('option');
+                        opt.value = p.name || p.node_id;
+                        opt.textContent = `⚡ ${{p.name || p.node_id}} (${{p.role_label || p.role || 'Pair'}} · ${{p.rtt_ms ? p.rtt_ms + 'ms' : 'Local'}})`;
+                        targetSelect.appendChild(opt);
+                    }});
+                    targetSelect.value = currentVal || 'auto';
+                }}
+
+                if (tbody) {{
+                    if (peers.length === 0) {{
+                        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.5rem;">Aucun autre pair détecté pour l'instant. Le Guichet Unique recherche activement les pairs sur le maillage mondial.</td></tr>`;
+                        return;
+                    }}
+                    tbody.innerHTML = '';
+                    peers.forEach(p => {{
+                        const tr = document.createElement('tr');
+                        const isOnline = p.status === 'online';
+                        const roleColor = p.role === 'hub' ? 'var(--cyan)' : (p.role === 'gpu_compute' ? 'var(--primary)' : 'var(--purple)');
+                        const skillsStr = (p.skills || []).slice(0, 4).join(', ') || 'Inférence IA';
+                        const ipDisplay = p.mesh_ip ? `<span style="color:var(--cyan); font-family:monospace;">${{p.mesh_ip}}</span>` : `<span style="color:var(--text-muted); font-family:monospace;">${{p.local_ip || p.public_ip || '-'}}</span>`;
+                        const hw = p.hardware_summary || (p.hardware ? (p.hardware.accelerator_name || p.hardware.model || 'Machine IA') : 'CPU / GPU Standard');
+
+                        tr.innerHTML = `
+                            <td>
+                                <strong style="color:var(--text-main); font-size:0.92rem;">${{p.name || p.node_id}}</strong>
+                                <div style="font-size:0.75rem; color:var(--text-dim); font-family:monospace;">${{p.node_id || ''}}</div>
+                            </td>
+                            <td>
+                                <span class="badge" style="background:rgba(255,255,255,0.06); color:${{roleColor}}; border:1px solid ${{roleColor}}; font-size:0.72rem;">
+                                    ${{p.role_label || p.role || 'Nœud Mesh'}}
+                                </span>
+                                <span class="badge ${{isOnline ? 'badge-green' : 'badge-amber'}}" style="margin-left:0.3rem;">
+                                    ${{isOnline ? 'En ligne' : 'Inactif'}}
+                                </span>
+                            </td>
+                            <td>${{ipDisplay}}</td>
+                            <td><span style="font-size:0.8rem; color:var(--text-muted);">${{hw}}</span></td>
+                            <td><span class="badge badge-cyan" style="font-size:0.72rem;">${{skillsStr}}</span></td>
+                            <td><strong style="color:var(--amber); font-size:0.85rem;">${{p.rtt_ms !== undefined ? p.rtt_ms + ' ms' : '< 1 ms'}}</strong></td>
+                            <td>
+                                <button class="btn btn-sm btn-secondary" onclick="testPingPeer('${{p.name || p.node_id}}')" style="padding:0.25rem 0.6rem; font-size:0.72rem;">
+                                    Tester ⚡
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    }});
+                }}
+
+                if (manualAlert) {{
+                    showToast(`Annuaire du maillage mis à jour : ${{peers.length}} machine(s) active(s).`);
+                }}
+            }} catch (e) {{
+                // Ignore transient errors
+            }}
+        }}
+
+        function testPingPeer(peerName) {{
+            showToast(`Test de connectivité avec '${{peerName}}' envoyé sur le maillage.`);
+            switchTab('chat');
+            const targetSelect = document.getElementById('chatTargetNode');
+            if (targetSelect) {{
+                targetSelect.value = peerName;
+            }}
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) {{
+                chatInput.value = `Explique en 1 phrase le fonctionnement du maillage P2P depuis ${{peerName}}`;
+                sendChatMessage();
+            }}
+        }}
+
         document.addEventListener('DOMContentLoaded', () => {{
             initMeshCanvas();
             fetchLiveClusterStatus();
+            fetchGuichetStatus();
+            fetchMeshPeers();
             setInterval(fetchLiveClusterStatus, 3000);
+            setInterval(fetchGuichetStatus, 4000);
+            setInterval(fetchMeshPeers, 6000);
         }});
     </script>
 </body>

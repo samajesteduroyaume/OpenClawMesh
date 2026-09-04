@@ -24,8 +24,28 @@ class OpenClawDesktopApp:
             else 4096.0
         )
         self.is_sharing = True
-        self.connected_peers_count = 3
+        self.connected_peers_count = 1
+        self.guichet_connected = False
+        self.guichet_url = None
+        self._check_guichet_status()
         self.is_running = True
+
+    def _check_guichet_status(self) -> None:
+        try:
+            import json
+            import urllib.request
+
+            req = urllib.request.Request(
+                "http://127.0.0.1:8790/api/guichet/health",
+                headers={"User-Agent": "OpenClaw-Tray/1.0"},
+            )
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
+                if resp.status == 200:
+                    self.guichet_connected = True
+                    self.guichet_url = "http://127.0.0.1:8790"
+                    self.connected_peers_count = 2
+        except Exception:
+            pass
 
     def set_vram_sharing(self, vram_mb: float) -> None:
         """Update shared VRAM limit."""
@@ -42,6 +62,9 @@ class OpenClawDesktopApp:
         return {
             "app": "OpenClawMesh Desktop",
             "version": "1.2.0",
+            "is_free_user": True,
+            "guichet_connected": self.guichet_connected,
+            "guichet_url": self.guichet_url,
             "accelerator": self.hardware.accelerator_name or self.hardware.cpu_model,
             "vram_total_mb": self.hardware.vram_total_mb,
             "vram_shared_mb": self.shared_vram_mb,
@@ -52,13 +75,17 @@ class OpenClawDesktopApp:
 
     def run_cli_tray_simulation(self) -> None:
         """Runs interactive CLI status loop when GUI tray libraries (pystray/tkinter) are headless."""
+        guichet_status_str = (
+            f"Connecté ({self.guichet_url})" if self.guichet_connected else "Recherche..."
+        )
         print("=" * 60)
-        print("🌟 OpenClawMesh 1-Click Desktop MenuBar Running")
-        print(f"💻 Accélérateur : {self.hardware.accelerator_name}")
+        print("🌟 OpenClawMesh 1-Click Desktop MenuBar (Accès 100% Gratuit)")
+        print(f"⚡ Guichet Unique: {guichet_status_str}")
+        print(f"💻 Accélérateur  : {self.hardware.accelerator_name}")
         print(
             f"🎮 VRAM Partagée : {self.shared_vram_mb:.0f} MB / {self.hardware.vram_total_mb:.0f} MB"
         )
-        print(f"🌐 Portail Web  : http://127.0.0.1:{self.port}")
+        print(f"🌐 Portail Web   : http://127.0.0.1:{self.port}")
         print("=" * 60)
 
 

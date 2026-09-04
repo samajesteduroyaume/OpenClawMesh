@@ -57,6 +57,7 @@ class OpenClawMeshNode:
         trust_store: TrustStore | None = None,
         ssl_context: ssl_module.SSLContext | None = None,
         health_extra: Callable[[], dict] | None = None,
+        guichet_url: str | None = None,
     ):
         self.name = name or _settings.node_name
         self.port = port or _settings.default_port
@@ -68,6 +69,7 @@ class OpenClawMeshNode:
         self.trust_store = trust_store
         self.ssl_context = ssl_context
         self.health_extra = health_extra
+        self.guichet_url = guichet_url
 
         self.discovery: MeshDiscovery | None = None
         self.dht: Any | None = None
@@ -129,6 +131,29 @@ class OpenClawMeshNode:
                 logger.warning(f"Clé PSK de sécurité auto-générée pour le nœud WAN: {self.psk}")
 
         self._start_time = time.time()
+
+        # 0. RACCORDEMENT PRIORITAIRE AU GUICHET UNIQUE FREEBOX ULTRA (PREMIER DÉMARRAGE & ANCRE)
+        initial_reg_res = None
+        if _settings.freebox_guichet_enabled:
+            try:
+                from .network.freebox_guichet import FreeboxGuichetClient
+
+                nid = getattr(self.identity, "node_id", None) or f"node-{self.name.lower().replace(' ', '-')}-{self.port}"
+                target_guichet_url = self.guichet_url or _settings.freebox_guichet_url
+                self.freebox_client = FreeboxGuichetClient(
+                    guichet_url=target_guichet_url,
+                    node_id=nid,
+                    name=self.name,
+                    port=self.port,
+                    dht_port=dht_port,
+                    skills=self.registry.list_remote_names(),
+                    pubkey=getattr(self.identity, "public_key_hex", None) if self.identity else None,
+                )
+                logger.info("⚡ [Étape 1 Prioritaire] Raccordement au Guichet Unique Freebox...")
+                initial_reg_res = await self.freebox_client.auto_onboard_first_start()
+            except Exception as e:
+                logger.debug(f"Auto-raccordement initial Freebox Guichet: {e}")
+
         self._ws_server = await websockets.serve(
             self._handle_ws,
             self.host,
@@ -200,6 +225,14 @@ class OpenClawMeshNode:
                 await self.dht.bootstrap_global()
                 self._dht_task = self.dht.start_auto_refresh(interval_seconds=45.0)
 
+                # Amorçage direct via les pairs reçus du Guichet Freebox
+                if initial_reg_res and "bootstrap_peers" in initial_reg_res:
+                    for peer in initial_reg_res.get("bootstrap_peers", []):
+                        p_host = peer.get("public_ip") or peer.get("local_ip")
+                        p_dht_port = peer.get("dht_port", 8780)
+                        if p_host and p_dht_port:
+                            asyncio.create_task(self.dht.ping_node(p_host, p_dht_port))
+
                 # Publier nos compétences sur la toile mondiale DHT (Provider Records)
                 for skill_name in self.registry.list_remote_names():
                     await self.dht.advertise_skill_distributed(
@@ -238,33 +271,6 @@ class OpenClawMeshNode:
                 await self.gossipsub.start()
             except Exception as e:
                 logger.warning(f"Avertissement démarrage GossipSub: {e}")
-
-        # 5. Enregistrement automatique & Annonce d'adresses IP au Guichet Unique Freebox Ultra
-        if _settings.freebox_guichet_enabled:
-            try:
-                from .network.freebox_guichet import FreeboxGuichetClient
-
-                nid = getattr(self.identity, "node_id", None) or f"node-{self.name.lower().replace(' ', '-')}-{self.port}"
-                self.freebox_client = FreeboxGuichetClient(
-                    guichet_url=_settings.freebox_guichet_url,
-                    node_id=nid,
-                    name=self.name,
-                    port=self.port,
-                    dht_port=dht_port,
-                    skills=self.registry.list_remote_names(),
-                    pubkey=getattr(self.identity, "public_key_hex", None) if self.identity else None,
-                )
-                pub_ip = self._nat_profile.public_ip if self._nat_profile else None
-                nat_type = self._nat_profile.nat_type if self._nat_profile else "Full-Cone"
-                reg_res = await self.freebox_client.register(public_ip=pub_ip, nat_type=nat_type)
-                if reg_res and self.dht and "bootstrap_peers" in reg_res:
-                    for peer in reg_res.get("bootstrap_peers", []):
-                        p_host = peer.get("public_ip") or peer.get("local_ip")
-                        p_dht_port = peer.get("dht_port", 8780)
-                        if p_host and p_dht_port:
-                            asyncio.create_task(self.dht.ping_node(p_host, p_dht_port))
-            except Exception as e:
-                logger.debug(f"Auto-enregistrement Freebox Guichet: {e}")
 
         logger.info(f"Nœud OpenClawMesh '{self.name}' démarré sur {self.host}:{self.port}")
 

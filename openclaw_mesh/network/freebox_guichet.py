@@ -26,9 +26,10 @@ logger = logging.getLogger("openclaw_mesh.freebox_guichet")
 
 DEFAULT_CANDIDATE_URLS = [
     os.getenv("OPENCLAW_FREEBOX_GUICHET_URL"),
+    "http://127.0.0.1:8790",
+    "http://localhost:8790",
     "http://192.168.1.15:8790",
     "http://82.67.166.90:8790",
-    "http://127.0.0.1:8790",
     "http://mafreebox.freebox.fr:8790",
     "http://192.168.1.254:8790",
 ]
@@ -61,6 +62,10 @@ class FreeboxGuichetClient:
 
         self.discovered_guichet_url: str | None = None
         self.is_registered: bool = False
+        self.assigned_ip: str | None = None
+        self.rtt_ms: float | None = None
+        self.last_seen: float | None = None
+        self.last_registration_response: dict[str, Any] | None = None
         self.active_bootstrap_peers: list[dict[str, Any]] = []
         self._heartbeat_task: asyncio.Task | None = None
 
@@ -91,17 +96,48 @@ class FreeboxGuichetClient:
 
     async def _check_health(self, base_url: str) -> bool:
         loop = asyncio.get_running_loop()
+        t0 = time.perf_counter()
 
         def _probe() -> bool:
             try:
                 url = f"{base_url}/api/guichet/health"
                 req = urllib.request.Request(url, headers={"User-Agent": "OpenClawMesh-Node/1.0"})
-                with urllib.request.urlopen(req, timeout=1.5) as resp:
+                with urllib.request.urlopen(req, timeout=3.5) as resp:
                     return resp.status == 200
             except Exception:
                 return False
 
-        return await loop.run_in_executor(None, _probe)
+        ok = await loop.run_in_executor(None, _probe)
+        if ok:
+            self.rtt_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+            self.last_seen = time.time()
+        return ok
+
+    def _save_wireguard_config(self, wg_config_text: str) -> None:
+        """Sauvegarde la configuration WireGuard reçue pour raccordement direct."""
+        try:
+            from pathlib import Path
+            conf_dir = Path("wireguard_mesh")
+            conf_dir.mkdir(parents=True, exist_ok=True)
+            conf_file = conf_dir / "wg0.conf"
+            conf_file.write_text(wg_config_text, encoding="utf-8")
+            logger.info(f"🛡️ Configuration WireGuard auto-enregistrée : {conf_file}")
+        except Exception as e:
+            logger.debug(f"Impossible de sauvegarder wg0.conf: {e}")
+
+    def _persist_guichet_url(self, url: str) -> None:
+        """Enregistre l'URL du Guichet dans .env local pour que les démarrages suivants s'y connectent automatiquement."""
+        try:
+            from pathlib import Path
+            env_path = Path(".env")
+            lines = []
+            if env_path.exists():
+                lines = [l for l in env_path.read_text(encoding="utf-8").splitlines() if not l.startswith("OPENCLAW_FREEBOX_GUICHET_URL=")]
+            lines.append(f'OPENCLAW_FREEBOX_GUICHET_URL="{url}"')
+            env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            logger.info(f"💾 URL du Guichet persistée dans .env : {url}")
+        except Exception as e:
+            logger.debug(f"Impossible de mettre à jour .env: {e}")
 
     async def register(
         self,
@@ -144,7 +180,7 @@ class FreeboxGuichetClient:
                     data=data_bytes,
                     headers={"Content-Type": "application/json", "User-Agent": "OpenClawMesh-Node/1.0"},
                 )
-                with urllib.request.urlopen(req, timeout=3.0) as resp:
+                with urllib.request.urlopen(req, timeout=5.0) as resp:
                     if resp.status == 200:
                         return json.loads(resp.read().decode("utf-8"))
             except Exception as e:
@@ -154,16 +190,78 @@ class FreeboxGuichetClient:
         result = await loop.run_in_executor(None, _send_reg)
         if result and result.get("status") == "registered":
             self.is_registered = True
+            self.last_registration_response = result
+            self.last_seen = time.time()
             self.active_bootstrap_peers = result.get("bootstrap_peers", [])
             logger.info(
                 f"🌟 Nœud '{self.name}' enregistré au Guichet Freebox ! "
                 f"({len(self.active_bootstrap_peers)} pairs mondiaux reçus pour l'amorçage)"
             )
-            # Démarrer le battement de cœur
-            self.start_heartbeat()
-            return result
 
-        return None
+            # Sauvegarder automatiquement la configuration WireGuard reçue
+            wg_prov = result.get("wireguard_provisioning")
+            if wg_prov and isinstance(wg_prov, dict):
+                self.assigned_ip = wg_prov.get("assigned_ip")
+                if wg_prov.get("wg_config"):
+                    self._save_wireguard_config(wg_prov["wg_config"])
+
+            # Persister l'URL du Guichet dans .env
+            self._persist_guichet_url(guichet)
+        return result
+
+    async def auto_onboard_first_start(
+        self,
+        public_ip: str | None = None,
+        nat_type: str = "Full-Cone",
+    ) -> dict[str, Any] | None:
+        """
+        Exécute le raccordement universel 1-clic au Guichet Unique Freebox lors du premier démarrage.
+        C'est la toute première action qu'OpenClawMesh effectue pour s'ancrer au maillage mondial.
+        """
+        from pathlib import Path
+
+        enrolled_marker = Path(".openclaw_enrolled")
+        wg_file = Path("wireguard_mesh/wg0.conf")
+        is_first_start = not enrolled_marker.exists() or not wg_file.exists()
+
+        # Détecter le matériel si pas encore renseigné
+        if not self.hardware:
+            try:
+                from ..hardware import detect_accelerator
+                accel = detect_accelerator()
+                self.hardware = accel.to_dict()
+                if self.hardware.get("accelerator_type") in ("nvidia_cuda", "apple_silicon_metal", "rocm_amd"):
+                    for sk in ("gpu_compute", "llm"):
+                        if sk not in self.skills:
+                            self.skills.append(sk)
+            except Exception:
+                pass
+
+        if is_first_start:
+            logger.info("🚀 [Premier Démarrage] Raccordement universel 1-clic au Guichet Unique Freebox...")
+
+        res = await self.register(public_ip=public_ip, nat_type=nat_type)
+        if res and res.get("status") == "registered":
+            try:
+                enrolled_marker.write_text(
+                    json.dumps({
+                        "node_id": self.node_id,
+                        "enrolled_at": time.time(),
+                        "guichet_url": self.discovered_guichet_url,
+                        "assigned_ip": res.get("wireguard_provisioning", {}).get("assigned_ip"),
+                    }, indent=2),
+                    encoding="utf-8"
+                )
+            except Exception:
+                pass
+
+            if is_first_start:
+                logger.info(
+                    f"🎉 [Premier Démarrage] Raccordement réussi ! "
+                    f"IP WireGuard: {res.get('wireguard_provisioning', {}).get('assigned_ip')} | "
+                    f"Hub: {self.discovered_guichet_url}"
+                )
+        return res
 
     def start_heartbeat(self, interval: float = 30.0) -> None:
         """Démarre la boucle de battement de cœur en tâche de fond."""
@@ -223,3 +321,50 @@ class FreeboxGuichetClient:
                 return None
 
         return await loop.run_in_executor(None, _get_ips)
+
+    def get_status_summary(self) -> dict[str, Any]:
+        """Retourne une synthèse complète de l'état de raccordement au Guichet Unique."""
+        return {
+            "connected": bool(self.discovered_guichet_url and self.is_registered),
+            "guichet_url": self.discovered_guichet_url,
+            "is_registered": self.is_registered,
+            "assigned_ip": self.assigned_ip,
+            "node_id": self.node_id,
+            "name": self.name,
+            "bootstrap_peers_count": len(self.active_bootstrap_peers),
+            "rtt_ms": self.rtt_ms,
+            "last_seen": self.last_seen,
+        }
+
+    async def dispatch_ai_task(
+        self, skill: str, prompt: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
+        """Dispatche une tâche IA souveraine via l'orchestrateur du Guichet Unique Freebox."""
+        guichet = self.discovered_guichet_url or await self.detect_guichet_endpoint()
+        if not guichet:
+            return None
+
+        loop = asyncio.get_running_loop()
+
+        def _call_dispatch() -> dict[str, Any] | None:
+            try:
+                url = f"{guichet}/api/guichet/ai/dispatch"
+                payload = {"skill": skill, "prompt": prompt, "params": params or {}}
+                data_bytes = json.dumps(payload).encode("utf-8")
+                req = urllib.request.Request(
+                    url,
+                    data=data_bytes,
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": "OpenClawMesh-Node/1.0",
+                    },
+                )
+                with urllib.request.urlopen(req, timeout=8.0) as resp:
+                    if resp.status == 200:
+                        return json.loads(resp.read().decode("utf-8"))
+            except Exception as e:
+                logger.debug(f"Erreur dispatch IA Guichet: {e}")
+                return None
+
+        return await loop.run_in_executor(None, _call_dispatch)
+

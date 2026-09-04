@@ -47,6 +47,8 @@ htmlcov/
 *.sqlite3
 *.key
 openclaw_node.key
+.openclaw_enrolled
+wireguard_mesh/
 
 # OS artifacts
 .DS_Store

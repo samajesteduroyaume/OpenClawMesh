@@ -266,6 +266,7 @@ async def cmd_serve(args: argparse.Namespace) -> None:
         psk=args.psk,
         identity=identity,
         trust_store=trust_store,
+        guichet_url=getattr(args, "guichet_url", None),
     )
 
     enable_wan = not getattr(args, "no_wan", False)
@@ -800,6 +801,10 @@ def main() -> None:
     p_serve.add_argument(
         "--relay", help="URL du serveur relais WAN WebSocket (ex: ws://hub.domaine.com:8790)"
     )
+    p_serve.add_argument(
+        "--guichet-url",
+        help="URL explicite du Guichet Freebox Ultra (défaut: auto-détection sur http://82.67.166.90:8790)",
+    )
 
     # 6. keygen
     p_keygen = subparsers.add_parser("keygen", help="Génère une paire de clés asymétriques Ed25519")
@@ -888,10 +893,10 @@ def main() -> None:
     )
     p_guichet.add_argument(
         "action",
-        choices=["ips", "nodes", "register", "status"],
+        choices=["ips", "nodes", "register", "status", "join"],
         default="ips",
         nargs="?",
-        help="Action : ips (annuaire mondial), nodes (détails), register (s'enregistrer), status (santé)",
+        help="Action : ips (annuaire mondial), nodes (détails), register (s'enregistrer), status (santé), join (auto-raccordement 1-clic)",
     )
     p_guichet.add_argument(
         "--url", help="URL personnalisée du Guichet Freebox (défaut: auto-détection)"
@@ -1053,6 +1058,41 @@ async def cmd_guichet(args: argparse.Namespace) -> None:
             print(f"🌍 Pairs reçus pour amorçage : {res.get('mesh_peer_count', 0)}")
         else:
             print("[-] Échec de l'enregistrement.")
+    elif args.action == "join":
+        print(f"🚀 Auto-raccordement de cette machine au Guichet Freebox ({endpoint})...")
+        hw_info = {}
+        skills = ["workstation"]
+        try:
+            from .hardware import detect_accelerator
+            accel = detect_accelerator()
+            hw_info = accel.to_dict()
+            if hw_info.get("accelerator_type") in ("nvidia_cuda", "apple_silicon_metal", "rocm_amd"):
+                skills.extend(["gpu_compute", "llm"])
+        except Exception:
+            pass
+
+        client.hardware = hw_info
+        client.skills = skills
+        res = await client.register()
+        if res:
+            prov = res.get("wireguard_provisioning", {})
+            wg_ip = prov.get("assigned_ip", "10.88.0.x")
+            wg_endpoint = prov.get("server_endpoint", "—")
+            print("=" * 70)
+            print("✅ RACCORDEMENT RÉUSSI AU GUICHET FREEBOX !")
+            print(f"📡 Endpoint Guichet : {endpoint}")
+            print(f"🆔 Node ID          : {client.node_id}")
+            print(f"🛡️ IP WireGuard Mesh : {wg_ip}")
+            print(f"🌍 Passerelle Hub    : {wg_endpoint}")
+            print(f"💾 Fichier WireGuard : wireguard_mesh/wg0.conf")
+            print(f"📝 Configuration     : .env (OPENCLAW_FREEBOX_GUICHET_URL={endpoint})")
+            print(f"🌐 Pairs Reçus       : {res.get('mesh_peer_count', 0)}")
+            print("=" * 70)
+            print("👉 Vous pouvez maintenant lancer votre nœud avec :")
+            print("   python scripts/mesh_cli.py serve --wan")
+            print("=" * 70)
+        else:
+            print("[-] Échec du raccordement au Guichet.")
 
 
 if __name__ == "__main__":
