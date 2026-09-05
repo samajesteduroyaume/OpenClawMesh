@@ -681,6 +681,9 @@ def cmd_doctor(args: argparse.Namespace) -> None:
 # Point d'Entrée Principal
 # ---------------------------------------------------------------------- #
 def main() -> None:
+    if len(sys.argv) == 1:
+        sys.argv.append("serve")
+
     parser = argparse.ArgumentParser(
         prog="openclaw-mesh",
         description="OpenClawMesh — Maillage Décentralisé P2P IA & Transport Ultra-Basse Latence",
@@ -914,6 +917,11 @@ def main() -> None:
         help="Action : install (active au démarrage), status, start, stop",
     )
     p_daemon.add_argument("--port", type=int, default=8770, help="Port d'écoute du nœud")
+    p_daemon.add_argument(
+        "--guichet-url",
+        default="http://82.67.166.90:8790",
+        help="URL du Guichet Unique Freebox (défaut: http://82.67.166.90:8790)",
+    )
 
     args = parser.parse_args()
 
@@ -970,11 +978,12 @@ def cmd_daemon(args: argparse.Namespace) -> None:
         os_type = platform.system().lower()
         target_type = "launchd" if "darwin" in os_type else "systemd"
 
+        guichet_url = getattr(args, "guichet_url", "http://82.67.166.90:8790")
         if target_type == "launchd":
-            content = _mod.generate_launchd_plist(port=args.port)
+            content = _mod.generate_launchd_plist(port=args.port, guichet_url=guichet_url)
             out_path = plist_path
         else:
-            content = _mod.generate_systemd_service(port=args.port)
+            content = _mod.generate_systemd_service(port=args.port, guichet_url=guichet_url)
             out_path = service_path
 
         out_path.parent.mkdir(parents=True, exist_ok=True)

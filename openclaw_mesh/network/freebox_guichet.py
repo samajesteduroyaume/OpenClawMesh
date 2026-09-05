@@ -26,10 +26,10 @@ logger = logging.getLogger("openclaw_mesh.freebox_guichet")
 
 DEFAULT_CANDIDATE_URLS = [
     os.getenv("OPENCLAW_FREEBOX_GUICHET_URL"),
+    "http://82.67.166.90:8790",
+    "http://192.168.1.15:8790",
     "http://127.0.0.1:8790",
     "http://localhost:8790",
-    "http://192.168.1.15:8790",
-    "http://82.67.166.90:8790",
     "http://mafreebox.freebox.fr:8790",
     "http://192.168.1.254:8790",
 ]
@@ -242,6 +242,8 @@ class FreeboxGuichetClient:
 
         res = await self.register(public_ip=public_ip, nat_type=nat_type)
         if res and res.get("status") == "registered":
+            # Démarrage automatique immédiat du battement de cœur
+            self.start_heartbeat()
             try:
                 enrolled_marker.write_text(
                     json.dumps({

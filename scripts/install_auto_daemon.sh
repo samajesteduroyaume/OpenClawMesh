@@ -20,7 +20,14 @@ else
 fi
 
 echo "🐍 Interpréteur Python : $PYTHON_EXEC"
-echo "🌐 Connexion automatique vers Freebox Guichet : http://82.67.166.90:8790"
+echo "🌐 Configuration de la connexion vers le Guichet Freebox : http://82.67.166.90:8790"
+
+# Persister l'URL dans .env pour être certain que tout processus la charge
+if [ ! -f "$ROOT_DIR/.env" ] || ! grep -q "OPENCLAW_FREEBOX_GUICHET_URL" "$ROOT_DIR/.env"; then
+    echo 'OPENCLAW_FREEBOX_GUICHET_URL="http://82.67.166.90:8790"' >> "$ROOT_DIR/.env"
+    echo 'OPENCLAW_WAN_ENABLED=true' >> "$ROOT_DIR/.env"
+    echo "✓ Configuration sauvegardée dans .env"
+fi
 
 "$PYTHON_EXEC" "$SCRIPT_DIR/service_installer.py" --install
 

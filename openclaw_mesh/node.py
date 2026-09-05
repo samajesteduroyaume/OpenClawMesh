@@ -151,6 +151,9 @@ class OpenClawMeshNode:
                 )
                 logger.info("⚡ [Étape 1 Prioritaire] Raccordement au Guichet Unique Freebox...")
                 initial_reg_res = await self.freebox_client.auto_onboard_first_start()
+                if self.freebox_client.is_registered:
+                    self.freebox_client.start_heartbeat(interval=_settings.freebox_guichet_heartbeat_interval)
+                    logger.info(f"💓 Heartbeat Guichet activé en continu toutes les {_settings.freebox_guichet_heartbeat_interval}s.")
             except Exception as e:
                 logger.debug(f"Auto-raccordement initial Freebox Guichet: {e}")
 

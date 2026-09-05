@@ -15,18 +15,28 @@ import sys
 from pathlib import Path
 
 
-def get_default_exec_args(port: int = 8770) -> list[str]:
-    root_dir = Path(__file__).resolve().parent.parent
-    cli_path = root_dir / "scripts" / "mesh_cli.py"
+def get_default_exec_args(port: int = 8770, guichet_url: str = "http://82.67.166.90:8790") -> list[str]:
     py_exec = sys.executable
-    return [py_exec, str(cli_path), "serve", "--port", str(port), "--host", "0.0.0.0", "--wan"]
+    return [
+        py_exec,
+        "-m",
+        "openclaw_mesh.cli",
+        "serve",
+        "--port",
+        str(port),
+        "--host",
+        "0.0.0.0",
+        "--wan",
+        "--guichet-url",
+        guichet_url,
+    ]
 
 
 def generate_systemd_service(
-    user: str = "root", port: int = 8770, exec_cmd: str | None = None
+    user: str = "root", port: int = 8770, exec_cmd: str | None = None, guichet_url: str = "http://82.67.166.90:8790"
 ) -> str:
     if not exec_cmd:
-        args = get_default_exec_args(port)
+        args = get_default_exec_args(port, guichet_url=guichet_url)
         exec_cmd = " ".join(f'"{a}"' if " " in a else a for a in args)
     return f"""[Unit]
 Description=OpenClawMesh Autonomous P2P Agent Mesh & Gateway Daemon
@@ -49,9 +59,13 @@ WantedBy=multi-user.target
 """
 
 
-def generate_launchd_plist(port: int = 8770, exec_args: list[str] | None = None) -> str:
+def generate_launchd_plist(
+    port: int = 8770,
+    exec_args: list[str] | None = None,
+    guichet_url: str = "http://82.67.166.90:8790",
+) -> str:
     if not exec_args:
-        exec_args = get_default_exec_args(port)
+        exec_args = get_default_exec_args(port, guichet_url=guichet_url)
     args_xml = "\n        ".join(f"<string>{arg}</string>" for arg in exec_args)
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
