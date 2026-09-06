@@ -26,6 +26,8 @@ metadata:
 
 # 🌐 OpenClawMesh — Decentralized P2P AI Mesh Skill
 
+> Documentation française : [COMPÉTENCE.md](COMPÉTENCE.md)
+
 ## Permissions et consentement
 
 - Exécution : `python3` uniquement.
