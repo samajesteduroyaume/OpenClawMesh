@@ -145,7 +145,7 @@ class MeshClient:
 
             return self.guichet_peers
         except Exception as e:
-            logger.debug(f"Synchronisation Guichet Freebox: {e}")
+            logger.warning(f"Synchronisation Guichet Freebox échouée: {e}")
             return {}
 
     async def start(self, enable_quic: bool | None = None) -> None:
@@ -157,7 +157,7 @@ class MeshClient:
             try:
                 await self.sync_guichet_peers()
             except Exception as e:
-                logger.debug(f"Sync initial Guichet Freebox: {e}")
+                logger.warning(f"Sync initial Guichet Freebox échouée: {e}")
 
         use_quic = enable_quic if enable_quic is not None else _settings.quic_enabled
         if use_quic and self.quic_transport is None:
@@ -173,7 +173,7 @@ class MeshClient:
                 )
                 await self.quic_transport.start()
             except Exception as e:
-                logger.debug(f"Transport client QUIC UDP non démarré: {e}")
+                logger.warning(f"Transport client QUIC UDP non démarré: {e}")
 
     async def stop(self) -> None:
         """Ferme toutes les connexions et arrête la découverte et les transports."""
@@ -374,7 +374,7 @@ class MeshClient:
         except (asyncio.CancelledError, websockets.ConnectionClosed):
             pass
         except Exception as e:
-            logger.debug(f"Déconnexion du pair {endpoint_key}: {e}")
+            logger.warning(f"Déconnexion du pair {endpoint_key}: {e}")
         finally:
             self._pool.pop(endpoint_key, None)
             self._send_locks.pop(endpoint_key, None)

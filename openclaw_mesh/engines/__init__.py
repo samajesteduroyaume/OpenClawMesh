@@ -15,11 +15,13 @@ from .distributed_rag import (
     cosine_similarity,
 )
 from .distributed_vector_store import CRDTDistributedVectorStore
+from .embeddings import UniversalEmbeddingEngine
 from .extreme_quant import BitNetQuantizer, FP8Quantizer, QuantizationFormat, QuantizedTensor
 from .federated_lora import FederatedLoRAOrchestrator, FederatedRoundReport, LoRAWeightDelta
 from .hardware import HardwareProfile, detect_hardware
 from .inference import UniversalInferenceEngine
 from .kv_cache import SemanticKVCache
+from .model_cache import CachedModelEntry, ModelCache
 from .model_manager import AutoModelManager, ModelRecommendation
 from .multimodal import MultiModalEngine
 from .pipeline_parallelism import ActivationTensor, LayerBlock, LayerPipelineScheduler
@@ -36,6 +38,9 @@ __all__ = [
     "detect_hardware",
     "HardwareProfile",
     "UniversalInferenceEngine",
+    "UniversalEmbeddingEngine",
+    "ModelCache",
+    "CachedModelEntry",
     "AutoModelManager",
     "ModelRecommendation",
     "DistributedMoEOrchestrator",

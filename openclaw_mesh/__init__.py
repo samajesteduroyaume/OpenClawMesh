@@ -7,23 +7,32 @@ le chiffrement de bout en bout (E2EE), la délégation multi-matériels (NVIDIA,
 et l'inférence multi-modale (Vision, Whisper STT, TTS, MoE).
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 from .bridge import SkillRegistry
 from .client import MeshClient
 from .config import Settings, get_settings, reload_settings, reset_settings
 from .crypto import NodeIdentity, TrustStore, verify_ed25519_signature
-from .crypto_e2ee import E2EESession, decrypt_message_with_key, encrypt_message_for_peer
+from .crypto_e2ee import (
+    E2EESession,
+    decrypt_message_with_key,
+    decrypt_pqc_message_with_manager,
+    encrypt_message_for_peer,
+    encrypt_pqc_message_for_peer,
+)
 from .discovery import MeshDiscovery, PeerInfo
 from .engines import (
     AutoModelManager,
     DistributedMoEOrchestrator,
     HardwareProfile,
+    ModelCache,
     ModelRecommendation,
     MultiModalEngine,
+    UniversalEmbeddingEngine,
     UniversalInferenceEngine,
     detect_hardware,
 )
+from .security.pqc_kem import HybridPQCManager
 from .network import (
     Contact,
     KademliaDHT,
@@ -62,6 +71,9 @@ __all__ = [
     "E2EESession",
     "encrypt_message_for_peer",
     "decrypt_message_with_key",
+    "encrypt_pqc_message_for_peer",
+    "decrypt_pqc_message_with_manager",
+    "HybridPQCManager",
     "MeshDiscovery",
     "PeerInfo",
     "MeshClient",
@@ -77,6 +89,8 @@ __all__ = [
     "detect_hardware",
     "HardwareProfile",
     "UniversalInferenceEngine",
+    "UniversalEmbeddingEngine",
+    "ModelCache",
     "AutoModelManager",
     "ModelRecommendation",
     "DistributedMoEOrchestrator",

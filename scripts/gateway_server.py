@@ -20,7 +20,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Passerelle Universelle & Portail OpenClawMesh (100% Free & Open-Access)"
     )
-    parser.add_argument("--host", default="127.0.0.1", help="Hôte d'écoute (défaut: localhost)")
+    parser.add_argument("--host", default="0.0.0.0", help="Hôte d'écoute (défaut: 0.0.0.0 - toutes interfaces LAN/WAN)")
     parser.add_argument("--port", type=int, default=8000, help="Port d'écoute HTTP (défaut: 8000)")
     parser.add_argument("--reload", action="store_true", help="Rechargement à chaud automatique")
     args = parser.parse_args()
@@ -31,10 +31,10 @@ def main():
     print(f"⚡ Endpoints OpenAI : http://{args.host}:{args.port}/v1/chat/completions")
     print(f"🛡️  Endpoint Exécution : http://{args.host}:{args.port}/api/v1/execute")
     print(
-        "🔒 [Avis de Sécurité] Écoute locale par défaut (127.0.0.1). L'accès aux outils, mémoire et calcul"
+        "🌐 [Mode WAN Activé] Écoute sur toutes les interfaces (0.0.0.0). Découverte et relais WAN actifs."
     )
     print(
-        "   exige le consentement explicite de l'opérateur. L'exposition WAN requiert TLS et authentification.\n"
+        "   L'accès aux outils et calculs sensibles reste protégé par clé API / Bearer Token.\n"
     )
 
     uvicorn.run(

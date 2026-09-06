@@ -1,4 +1,4 @@
-# OpenClawMesh v1.1.0 — Documentation Technique
+# OpenClawMesh v1.2.0 — Documentation Technique
 
 > **Périmètre et sécurité :** la passerelle FastAPI est un composant de commande optionnel, séparé de la connectivité mesh. Elle permet la génération de clés d'accès gratuites, l'inférence locale/WAN et le pilotage sécurisé du nœud en 100% Confiance.
 
@@ -1021,6 +1021,15 @@ async def test_my_feature():
 
 ## 12. Changelog & Décisions Architecturales
 
+### v1.2.0 (2026-09) — PQC, Embeddings, Cache Modèle, WAN par Défaut & Découpage Passerelle
+
+**Fonctionnalités & Optimisations majeures** :
+- **Cryptographie Post-Quantique (PQC)** : Intégration hybride X25519 + ML-KEM-768 (Kyber768) au protocole E2EE (`crypto_e2ee.py`) et transmission de la clé PQC aux tiers Freebox Guichet (`node.py`).
+- **Moteur Universel d'Embeddings (`UniversalEmbeddingEngine`)** : Intégration d'embeddings multi-backends (Ollama, PyTorch/Transformers, fallback sémantique par projection unitaire déterministe).
+- **WAN Activé par Défaut** : Écoute `0.0.0.0` par défaut sur le serveur de passerelle, initialisation automatique du nœud WAN au cycle de vie (lifespan), badges portail alignés sur l'ouverture WAN.
+- **Cache de Modèles d'Inférence (`ModelCache`)** : Gestionnaire LRU thread-safe évitant les rechargements VRAM/disque à chaque requête, améliorant le TTFT et la stabilité sous forte charge.
+- **Découpage Modulaire de la Passerelle** : Séparation de `gateway/server.py` en sous-routeurs FastAPI (`routes/`) et état partagé (`state.py`), préservant une rétro-compatibilité stricte à 100%.
+
 ### v1.1.0 (2026-08) — Corrections & Documentation
 
 **Bugs corrigés** :
@@ -1140,5 +1149,5 @@ async def test_my_feature():
 
 ---
 
-*Documentation OpenClawMesh v1.1.0 — Niveau Ingénieur Senior*  
-*Généré le 2026-08-29*
+*Documentation OpenClawMesh v1.2.0 — Niveau Ingénieur Senior*  
+*Généré le 2026-09-06*

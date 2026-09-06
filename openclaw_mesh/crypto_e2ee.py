@@ -16,7 +16,7 @@ import os
 import threading
 import time
 from collections import deque
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
@@ -25,6 +25,9 @@ from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 from .config import get_settings
+
+if TYPE_CHECKING:
+    from .security.pqc_kem import HybridPQCManager
 
 _settings = get_settings()
 _DEFAULT_MAX_DRIFT = _settings.e2ee_max_drift_seconds
@@ -39,6 +42,9 @@ def _e2ee_auth_base(package: dict[str, Any]) -> bytes:
             "version",
             "algorithm",
             "ephemeral_pubkey",
+            "ephemeral_public_b64",
+            "pqc_ciphertext_b64",
+            "pqc_ephemeral_pub_b64",
             "nonce",
             "ciphertext",
             "data_type",
@@ -124,11 +130,13 @@ class E2EESession:
         identity: Any | None = None,
         peer_identity_public_key: str | None = None,
         require_identity_binding: bool | None = None,
+        pqc_manager: HybridPQCManager | None = None,
     ):
         self._private_key = local_private_key or x25519.X25519PrivateKey.generate()
         self._public_key = self._private_key.public_key()
         self._shared_key: bytes | None = None
         self._cipher: ChaCha20Poly1305 | None = None
+        self._pqc_manager = pqc_manager
 
         self._max_drift_seconds = (
             max_drift_seconds if max_drift_seconds is not None else _DEFAULT_MAX_DRIFT
@@ -162,6 +170,30 @@ class E2EESession:
 
         if peer_public_key_bytes:
             self.establish_with_peer(peer_public_key_bytes)
+
+    @property
+    def pqc_public_key_b64(self) -> str | None:
+        """Retourne la clé publique hybride PQC locale en base64 si activée."""
+        if self._pqc_manager:
+            return self._pqc_manager.keypair.public_key_b64
+        return None
+
+    def establish_pqc_with_peer(self, peer_pqc_public_b64: str) -> dict[str, str]:
+        """Encapsule un secret partagé hybride post-quantique pour le pair."""
+        from .security.pqc_kem import HybridPQCManager
+
+        enc = HybridPQCManager.encapsulate(peer_pqc_public_b64)
+        self._shared_key = enc.shared_secret
+        self._cipher = ChaCha20Poly1305(self._shared_key)
+        return enc.to_dict()
+
+    def decapsulate_pqc_peer(self, ephemeral_public_b64: str, pqc_ciphertext_b64: str) -> bytes:
+        """Décapsule le secret partagé hybride post-quantique avec le trousseau local."""
+        if not self._pqc_manager:
+            raise RuntimeError("Gestionnaire PQC non initialisé sur cette session.")
+        self._shared_key = self._pqc_manager.decapsulate(ephemeral_public_b64, pqc_ciphertext_b64)
+        self._cipher = ChaCha20Poly1305(self._shared_key)
+        return self._shared_key
 
     @property
     def public_key_bytes(self) -> bytes:
@@ -264,7 +296,19 @@ class E2EESession:
         (enable_nonce_replay=False) pour un usage stateless.
         """
         if not self._cipher:
-            if "ephemeral_pubkey" in encrypted_package:
+            if "pqc_ciphertext_b64" in encrypted_package and (
+                "ephemeral_public_b64" in encrypted_package
+                or "pqc_ephemeral_pub_b64" in encrypted_package
+            ):
+                if not self._pqc_manager:
+                    raise RuntimeError(
+                        "Paquet PQC reçu mais aucun HybridPQCManager configuré sur cette session."
+                    )
+                eph_pub = encrypted_package.get("ephemeral_public_b64") or encrypted_package.get(
+                    "pqc_ephemeral_pub_b64"
+                )
+                self.decapsulate_pqc_peer(str(eph_pub), encrypted_package["pqc_ciphertext_b64"])
+            elif "ephemeral_pubkey" in encrypted_package:
                 peer_bytes = bytes.fromhex(encrypted_package["ephemeral_pubkey"])
                 self.establish_with_peer(peer_bytes)
             else:
@@ -406,3 +450,63 @@ def derive_shared_key(
         info=b"openclaw_mesh_e2ee_session_key",
     )
     return hkdf.derive(raw_secret)
+
+
+def encrypt_pqc_message_for_peer(
+    peer_pqc_public_b64: str,
+    payload: Any,
+    associated_data: bytes | None = None,
+) -> dict[str, Any]:
+    """Chiffre un message unique pour un pair avec encapsulation hybride Post-Quantique (ML-KEM-768 + X25519)."""
+    from .security.pqc_kem import HybridPQCManager
+
+    enc = HybridPQCManager.encapsulate(peer_pqc_public_b64)
+    cipher = ChaCha20Poly1305(enc.shared_secret)
+
+    if isinstance(payload, (dict, list)):
+        plaintext = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        data_type = "json"
+    elif isinstance(payload, str):
+        plaintext = payload.encode("utf-8")
+        data_type = "text"
+    elif isinstance(payload, bytes):
+        plaintext = payload
+        data_type = "bytes"
+    else:
+        raise TypeError(f"Type de données non pris en charge: {type(payload)}")
+
+    nonce = os.urandom(12)
+    ciphertext = cipher.encrypt(nonce, plaintext, associated_data)
+    timestamp = time.time()
+    package = {
+        "version": "1.2",
+        "algorithm": "ChaCha20-Poly1305+ML-KEM-768",
+        "ephemeral_public_b64": enc.ephemeral_public_b64,
+        "pqc_ciphertext_b64": enc.pqc_ciphertext_b64,
+        "nonce": nonce.hex(),
+        "ciphertext": ciphertext.hex(),
+        "data_type": data_type,
+        "timestamp": timestamp,
+    }
+    return package
+
+
+def decrypt_pqc_message_with_manager(
+    pqc_manager: HybridPQCManager,
+    encrypted_package: dict[str, Any],
+    associated_data: bytes | None = None,
+    max_drift_seconds: float | None = None,
+    replay_cache: ReplayCache | None = None,
+) -> Any:
+    """Déchiffre un message PQC reçu à l'aide d'un HybridPQCManager."""
+    session = E2EESession(
+        pqc_manager=pqc_manager,
+        max_drift_seconds=max_drift_seconds,
+        replay_cache=replay_cache,
+        enable_nonce_replay=replay_cache is not None,
+    )
+    return session.decrypt(
+        encrypted_package,
+        associated_data=associated_data,
+        max_drift_seconds=max_drift_seconds,
+    )

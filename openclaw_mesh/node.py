@@ -58,6 +58,7 @@ class OpenClawMeshNode:
         ssl_context: ssl_module.SSLContext | None = None,
         health_extra: Callable[[], dict] | None = None,
         guichet_url: str | None = None,
+        pqc_manager: Any | None = None,
     ):
         self.name = name or _settings.node_name
         self.port = port or _settings.default_port
@@ -70,6 +71,10 @@ class OpenClawMeshNode:
         self.ssl_context = ssl_context
         self.health_extra = health_extra
         self.guichet_url = guichet_url
+
+        from .security.pqc_kem import HybridPQCManager
+
+        self.pqc_manager = pqc_manager if pqc_manager is not None else HybridPQCManager()
 
         self.discovery: MeshDiscovery | None = None
         self.dht: Any | None = None
@@ -128,7 +133,8 @@ class OpenClawMeshNode:
                 import secrets
 
                 self.psk = secrets.token_urlsafe(32)
-                logger.warning(f"Clé PSK de sécurité auto-générée pour le nœud WAN: {self.psk}")
+                logger.warning("Clé PSK de sécurité auto-générée pour le nœud WAN (NE PAS PARTAGER)")
+                logger.warning("Pour une sécurité optimale, définissez OPENCLAW_PSK explicitement")
 
         self._start_time = time.time()
 
@@ -140,6 +146,9 @@ class OpenClawMeshNode:
 
                 nid = getattr(self.identity, "node_id", None) or f"node-{self.name.lower().replace(' ', '-')}-{self.port}"
                 target_guichet_url = self.guichet_url or _settings.freebox_guichet_url
+                pqc_key_str = (
+                    self.pqc_manager.keypair.public_key_b64 if self.pqc_manager else None
+                )
                 self.freebox_client = FreeboxGuichetClient(
                     guichet_url=target_guichet_url,
                     node_id=nid,
@@ -148,6 +157,7 @@ class OpenClawMeshNode:
                     dht_port=dht_port,
                     skills=self.registry.list_remote_names(),
                     pubkey=getattr(self.identity, "public_key_hex", None) if self.identity else None,
+                    pqc_key=pqc_key_str,
                 )
                 logger.info("⚡ [Étape 1 Prioritaire] Raccordement au Guichet Unique Freebox...")
                 initial_reg_res = await self.freebox_client.auto_onboard_first_start()
@@ -155,7 +165,7 @@ class OpenClawMeshNode:
                     self.freebox_client.start_heartbeat(interval=_settings.freebox_guichet_heartbeat_interval)
                     logger.info(f"💓 Heartbeat Guichet activé en continu toutes les {_settings.freebox_guichet_heartbeat_interval}s.")
             except Exception as e:
-                logger.debug(f"Auto-raccordement initial Freebox Guichet: {e}")
+                logger.warning(f"Auto-raccordement initial Freebox Guichet échoué: {e}")
 
         self._ws_server = await websockets.serve(
             self._handle_ws,
@@ -183,7 +193,7 @@ class OpenClawMeshNode:
                 self.quic_transport.set_request_handler(self._handle_quic_request)
                 await self.quic_transport.start()
             except Exception as e:
-                logger.warning(f"Avertissement démarrage transport QUIC/WebRTC: {e}")
+                logger.error(f"Échec démarrage transport QUIC/WebRTC: {e}")
 
         # 2. Découverte locale mDNS Zeroconf
         if enable_zeroconf:
@@ -212,7 +222,7 @@ class OpenClawMeshNode:
                 )
                 public_host = self._nat_profile.public_ip or self.advertise_ip
             except Exception as e:
-                logger.debug(f"Découverte & ouverture NAT WAN: {e}")
+                logger.warning(f"Découverte & ouverture NAT WAN échouée: {e}")
                 public_host = self.advertise_ip
 
             try:
@@ -254,7 +264,7 @@ class OpenClawMeshNode:
                     f"✓ Nœud '{self.name}' raccordé au WAN et à la DHT Kademlia mondiale (UDP:{dht_port})"
                 )
             except Exception as e:
-                logger.warning(f"Avertissement DHT Kademlia WAN: {e}")
+                logger.error(f"Échec DHT Kademlia WAN: {e}")
 
         # 4. Overlay Pub/Sub GossipSub v1.1
         use_gossipsub = (
@@ -273,7 +283,7 @@ class OpenClawMeshNode:
                 )
                 await self.gossipsub.start()
             except Exception as e:
-                logger.warning(f"Avertissement démarrage GossipSub: {e}")
+                logger.error(f"Échec démarrage GossipSub: {e}")
 
         logger.info(f"Nœud OpenClawMesh '{self.name}' démarré sur {self.host}:{self.port}")
 

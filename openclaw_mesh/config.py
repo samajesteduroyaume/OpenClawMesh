@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # Configuration Générale
     # ------------------------------------------------------------------ #
     app_name: str = Field(default="openclaw-mesh", description="Nom de l'application")
-    app_version: str = Field(default="1.0.0", description="Version de l'application")
+    app_version: str = Field(default="1.2.0", description="Version de l'application")
     debug: bool = Field(default=False, description="Mode debug")
 
     # ------------------------------------------------------------------ #
@@ -36,11 +36,11 @@ class Settings(BaseSettings):
     default_host: str = Field(default="0.0.0.0", description="Hôte par défaut (0.0.0.0 pour écoute sur toutes les interfaces LAN/WAN)")
     default_port: int = Field(default=8770, description="Port par défaut")
     wan_enabled: bool = Field(
-        default=True,
+        default=False,
         description="Ouvrir et activer automatiquement le WAN (UPnP IGD, PCP RFC 6887, STUN, DHT) à l'installation",
     )
     upnp_enabled: bool = Field(
-        default=True, description="Activer le mappage de ports automatique UPnP IGD"
+        default=False, description="Activer le mappage de ports automatique UPnP IGD"
     )
     pcp_enabled: bool = Field(
         default=True, description="Activer le protocole de contrôle de ports PCP (RFC 6887) / NAT-PMP"
@@ -302,11 +302,11 @@ class Settings(BaseSettings):
     # Configuration Freebox Ultra Guichet Unique & Ancre Mondiale
     # ------------------------------------------------------------------ #
     freebox_guichet_enabled: bool = Field(
-        default=True, description="Activer l'enregistrement automatique sur le Guichet Freebox"
+        default=False, description="Activer l'enregistrement automatique sur le Guichet Freebox"
     )
     freebox_guichet_url: str = Field(
-        default="http://82.67.166.90:8790",
-        description="URL du Guichet Unique Freebox Ultra",
+        default="",
+        description="URL du Guichet Unique Freebox Ultra (vide par défaut pour sécurité)",
     )
     freebox_guichet_heartbeat_interval: float = Field(
         default=30.0, description="Intervalle de battement de cœur en secondes"

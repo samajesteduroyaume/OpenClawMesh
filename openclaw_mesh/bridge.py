@@ -18,7 +18,7 @@ try:
 
     _OPENCLAW_VERSION = _pkg_version("openclaw-mesh")
 except Exception:
-    _OPENCLAW_VERSION = "1.1.0"  # fallback si package non installé en mode éditable
+    _OPENCLAW_VERSION = "1.2.0"  # fallback si package non installé en mode éditable
 
 try:
     from pydantic import BaseModel

@@ -12,15 +12,15 @@ Supporte automatiquement et de manière transparente :
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import logging
-import math
 import time
 from collections.abc import AsyncGenerator
 from typing import Any
 
 from ..config import get_settings
+from .embeddings import UniversalEmbeddingEngine
 from .hardware import HardwareProfile, detect_hardware
+from .model_cache import ModelCache
 
 logger = logging.getLogger("openclaw_mesh.inference")
 _settings = get_settings()
@@ -29,15 +29,21 @@ _settings = get_settings()
 class UniversalInferenceEngine:
     """Moteur d'inférence agnostique du matériel, optimisé pour chaque puce."""
 
-    def __init__(self, hardware: HardwareProfile | None = None) -> None:
+    def __init__(
+        self,
+        hardware: HardwareProfile | None = None,
+        max_cached_models: int = 2,
+    ) -> None:
         self.hardware = hardware or detect_hardware()
         self.backend = self.hardware.recommended_backend
+        self.model_cache = ModelCache(max_models=max_cached_models)
+        self.embedding_engine = UniversalEmbeddingEngine()
         logger.info(
             f"Moteur d'Inférence initialisé avec l'accélérateur : {self.hardware.accelerator_name}"
         )
 
     def get_status(self) -> dict[str, Any]:
-        """Retourne l'état du matériel et du backend d'inférence."""
+        """Retourne l'état du matériel, du backend et du cache de modèles."""
         return {
             "accelerator": self.hardware.accelerator_name,
             "accelerator_type": self.hardware.accelerator_type,
@@ -48,6 +54,7 @@ class UniversalInferenceEngine:
             "has_rocm": self.hardware.has_rocm,
             "has_intel_npu": self.hardware.has_intel_npu,
             "has_apple_metal": self.hardware.has_apple_metal,
+            "model_cache": self.model_cache.get_status(),
         }
 
     # ------------------------------------------------------------------ #
@@ -71,10 +78,17 @@ class UniversalInferenceEngine:
         if self.backend == "mlx" and model != "test":
             try:
                 from mlx_lm import generate as mlx_gen
-                from mlx_lm import load
 
                 mlx_model_name = model or "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit"
-                model_obj, tokenizer = load(mlx_model_name)
+                cached = self.model_cache.get(mlx_model_name, "mlx")
+                if cached:
+                    model_obj, tokenizer = cached.model_obj, cached.tokenizer
+                else:
+                    from mlx_lm import load
+
+                    model_obj, tokenizer = load(mlx_model_name)
+                    self.model_cache.put(mlx_model_name, "mlx", model_obj, tokenizer)
+
                 formatted_prompt = f"{system_prompt}\n{prompt}" if system_prompt else prompt
                 text = mlx_gen(model_obj, tokenizer, prompt=formatted_prompt, max_tokens=max_tokens)
                 duration_ms = (time.perf_counter() - t0) * 1000.0
@@ -90,13 +104,19 @@ class UniversalInferenceEngine:
         # 2. Tentative NVIDIA CUDA (PyTorch / Transformers)
         if self.backend == "cuda":
             try:
-                import torch
-                from transformers import pipeline
-
                 cuda_model = model or "Qwen/Qwen2.5-Coder-7B-Instruct"
-                pipe = pipeline(
-                    "text-generation", model=cuda_model, device="cuda", torch_dtype=torch.float16
-                )
+                cached = self.model_cache.get(cuda_model, "cuda")
+                if cached:
+                    pipe = cached.model_obj
+                else:
+                    import torch
+                    from transformers import pipeline
+
+                    pipe = pipeline(
+                        "text-generation", model=cuda_model, device="cuda", torch_dtype=torch.float16
+                    )
+                    self.model_cache.put(cuda_model, "cuda", pipe)
+
                 out = pipe(prompt, max_new_tokens=max_tokens, temperature=temperature)
                 text = out[0]["generated_text"]
                 duration_ms = (time.perf_counter() - t0) * 1000.0
@@ -112,12 +132,18 @@ class UniversalInferenceEngine:
         # 3. Tentative Intel Core Ultra (OpenVINO / NPU)
         if "openvino" in self.backend:
             try:
-                import openvino_genai as ov_genai
-
                 ov_model_path = model or "openvino_model"
-                pipe = ov_genai.LLMPipeline(
-                    ov_model_path, "NPU" if self.hardware.has_intel_npu else "CPU"
-                )
+                cached = self.model_cache.get(ov_model_path, "openvino")
+                if cached:
+                    pipe = cached.model_obj
+                else:
+                    import openvino_genai as ov_genai
+
+                    pipe = ov_genai.LLMPipeline(
+                        ov_model_path, "NPU" if self.hardware.has_intel_npu else "CPU"
+                    )
+                    self.model_cache.put(ov_model_path, "openvino", pipe)
+
                 text = pipe.generate(prompt, max_new_tokens=max_tokens)
                 duration_ms = (time.perf_counter() - t0) * 1000.0
                 return {
@@ -150,10 +176,18 @@ class UniversalInferenceEngine:
         # 1. Streaming MLX Apple Silicon
         if self.backend == "mlx" and model != "test":
             try:
-                from mlx_lm import load, stream_generate
+                from mlx_lm import stream_generate
 
                 mlx_model_name = model or "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit"
-                model_obj, tokenizer = load(mlx_model_name)
+                cached = self.model_cache.get(mlx_model_name, "mlx")
+                if cached:
+                    model_obj, tokenizer = cached.model_obj, cached.tokenizer
+                else:
+                    from mlx_lm import load
+
+                    model_obj, tokenizer = load(mlx_model_name)
+                    self.model_cache.put(mlx_model_name, "mlx", model_obj, tokenizer)
+
                 for response in stream_generate(model_obj, tokenizer, prompt=prompt):
                     yield {"text": response.text, "backend": "apple_metal_mlx"}
                     await asyncio.sleep(0.001)
@@ -171,19 +205,5 @@ class UniversalInferenceEngine:
     async def embed(
         self, input_text: str | list[str], model: str | None = None
     ) -> list[list[float]]:
-        """Génère des représentations vectorielles d'embeddings normalisées."""
-        texts = [input_text] if isinstance(input_text, str) else input_text
-        results: list[list[float]] = []
-
-        for text in texts:
-            # Deterministic semantic hash projection (dim=384)
-            dim = 384
-            raw_hash = hashlib.sha256(text.encode("utf-8")).digest()
-            vector = [
-                math.sin(math.radians((raw_hash[i % len(raw_hash)] + i * 7) % 360))
-                for i in range(dim)
-            ]
-            norm = math.sqrt(sum(x * x for x in vector)) or 1.0
-            results.append([x / norm for x in vector])
-
-        return results
+        """Génère des représentations vectorielles d'embeddings normalisées via UniversalEmbeddingEngine."""
+        return await self.embedding_engine.embed(input_text, model=model)

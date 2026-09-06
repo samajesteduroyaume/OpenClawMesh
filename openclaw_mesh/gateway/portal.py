@@ -1324,7 +1324,7 @@ main();</pre>
                                 Basculez instantanément votre passerelle entre le mode privé local (127.0.0.1) et l'accès mondial WAN (0.0.0.0) avec génération automatique de certificats TLS et clés PSK.
                             </div>
                         </div>
-                        <span id="wanBadge" class="badge badge-cyan">Mode Local (127.0.0.1)</span>
+                        <span id="wanBadge" class="badge badge-green">Mode WAN Actif (0.0.0.0)</span>
                     </div>
 
                     <div class="grid-2" style="margin-bottom:1.5rem;">

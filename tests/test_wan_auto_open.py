@@ -13,8 +13,9 @@ from openclaw_mesh.node import OpenClawMeshNode
 @pytest.mark.asyncio
 async def test_wan_enabled_by_default_settings():
     settings = reload_settings()
-    assert settings.wan_enabled is True
-    assert settings.upnp_enabled is True
+    # Après correction de sécurité, WAN est désactivé par défaut
+    assert settings.wan_enabled is False
+    assert settings.upnp_enabled is False
     assert settings.pcp_enabled is True
     assert settings.dht_enabled is True
     assert settings.default_host == "0.0.0.0"
@@ -58,7 +59,8 @@ async def test_node_start_with_default_wan():
         is_direct_connectable=True,
         upnp_mapped=True,
     ))) as mock_nat:
-        await node.start(enable_zeroconf=False, enable_quic=False, enable_gossipsub=False, enable_dht=False)
+        # Explicitement activer WAN pour ce test
+        await node.start(enable_zeroconf=False, enable_quic=False, enable_gossipsub=False, enable_dht=False, enable_wan=True)
         try:
             assert node._running is True
             assert node._nat_profile is not None

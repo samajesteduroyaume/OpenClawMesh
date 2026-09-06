@@ -84,7 +84,7 @@ class CRDTDistributedVectorStore:
         """Compute cosine similarity between two float vectors."""
         if len(v1) != len(v2) or not v1:
             return 0.0
-        dot = sum(a * b for a, b in zip(v1, v2, strict=False))
+        dot = sum(a * b for a, b in zip(v1, v2))
         norm1 = math.sqrt(sum(a * a for a in v1)) or 1.0
         norm2 = math.sqrt(sum(b * b for b in v2)) or 1.0
         return dot / (norm1 * norm2)
