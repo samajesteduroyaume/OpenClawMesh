@@ -1,7 +1,7 @@
 ---
 name: openclaw-mesh
 description: Connect OpenClaw to local and LAN P2P AI agent meshes (JarvisMesh & OpenClawMesh). Requires explicit user consent for mDNS, LAN/WAN network access, remote delegation, key-file access, and exposing local tools. Remote traffic may transmit prompts, files, memory, media, and tool results to selected peers.
-version: 1.2.0
+version: 0.1.25
 permissions:
   execution: python3
   network_outbound: opt_in (mDNS, WebSocket/WSS, DHT UDP, STUN)
