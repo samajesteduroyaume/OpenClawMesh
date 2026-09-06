@@ -5,6 +5,16 @@
 .mypy_cache
 .ruff_cache
 tests
+openclaw_mesh
+scripts
+examples
+charts
+wireguard_mesh
+Dockerfile
+requirements.txt
+pyproject.toml
+uv.lock
+autostart.sh
 openclaw_keys.db
 .env
 .env.*
