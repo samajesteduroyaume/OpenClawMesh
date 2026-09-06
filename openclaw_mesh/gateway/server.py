@@ -535,7 +535,7 @@ async def dispatch_mesh_task(req: MeshDispatchRequest) -> dict[str, Any]:
         "result": {
             "text": f"🤖 [OpenClawMesh] Réponse traitée pour : '{prompt}'",
             "model": params.get("model", "sovereign-free-v1"),
-            "tokens": 42,
+            "tokens": max(1, len(prompt.split())),
         },
         "duration_ms": duration_ms,
         "message": "Traité avec succès par le nœud souverain.",
@@ -632,7 +632,7 @@ async def execute_skill(
                         f"🤖 [OpenClaw Free Gateway · {target_name}] Réponse du maillage distribué pour : '{prompt}'"
                     ),
                     "model": payload.get("model", "qwen2.5-coder-free"),
-                    "tokens": 42,
+                    "tokens": max(1, len(prompt.split())),
                     "mesh_routed": True,
                     "target_node": target_name,
                 }
@@ -640,14 +640,14 @@ async def execute_skill(
                 result = {
                     "text": f"🤖 [OpenClaw Free Gateway] Réponse traitée pour : '{prompt}'",
                     "model": payload.get("model", "qwen2.5-coder-free"),
-                    "tokens": 42,
+                    "tokens": max(1, len(prompt.split())),
                 }
         elif skill_name == "llm":
             prompt = payload.get("prompt", "")
             result = {
                 "text": f"🤖 [OpenClaw Free Gateway] Réponse traitée pour : '{prompt}'",
                 "model": payload.get("model", "qwen2.5-coder-free"),
-                "tokens": 42,
+                "tokens": max(1, len(prompt.split())),
             }
         elif skill_name == "memory_search":
             query = payload.get("query", "")
@@ -1307,6 +1307,22 @@ async def get_cluster_status(
 # ---------------------------------------------------------------------- #
 # 4. Administration & Nœud WAN (100% Confiance)
 # ---------------------------------------------------------------------- #
+@app.post("/api/v1/admin/auth/verify")
+async def admin_auth_verify(
+    request: Request,
+    token: str | None = Header(None, alias="X-Admin-Token"),
+) -> dict[str, Any]:
+    """Vérifie l'authenticité du jeton Administrateur Maître Guichet Freebox."""
+    if not _is_admin_token_valid(token):
+        raise HTTPException(status_code=401, detail="Token administrateur invalide.")
+    return {
+        "ok": True,
+        "role": "master_admin",
+        "guichet": "Freebox Ultra Master",
+        "message": "Session Administrateur Maître Guichet Freebox validée avec succès.",
+    }
+
+
 @app.get("/api/v1/admin/keys")
 async def admin_list_keys(
     request: Request,

@@ -200,6 +200,40 @@ def test_admin_key_management_flow():
     assert verify_resp.json()["valid"] is False
 
 
+def test_admin_auth_verify_and_rbac_portal():
+    client = TestClient(app)
+
+    # 1. Vérification avec token valide
+    auth_ok = client.post(
+        "/api/v1/admin/auth/verify",
+        headers={"X-Admin-Token": ADMIN_TOKEN},
+    )
+    assert auth_ok.status_code == 200
+    auth_data = auth_ok.json()
+    assert auth_data["ok"] is True
+    assert auth_data["role"] == "master_admin"
+    assert "Freebox" in auth_data["guichet"]
+
+    # 2. Vérification avec token invalide
+    auth_fail = client.post(
+        "/api/v1/admin/auth/verify",
+        headers={"X-Admin-Token": "bad_token_123"},
+    )
+    assert auth_fail.status_code == 401
+
+    # 3. Éléments RBAC dans le portail HTML
+    portal_resp = client.get("/portal")
+    assert portal_resp.status_code == 200
+    html = portal_resp.text
+    assert "Mode Utilisateur" in html
+    assert "Accès Maître Guichet Freebox" in html
+    assert "adminAuthModal" in html
+    assert "tab-admin-keys" in html
+    assert "tab-wan" in html
+    assert "tab-chat" in html
+    assert "tab-user-key" in html
+
+
 @pytest.mark.asyncio
 async def test_admin_wan_toggle_100_percent_confidence(monkeypatch):
     import httpx

@@ -109,7 +109,7 @@ await dht.provide_distributed("skill:llm_streaming", {
     "host": "198.51.100.42",
     "port": 8770,
     "quic_port": 8775,
-    "gpu": "RTX 4090"
+    "gpu": "GPU CUDA"
 })
 
 # Résoudre tous les fournisseurs enregistrés sur la DHT

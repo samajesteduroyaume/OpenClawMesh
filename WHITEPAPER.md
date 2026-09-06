@@ -107,7 +107,7 @@ $$\text{Allocation}(N_i) = \max\left(1, \left\lfloor \frac{\text{VRAM}_i \cdot W
 sequenceDiagram
     participant User as Agent Client
     participant NodeA as Machine A (MacBook M3 Max · 64Go)
-    participant NodeB as Machine B (PC RTX 4090 · 24Go)
+    participant NodeB as Machine B (PC GPU CUDA · 24Go)
     participant NodeC as Machine C (Intel NPU Server · 32Go)
 
     User->>NodeA: Prompt Tokenisé (Head Node)

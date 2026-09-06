@@ -16,8 +16,8 @@ async def test_distributed_cluster_planning_and_forward():
             "vram_mb": 64000,
         },
         {
-            "node_id": "rtx4090-node",
-            "node_name": "Desktop RTX 4090",
+            "node_id": "cuda-gpu-node",
+            "node_name": "Serveur GPU CUDA (24 GB)",
             "hardware_type": "nvidia_cuda",
             "vram_mb": 24000,
         },

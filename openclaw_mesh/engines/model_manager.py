@@ -88,7 +88,7 @@ class AutoModelManager:
                 description="Hautes performances pour tâches de code complexes et architectures logicielles.",
             )
 
-        # 4. Plus de 32 Go de VRAM (Mac Studio 64GB/128GB, NVIDIA A100 / RTX 4090 Cluster)
+        # 4. Plus de 32 Go de VRAM (Mac Studio 64GB/128GB, GPU NVIDIA CUDA haute densité, A100 ou supérieur)
         else:
             return ModelRecommendation(
                 model_name="Qwen2.5-Coder-32B-Instruct",

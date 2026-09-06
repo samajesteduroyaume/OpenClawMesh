@@ -40,7 +40,7 @@ def test_model_manager_recommendations_for_different_vrams():
     assert "14B" in rec_mid.model_name
     assert rec_mid.format == "mlx"
 
-    # 3. Profil Haut de Gamme (ex: NVIDIA RTX 4090 / 64GB)
+    # 3. Profil Haut de Gamme (GPU CUDA 48 GB VRAM)
     high_hw = HardwareProfile(
         os_name="Linux",
         os_version="6.0",
@@ -49,7 +49,7 @@ def test_model_manager_recommendations_for_different_vrams():
         cpu_cores_logical=32,
         cpu_cores_physical=16,
         accelerator_type="nvidia_cuda",
-        accelerator_name="NVIDIA RTX 4090",
+        accelerator_name="NVIDIA GPU (CUDA)",
         vram_total_mb=48000.0,
         recommended_backend="cuda",
     )

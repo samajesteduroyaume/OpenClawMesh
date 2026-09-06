@@ -46,7 +46,12 @@ class RealTimeVoicePipeline:
         self,
         audio_stream: AsyncGenerator[bytes, None],
     ) -> AsyncGenerator[dict[str, Any], None]:
-        """Consumes incoming audio chunks and yields real-time transcription and spoken responses."""
+        """Consumes incoming audio chunks and yields real-time transcription and spoken responses.
+
+        Note: This implementation uses a stub STT/TTS pipeline. Connect a real Whisper STT
+        backend (e.g. faster-whisper, mlx-whisper) and a TTS engine (e.g. Kokoro, Coqui, bark)
+        to replace the synthesis stubs below.
+        """
         t_start = time.perf_counter()
         accumulated_audio = bytearray()
 
@@ -54,32 +59,36 @@ class RealTimeVoicePipeline:
         async for chunk in audio_stream:
             accumulated_audio.extend(chunk)
 
-        # 2. STT Transcription (Simulated fast Whisper streaming)
-        transcription_time_ms = 45.0
-        prompt_text = (
-            "Bonjour OpenClaw, quel est l'état du maillage P2P ?"
-            if len(accumulated_audio) > 100
-            else "Bonjour !"
-        )
+        audio_bytes = len(accumulated_audio)
+
+        # 2. STT Transcription stub — replace with a real Whisper/STT backend call
+        # The estimated latency below is based on typical <150ms VAD + STT pipeline timing.
+        transcription_time_ms = max(20.0, audio_bytes / 320.0)  # ~10ms per 3200 bytes (16kHz mono)
+        prompt_text = "[STT stub] Transcription non disponible — backend Whisper non connecté."
+        if audio_bytes > 100:
+            # When a real STT backend is plugged in, replace this block with the actual call.
+            prompt_text = "[STT stub] Parole détectée — connectez un backend Whisper pour transcrire."
 
         yield {
             "type": "transcription",
             "text": prompt_text,
-            "latency_ms": transcription_time_ms,
-            "audio_bytes_processed": len(accumulated_audio),
+            "latency_ms": round(transcription_time_ms, 2),
+            "audio_bytes_processed": audio_bytes,
+            "stub": True,
         }
 
-        # 3. LLM Token Stream -> Audio Sentence Synthesis
+        # 3. LLM Token Stream → Audio Sentence Synthesis stub
+        # Replace with: real LLM mesh inference call + real TTS synthesis (Kokoro / Coqui / Bark).
         response_sentences = [
-            "Le maillage OpenClawMesh est actif avec trois nœuds GPU connectés.",
-            "Toutes les liaisons chiffrées sont opérationnelles.",
+            "[LLM stub] Réponse non disponible — backend LLM non connecté.",
         ]
 
         for sentence in response_sentences:
             t_sentence = time.perf_counter()
-            # Synthetic low-latency audio wave generation
-            dummy_pcm = b"\x00\x00\x7f\x7f" * (len(sentence) * 80)
-            audio_out_b64 = base64.b64encode(dummy_pcm).decode("utf-8")
+            # Generate a correctly-sized PCM silence buffer (16-bit mono, 16kHz)
+            duration_samples = int(self.config.sample_rate * (len(sentence) * 0.05))
+            silence_pcm = b"\x00\x00" * max(1, duration_samples)
+            audio_out_b64 = base64.b64encode(silence_pcm).decode("utf-8")
             sentence_latency_ms = (time.perf_counter() - t_sentence) * 1000.0 + 35.0
 
             yield {
@@ -88,8 +97,9 @@ class RealTimeVoicePipeline:
                 "audio_base64": audio_out_b64,
                 "format": "audio/pcm",
                 "sample_rate": self.config.sample_rate,
-                "duration_ms": len(sentence) * 45.0,
+                "duration_ms": round(duration_samples / self.config.sample_rate * 1000.0, 2),
                 "latency_ms": round(sentence_latency_ms, 2),
+                "stub": True,
             }
             await asyncio.sleep(0.01)
 

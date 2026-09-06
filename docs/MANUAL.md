@@ -285,7 +285,7 @@ async def run_cluster():
     # Déclaration des nœuds pairs disponibles
     peers = [
         {"node_id": "node-mac", "node_name": "Mac Studio M2 Ultra", "hardware_type": "apple_metal", "vram_mb": 128000},
-        {"node_id": "node-pc", "node_name": "Rig RTX 4090", "hardware_type": "nvidia_cuda", "vram_mb": 24000},
+        {"node_id": "node-pc", "node_name": "Serveur GPU CUDA (24 GB)", "hardware_type": "nvidia_cuda", "vram_mb": 24000},
         {"node_id": "node-srv", "node_name": "Serveur Xeon NPU", "hardware_type": "intel_npu", "vram_mb": 32000},
     ]
 

@@ -49,14 +49,14 @@ def test_dht_local_storage_and_skill_advertising():
 
     # 2. Publication d'une compétence IA
     skill_key = dht.advertise_skill(
-        "vlm_analyze", {"host": "10.0.0.5", "port": 8770, "gpu": "RTX 4090"}
+        "vlm_analyze", {"host": "10.0.0.5", "port": 8770, "gpu": "GPU CUDA"}
     )
     assert len(skill_key) == 40
 
     # 3. Résolution de la compétence
     res = dht.lookup_skill("vlm_analyze")
     assert res is not None
-    assert res["gpu"] == "RTX 4090"
+    assert res["gpu"] == "GPU CUDA"
 
 
 def _make_node(name, port):
@@ -100,7 +100,7 @@ def test_dht_network_store_and_find_value():
             [Contact(node_id=node_b.node_id, host=host_b, port=port_b, name="dht-b")]
         )
 
-        payload = {"host": "10.0.0.5", "port": 8770, "gpu": "RTX 4090"}
+        payload = {"host": "10.0.0.5", "port": 8770, "gpu": "GPU CUDA"}
         stored = await node_b.store_distributed("skill:llm", payload, ttl=60)
         assert stored is True
 

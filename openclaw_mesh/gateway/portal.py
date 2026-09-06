@@ -1,14 +1,20 @@
 """
 Portail Web Universel & Command Center Haute Performance pour OpenClawMesh (100% Free & Open-Access).
 
-Interface Cyberpunk Sovereign AI, Ultra-Moderne, Glassmorphism, 3D Mesh Topology & Live Monitoring :
-- Génération instantanée de clés d'accès gratuites (Free Community Tier)
-- Activation et pilotage du Nœud WAN en 100% Confiance
-- Visualisation 3D interactive du maillage de nœuds et flux de tokens
-- Chat distribué multi-modèles avec KV-Cache & TTFT en direct
-- Comparateur et Benchmark matériel multi-GPU/NPU en temps réel
-- Hub de modèles 1-Clic avec estimation VRAM intelligente
-- Playground d'exécution de compétences & Documentation SDK multi-langages
+Architecture à Deux Niveaux (RBAC Strict) :
+1. Utilisateurs & Développeurs Communautaires (Accès Restreint & Sécurisé) :
+   - Chat IA distribué multi-modèles (streaming, KV-Cache, TTFT)
+   - Playground d'exécution des compétences (skills)
+   - Duel et Live Benchmark multi-matériels (Apple Silicon, CUDA, NPU)
+   - Espace personnel : génération de clé gratuite communautaire & vérification de quota
+   - Réseau 3D & Annuaire public des pairs (données sensibles pseudonymisées)
+   - Documentation d'intégration & SDKs (OpenAI, Anthropic, Ollama, MCP)
+
+2. Administrateur Maître — Guichet Freebox Ultra (Accès Total Exclusif) :
+   - Pilotage mondial du Nœud WAN (0.0.0.0, TLS & clés PSK)
+   - Administration centrale de toutes les clés d'API (liste, audit, création, révocation)
+   - Gestionnaire et déploiement de modèles (pull, purge de cache, allocation VRAM)
+   - Supervision & Reconnexion de l'orchestrateur Guichet Unique Freebox
 """
 
 from __future__ import annotations
@@ -24,24 +30,28 @@ def render_portal_html(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:;">
     <title>{portal_title}</title>
-    <meta name="description" content="Portail Universel OpenClawMesh — Accédez gratuitement et souverainement à l'inférence IA distribuée et au maillage P2P d'agents autonomes.">
+    <meta name="description" content="Portail Universel OpenClawMesh — Inférence IA distribuée souveraine et maillage P2P orchestré par le Guichet Unique Freebox.">
 
     <style>
         :root {{
-            --bg-base: #06080e;
-            --bg-surface: #0b101d;
-            --bg-card: rgba(15, 23, 42, 0.72);
-            --bg-card-hover: rgba(22, 33, 62, 0.85);
+            --bg-base: #050811;
+            --bg-surface: #0a1124;
+            --bg-card: rgba(14, 23, 45, 0.72);
+            --bg-card-hover: rgba(20, 34, 66, 0.85);
             --border-color: rgba(255, 255, 255, 0.08);
             --border-highlight: rgba(0, 255, 157, 0.35);
             --border-cyan: rgba(0, 240, 255, 0.35);
+            --border-amber: rgba(245, 158, 11, 0.35);
+            --border-gold: rgba(251, 191, 36, 0.5);
 
             --primary: #00ff9d;
             --primary-glow: rgba(0, 255, 157, 0.22);
             --cyan: #00f0ff;
             --cyan-glow: rgba(0, 240, 255, 0.2);
             --purple: #a855f7;
+            --purple-glow: rgba(168, 85, 247, 0.22);
             --amber: #f59e0b;
+            --gold: #fbbf24;
             --rose: #f43f5e;
 
             --text-main: #f8fafc;
@@ -50,6 +60,7 @@ def render_portal_html(
 
             --code-bg: #030509;
             --gradient-primary: linear-gradient(135deg, #00ff9d 0%, #00f0ff 50%, #7000ff 100%);
+            --gradient-admin: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
             --gradient-accent: linear-gradient(135deg, #00f0ff 0%, #a855f7 100%);
             --gradient-card: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%);
         }}
@@ -58,11 +69,11 @@ def render_portal_html(
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }}
 
         code, pre, .font-mono {{
-            font-family: 'JetBrains Mono', monospace !important;
+            font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace !important;
         }}
 
         body {{
@@ -73,35 +84,30 @@ def render_portal_html(
             flex-direction: column;
             overflow-x: hidden;
             background-image:
-                radial-gradient(circle at 10% 15%, rgba(0, 255, 157, 0.05) 0%, transparent 45%),
-                radial-gradient(circle at 90% 80%, rgba(0, 240, 255, 0.05) 0%, transparent 45%),
-                radial-gradient(circle at 50% 50%, rgba(112, 0, 255, 0.03) 0%, transparent 60%);
+                radial-gradient(circle at 15% 10%, rgba(0, 255, 157, 0.06) 0%, transparent 45%),
+                radial-gradient(circle at 85% 20%, rgba(0, 240, 255, 0.06) 0%, transparent 45%),
+                radial-gradient(circle at 50% 75%, rgba(168, 85, 247, 0.04) 0%, transparent 60%);
             background-attachment: fixed;
         }}
 
         /* Scrollbar */
-        ::-webkit-scrollbar {{ width: 8px; height: 8px; }}
+        ::-webkit-scrollbar {{ width: 7px; height: 7px; }}
         ::-webkit-scrollbar-track {{ background: var(--bg-base); }}
         ::-webkit-scrollbar-thumb {{ background: rgba(255,255,255,0.15); border-radius: 4px; }}
         ::-webkit-scrollbar-thumb:hover {{ background: var(--primary); }}
 
-        /* ── Header & Navigation ── */
+        /* ── Header ── */
         header {{
             position: sticky;
             top: 0;
             z-index: 100;
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            background: rgba(6, 8, 14, 0.85);
+            background: rgba(5, 8, 17, 0.88);
             border-bottom: 1px solid var(--border-color);
-            padding: 0.9rem 2rem;
+            padding: 0.85rem 2rem;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-        }}
-
-        .brand-container {{
-            display: flex;
             align-items: center;
             gap: 1rem;
         }}
@@ -109,327 +115,53 @@ def render_portal_html(
         .brand-logo {{
             display: flex;
             align-items: center;
-            gap: 0.6rem;
-            font-size: 1.35rem;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            gap: 0.75rem;
             text-decoration: none;
+            color: var(--text-main);
         }}
 
-        .logo-icon {{
-            width: 34px;
-            height: 34px;
+        .brand-icon {{
+            width: 38px;
+            height: 38px;
+            background: var(--gradient-primary);
             border-radius: 10px;
-            background: linear-gradient(135deg, rgba(0,255,157,0.2), rgba(0,240,255,0.1));
-            border: 1px solid var(--border-highlight);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--primary);
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             box-shadow: 0 0 16px var(--primary-glow);
         }}
 
-        .status-strip {{
+        .brand-text-wrapper {{
             display: flex;
-            align-items: center;
-            gap: 1.25rem;
-            font-size: 0.82rem;
+            flex-direction: column;
         }}
 
-        .status-pill {{
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.35rem 0.8rem;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-color);
-            border-radius: 999px;
-            color: var(--text-muted);
-            font-weight: 500;
-        }}
-
-        .status-dot {{
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--primary);
-            box-shadow: 0 0 8px var(--primary);
-            animation: pulse-dot 2s infinite ease-in-out;
-        }}
-
-        @keyframes pulse-dot {{
-            0%, 100% {{ transform: scale(1); opacity: 1; }}
-            50% {{ transform: scale(1.35); opacity: 0.6; }}
-        }}
-
-        /* ── Tabs Navigation ── */
-        .tabs-nav-wrapper {{
-            background: rgba(11, 16, 29, 0.6);
-            border-bottom: 1px solid var(--border-color);
-            position: sticky;
-            top: 60px;
-            z-index: 90;
-            backdrop-filter: blur(16px);
-            padding: 0.4rem 2rem;
-        }}
-
-        .tabs-nav {{
-            display: flex;
-            gap: 0.5rem;
-            max-width: 1400px;
-            margin: 0 auto;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }}
-        .tabs-nav::-webkit-scrollbar {{ display: none; }}
-
-        .tab-btn {{
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            font-size: 0.88rem;
-            font-weight: 600;
-            padding: 0.65rem 1.1rem;
-            border-radius: 0.65rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }}
-
-        .tab-btn:hover {{
-            color: var(--text-main);
-            background: rgba(255, 255, 255, 0.05);
-        }}
-
-        .tab-btn.active {{
-            color: var(--primary);
-            background: rgba(0, 255, 157, 0.1);
-            box-shadow: inset 0 0 0 1px var(--border-highlight);
-        }}
-
-        /* ── Main Layout ── */
-        main {{
-            max-width: 1400px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 2rem 1.5rem 5rem;
-            flex: 1;
-        }}
-
-        .tab-panel {{
-            display: none;
-            animation: fadeIn 0.25s ease forwards;
-        }}
-        .tab-panel.active {{
-            display: block;
-        }}
-
-        @keyframes fadeIn {{
-            from {{ opacity: 0; transform: translateY(6px); }}
-            to {{ opacity: 1; transform: translateY(0); }}
-        }}
-
-        /* ── Hero & Quick Stats ── */
-        .hero-banner {{
-            background: linear-gradient(180deg, rgba(0,255,157,0.06) 0%, rgba(0,240,255,0.02) 100%), var(--bg-card);
-            border: 1px solid var(--border-highlight);
-            border-radius: 1.5rem;
-            padding: 2.5rem;
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 20px 40px -15px rgba(0, 255, 157, 0.08);
-        }}
-
-        .hero-banner::after {{
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(0,240,255,0.12) 0%, transparent 70%);
-            pointer-events: none;
-        }}
-
-        .hero-title {{
-            font-size: clamp(1.8rem, 3.5vw, 2.7rem);
+        .brand-title {{
+            font-size: 1.15rem;
             font-weight: 800;
-            line-height: 1.15;
-            letter-spacing: -0.03em;
-            margin-bottom: 0.8rem;
+            letter-spacing: -0.02em;
             background: var(--gradient-primary);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }}
 
-        .hero-subtitle {{
+        .brand-subtitle {{
+            font-size: 0.72rem;
             color: var(--text-muted);
-            font-size: 1.05rem;
-            max-width: 780px;
-            line-height: 1.6;
-            margin-bottom: 1.8rem;
-        }}
-
-        .hero-actions {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            align-items: center;
-        }}
-
-        /* ── Metric Cards ── */
-        .metrics-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.25rem;
-            margin-bottom: 2rem;
-        }}
-
-        .metric-card {{
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 1.25rem;
-            padding: 1.4rem 1.6rem;
-            backdrop-filter: blur(12px);
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-        }}
-
-        .metric-card:hover {{
-            border-color: var(--border-highlight);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
-        }}
-
-        .metric-label {{
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.4rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }}
-
-        .metric-val {{
-            font-size: 1.85rem;
-            font-weight: 800;
-            color: var(--text-main);
-            font-feature-settings: "tnum";
-            display: flex;
-            align-items: baseline;
-            gap: 0.4rem;
-        }}
-
-        .metric-unit {{
-            font-size: 0.9rem;
             font-weight: 500;
-            color: var(--text-muted);
         }}
 
-        .metric-sub {{
-            font-size: 0.8rem;
-            color: var(--primary);
-            margin-top: 0.4rem;
+        .header-center {{
             display: flex;
             align-items: center;
-            gap: 0.3rem;
+            gap: 0.8rem;
         }}
 
-        /* ── Glass Cards & Sections ── */
-        .card {{
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 1.25rem;
-            padding: 2rem;
-            backdrop-filter: blur(14px);
-            margin-bottom: 1.5rem;
-            transition: border-color 0.2s ease;
-        }}
-
-        .card:hover {{
-            border-color: rgba(255,255,255,0.15);
-        }}
-
-        .card-header {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }}
-
-        .card-title {{
-            font-size: 1.25rem;
-            font-weight: 700;
+        .header-actions {{
             display: flex;
             align-items: center;
-            gap: 0.6rem;
-        }}
-
-        /* ── Boutons ── */
-        .btn {{
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.55rem;
-            padding: 0.75rem 1.4rem;
-            border-radius: 0.75rem;
-            font-size: 0.92rem;
-            font-weight: 700;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-            border: none;
-            outline: none;
-        }}
-
-        .btn-primary {{
-            background: var(--gradient-primary);
-            color: #030712;
-            box-shadow: 0 4px 20px var(--primary-glow);
-        }}
-
-        .btn-primary:hover {{
-            transform: translateY(-1px);
-            box-shadow: 0 6px 28px rgba(0, 255, 157, 0.4);
-            opacity: 0.95;
-        }}
-
-        .btn-secondary {{
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-        }}
-
-        .btn-secondary:hover {{
-            background: rgba(255, 255, 255, 0.1);
-            border-color: var(--border-highlight);
-            color: var(--primary);
-        }}
-
-        .btn-cyan {{
-            background: rgba(0, 240, 255, 0.12);
-            color: var(--cyan);
-            border: 1px solid var(--border-cyan);
-        }}
-
-        .btn-cyan:hover {{
-            background: var(--cyan);
-            color: #030712;
-            box-shadow: 0 0 20px var(--cyan-glow);
+            gap: 0.75rem;
         }}
 
         /* ── Badges ── */
@@ -437,12 +169,11 @@ def render_portal_html(
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
-            font-size: 0.72rem;
-            font-weight: 700;
             padding: 0.25rem 0.65rem;
-            border-radius: 999px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
         }}
 
         .badge-green {{
@@ -458,154 +189,512 @@ def render_portal_html(
         }}
 
         .badge-purple {{
-            background: rgba(168, 85, 247, 0.15);
+            background: rgba(168, 85, 247, 0.12);
             color: var(--purple);
-            border: 1px solid rgba(168, 85, 247, 0.4);
+            border: 1px solid rgba(168, 85, 247, 0.3);
         }}
 
         .badge-amber {{
-            background: rgba(245, 158, 11, 0.15);
+            background: rgba(245, 158, 11, 0.12);
             color: var(--amber);
-            border: 1px solid rgba(245, 158, 11, 0.4);
+            border: 1px solid var(--border-amber);
         }}
 
-        /* ── Form Inputs ── */
+        .badge-gold {{
+            background: rgba(251, 191, 36, 0.16);
+            color: var(--gold);
+            border: 1px solid var(--border-gold);
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
+        }}
+
+        .badge-lock {{
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-size: 0.65rem;
+            padding: 0.15rem 0.45rem;
+        }}
+
+        /* ── Role Indicator Pill ── */
+        .role-pill {{
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            padding: 0.35rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+        }}
+
+        .role-pill.admin-active {{
+            background: rgba(251, 191, 36, 0.08);
+            border-color: var(--border-gold);
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.15);
+        }}
+
+        .status-dot {{
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 8px var(--primary);
+            display: inline-block;
+            animation: pulse-dot 2s infinite ease-in-out;
+        }}
+
+        .status-dot.gold {{
+            background: var(--gold);
+            box-shadow: 0 0 8px var(--gold);
+        }}
+
+        @keyframes pulse-dot {{
+            0%, 100% {{ transform: scale(1); opacity: 1; }}
+            50% {{ transform: scale(1.25); opacity: 0.7; }}
+        }}
+
+        /* ── Buttons ── */
+        .btn {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.55rem 1.15rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 0.65rem;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            text-decoration: none;
+            border: none;
+            outline: none;
+        }}
+
+        .btn-primary {{
+            background: var(--primary);
+            color: #050811;
+            box-shadow: 0 0 16px var(--primary-glow);
+        }}
+        .btn-primary:hover {{
+            background: #22ffa8;
+            transform: translateY(-1px);
+            box-shadow: 0 0 22px rgba(0, 255, 157, 0.4);
+        }}
+
+        .btn-cyan {{
+            background: var(--cyan);
+            color: #050811;
+            box-shadow: 0 0 16px var(--cyan-glow);
+        }}
+        .btn-cyan:hover {{
+            background: #33f3ff;
+            transform: translateY(-1px);
+            box-shadow: 0 0 22px rgba(0, 240, 255, 0.4);
+        }}
+
+        .btn-admin {{
+            background: var(--gradient-admin);
+            color: #050811;
+            font-weight: 700;
+            box-shadow: 0 0 16px rgba(251, 191, 36, 0.3);
+        }}
+        .btn-admin:hover {{
+            transform: translateY(-1px);
+            box-shadow: 0 0 24px rgba(251, 191, 36, 0.5);
+        }}
+
+        .btn-secondary {{
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }}
+        .btn-secondary:hover {{
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }}
+
+        .btn-danger {{
+            background: rgba(244, 63, 94, 0.15);
+            color: var(--rose);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+        }}
+        .btn-danger:hover {{
+            background: rgba(244, 63, 94, 0.25);
+            border-color: var(--rose);
+        }}
+
+        .btn-sm {{
+            padding: 0.35rem 0.75rem;
+            font-size: 0.78rem;
+            border-radius: 0.5rem;
+        }}
+
+        /* ── Guichet Unique Freebox Banner ── */
+        .guichet-banner {{
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.07) 0%, rgba(168, 85, 247, 0.07) 50%, rgba(0, 255, 157, 0.05) 100%);
+            border-bottom: 1px solid rgba(0, 240, 255, 0.18);
+            padding: 0.7rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+            font-size: 0.83rem;
+            flex-wrap: wrap;
+        }}
+
+        .guichet-title {{
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 700;
+            color: var(--cyan);
+        }}
+
+        .guichet-stats {{
+            display: flex;
+            align-items: center;
+            gap: 1.4rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }}
+
+        .guichet-stat-item {{
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }}
+
+        .guichet-stat-item strong {{
+            color: var(--text-main);
+        }}
+
+        .guichet-indicator {{
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--amber);
+            display: inline-block;
+        }}
+        .guichet-indicator.online {{
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }}
+        .guichet-indicator.offline {{
+            background: var(--rose);
+        }}
+
+        /* ── Tabs Navigation ── */
+        .tabs-nav-wrapper {{
+            position: sticky;
+            top: 57px;
+            z-index: 90;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            background: rgba(5, 8, 17, 0.94);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            overflow-x: auto;
+        }}
+
+        .tabs-group {{
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }}
+
+        .tabs-divider {{
+            height: 24px;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.12);
+            margin: 0 0.5rem;
+        }}
+
+        .tabs-group-label {{
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            padding-right: 0.3rem;
+            white-space: nowrap;
+        }}
+
+        .tab-btn {{
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 0.5rem 0.9rem;
+            border-radius: 0.6rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }}
+
+        .tab-btn:hover {{
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+        }}
+
+        .tab-btn.active {{
+            background: rgba(0, 255, 157, 0.08);
+            border-color: var(--border-highlight);
+            color: var(--primary);
+        }}
+
+        .tab-btn.admin-tab {{
+            color: #d1d5db;
+        }}
+        .tab-btn.admin-tab:hover {{
+            color: var(--gold);
+            border-color: rgba(251, 191, 36, 0.3);
+        }}
+        .tab-btn.admin-tab.active {{
+            background: rgba(251, 191, 36, 0.1);
+            border-color: var(--border-gold);
+            color: var(--gold);
+        }}
+
+        /* ── Main Layout ── */
+        main {{
+            max-width: 1440px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+            flex: 1;
+        }}
+
+        .tab-panel {{
+            display: none;
+            animation: fadeIn 0.25s ease-out;
+        }}
+        .tab-panel.active {{
+            display: block;
+        }}
+
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(6px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+
+        /* ── Cards & Grid ── */
+        .card {{
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 1.25rem;
+            padding: 1.8rem;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            background-image: var(--gradient-card);
+            margin-bottom: 1.5rem;
+            transition: border-color 0.2s ease;
+        }}
+        .card:hover {{
+            border-color: rgba(255, 255, 255, 0.16);
+        }}
+
+        .card-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.4rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }}
+
+        .card-title {{
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }}
+
+        .card-desc {{
+            font-size: 0.86rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            line-height: 1.5;
+        }}
+
+        .grid-2 {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 1.5rem;
+        }}
+
+        .grid-3 {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }}
+
+        .grid-4 {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }}
+
+        /* ── Metric Cards ── */
+        .metric-card {{
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }}
+
+        .metric-label {{
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }}
+
+        .metric-value {{
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 0.4rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-main);
+        }}
+
+        .metric-unit {{
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-dim);
+            margin-left: 0.25rem;
+        }}
+
+        /* ── Form Controls ── */
         .form-group {{
-            margin-bottom: 1.25rem;
+            margin-bottom: 1.2rem;
         }}
 
         .form-label {{
             display: block;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-weight: 600;
             color: var(--text-muted);
-            margin-bottom: 0.45rem;
+            margin-bottom: 0.4rem;
         }}
 
         .form-control {{
             width: 100%;
-            background: var(--code-bg);
+            background: rgba(3, 5, 9, 0.8);
             border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
+            color: var(--text-main);
+            border-radius: 0.65rem;
             padding: 0.75rem 1rem;
-            color: var(--text-main);
-            font-size: 0.92rem;
-            outline: none;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }}
-
-        .form-control:focus {{
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.12);
-        }}
-
-        /* ── Code Blocks ── */
-        pre.code-block {{
-            background: var(--code-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 0.85rem;
-            padding: 1.1rem;
-            overflow-x: auto;
-            font-size: 0.85rem;
-            line-height: 1.6;
-            color: #93c5fd;
-            position: relative;
-        }}
-
-        /* ── Modal ── */
-        .modal-backdrop {{
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(3, 5, 9, 0.85);
-            backdrop-filter: blur(12px);
-            z-index: 200;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }}
-
-        .modal-card {{
-            background: #0d121f;
-            border: 1px solid var(--border-highlight);
-            border-radius: 1.5rem;
-            padding: 2.2rem;
-            max-width: 580px;
-            width: 100%;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px var(--primary-glow);
-            animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }}
-
-        @keyframes modalPop {{
-            from {{ opacity: 0; transform: scale(0.94); }}
-            to {{ opacity: 1; transform: scale(1); }}
-        }}
-
-        /* ── Toast Container ── */
-        #toastContainer {{
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            z-index: 300;
-            display: flex;
-            flex-direction: column;
-            gap: 0.6rem;
-            pointer-events: none;
-        }}
-
-        .toast {{
-            background: #0f172a;
-            border: 1px solid var(--border-highlight);
-            color: var(--text-main);
-            padding: 0.85rem 1.25rem;
-            border-radius: 0.85rem;
             font-size: 0.88rem;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            animation: toastSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            pointer-events: auto;
+            outline: none;
+            transition: all 0.2s ease;
+        }}
+        .form-control:focus {{
+            border-color: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan-glow);
         }}
 
-        @keyframes toastSlide {{
-            from {{ opacity: 0; transform: translateX(40px); }}
-            to {{ opacity: 1; transform: translateX(0); }}
-        }}
-
-        /* ── Chat Playground Styles ── */
-        .chat-container {{
-            background: #070a12;
-            border: 1px solid var(--border-color);
+        /* ── Locked Area Screen ── */
+        .locked-container {{
+            text-align: center;
+            padding: 3.5rem 1.5rem;
+            background: rgba(251, 191, 36, 0.02);
+            border: 1px dashed var(--border-gold);
             border-radius: 1.25rem;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 520px;
+            margin-bottom: 1.5rem;
         }}
 
-        .chat-messages {{
-            flex: 1;
-            padding: 1.25rem;
+        .locked-icon {{
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+            filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.3));
+        }}
+
+        .locked-title {{
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }}
+
+        .locked-desc {{
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            max-width: 580px;
+            margin: 0 auto 1.6rem auto;
+            line-height: 1.6;
+        }}
+
+        /* ── Tables ── */
+        .mesh-table {{
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 1rem;
+        }}
+
+        .mesh-table th {{
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+        }}
+
+        .mesh-table td {{
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 0.85rem;
+            vertical-align: middle;
+        }}
+
+        .mesh-table tr:hover td {{
+            background: rgba(255, 255, 255, 0.02);
+        }}
+
+        /* ── Chat System ── */
+        .chat-box {{
+            height: 480px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            padding: 1.2rem;
+            background: rgba(3, 5, 9, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            margin-bottom: 1rem;
         }}
 
         .chat-bubble {{
             display: flex;
             gap: 0.75rem;
-            max-width: 85%;
+            max-width: 82%;
+            animation: fadeIn 0.2s ease;
         }}
 
         .chat-bubble.user {{
             align-self: flex-end;
             flex-direction: row-reverse;
-        }}
-
-        .chat-bubble.bot {{
-            align-self: flex-start;
         }}
 
         .chat-avatar {{
@@ -616,13 +705,13 @@ def render_portal_html(
             align-items: center;
             justify-content: center;
             font-size: 0.9rem;
+            font-weight: 700;
             flex-shrink: 0;
         }}
 
         .chat-bubble.user .chat-avatar {{
             background: var(--gradient-primary);
-            color: #030712;
-            font-weight: 800;
+            color: #050811;
         }}
 
         .chat-bubble.bot .chat-avatar {{
@@ -632,750 +721,576 @@ def render_portal_html(
         }}
 
         .chat-text {{
-            padding: 0.85rem 1.15rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
             border-radius: 1rem;
-            font-size: 0.92rem;
-            line-height: 1.6;
+            padding: 0.85rem 1.1rem;
+            font-size: 0.9rem;
+            line-height: 1.55;
         }}
 
         .chat-bubble.user .chat-text {{
-            background: var(--primary);
-            color: #030712;
-            font-weight: 600;
-            border-bottom-right-radius: 0.2rem;
+            background: rgba(0, 255, 157, 0.08);
+            border-color: var(--border-highlight);
         }}
 
-        .chat-bubble.bot .chat-text {{
-            background: rgba(255, 255, 255, 0.04);
+        /* ── Modals ── */
+        .modal-backdrop {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(3, 5, 9, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }}
+
+        .modal-card {{
+            background: var(--bg-surface);
             border: 1px solid var(--border-color);
-            color: var(--text-main);
-            border-bottom-left-radius: 0.2rem;
-        }}
-
-        .chat-input-bar {{
-            padding: 1rem 1.25rem;
-            background: rgba(11, 16, 29, 0.8);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-        }}
-
-        /* ── Guichet Unique & Mesh Live Banner ── */
-        .guichet-banner {{
-            background: linear-gradient(90deg, rgba(0, 255, 157, 0.08) 0%, rgba(0, 240, 255, 0.06) 50%, rgba(168, 85, 247, 0.08) 100%);
-            border-bottom: 1px solid rgba(0, 255, 157, 0.25);
-            padding: 0.65rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.84rem;
-            backdrop-filter: blur(12px);
-            z-index: 80;
-        }}
-
-        .guichet-banner-content {{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            border-radius: 1.5rem;
+            padding: 2.2rem;
+            max-width: 540px;
             width: 100%;
-            max-width: 1400px;
-            margin: 0 auto;
-            flex-wrap: wrap;
-            gap: 0.8rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            position: relative;
+            animation: modalScale 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }}
 
-        .guichet-status-group {{
+        @keyframes modalScale {{
+            from {{ transform: scale(0.95); opacity: 0; }}
+            to {{ transform: scale(1); opacity: 1; }}
+        }}
+
+        .modal-close {{
+            position: absolute;
+            top: 1.4rem;
+            right: 1.4rem;
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            font-size: 1.3rem;
+            cursor: pointer;
+        }}
+        .modal-close:hover {{ color: var(--text-main); }}
+
+        /* ── Toasts ── */
+        #toastContainer {{
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
             display: flex;
-            align-items: center;
-            gap: 0.75rem;
+            flex-direction: column;
+            gap: 0.6rem;
+            z-index: 300;
         }}
 
-        .guichet-indicator {{
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #ffcc00;
-            box-shadow: 0 0 10px #ffcc00;
-            display: inline-block;
-            transition: all 0.3s ease;
-        }}
-
-        .guichet-indicator.online {{
-            background: var(--primary);
-            box-shadow: 0 0 12px var(--primary);
-        }}
-
-        .guichet-indicator.offline {{
-            background: var(--rose);
-            box-shadow: 0 0 10px var(--rose);
-        }}
-
-        .guichet-details-group {{
-            display: flex;
-            align-items: center;
-            gap: 1.25rem;
-            flex-wrap: wrap;
-        }}
-
-        .guichet-detail-item {{
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            color: var(--text-muted);
-            font-size: 0.8rem;
-        }}
-
-        .mesh-table {{
-            width: 100%;
-            border-collapse: collapse;
+        .toast {{
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.85rem 1.2rem;
             font-size: 0.85rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: toastSlide 0.2s ease-out;
         }}
 
-        .mesh-table th {{
-            text-align: left;
-            padding: 0.85rem 1rem;
-            background: rgba(255, 255, 255, 0.02);
-            color: var(--text-muted);
-            font-weight: 600;
-            border-bottom: 1px solid var(--border-color);
+        @keyframes toastSlide {{
+            from {{ transform: translateX(30px); opacity: 0; }}
+            to {{ transform: translateX(0); opacity: 1; }}
         }}
 
-        .mesh-table td {{
-            padding: 0.85rem 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            color: var(--text-main);
-        }}
-
-        .mesh-table tr:hover td {{
-            background: rgba(255, 255, 255, 0.03);
+        /* ── Code Blocks ── */
+        .code-block {{
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.1rem;
+            overflow-x: auto;
+            font-size: 0.82rem;
+            color: #e2e8f0;
+            line-height: 1.6;
         }}
 
         /* Responsive */
-        @media (max-width: 768px) {{
+        @media (max-width: 900px) {{
             header {{ padding: 0.8rem 1rem; }}
-            .status-strip {{ display: none; }}
-            .guichet-banner {{ padding: 0.6rem 1rem; font-size: 0.78rem; }}
-            .guichet-details-group {{ gap: 0.6rem; }}
-            .tabs-nav-wrapper {{ padding: 0.4rem 1rem; top: 54px; }}
-            main {{ padding: 1.25rem 1rem 4rem; }}
-            .hero-banner {{ padding: 1.5rem; }}
+            .tabs-nav-wrapper {{ padding: 0.5rem 1rem; top: 52px; }}
+            main {{ padding: 1rem; }}
+            .guichet-banner {{ padding: 0.6rem 1rem; }}
         }}
     </style>
 </head>
 <body>
 
-    <!-- Header -->
+    <!-- ── Header ── -->
     <header>
-        <div class="brand-container">
-            <a href="#" class="brand-logo" onclick="switchTab('overview')">
-                <div class="logo-icon">⚡</div>
-                <span>OpenClawMesh</span>
-            </a>
-            <span class="badge badge-green">100% Free & Sovereign</span>
+        <a href="#" class="brand-logo" onclick="switchTab('chat'); return false;">
+            <div class="brand-icon">⚡</div>
+            <div class="brand-text-wrapper">
+                <div class="brand-title">OpenClaw Mesh</div>
+                <div class="brand-subtitle">Inférence IA Souveraine & Distribuée · Accès Gratuit</div>
+            </div>
+        </a>
+
+        <div class="header-center">
+            <div class="role-pill" id="currentRoleBadge">
+                <span class="status-dot" id="roleStatusDot"></span>
+                <span id="roleLabelText">👤 Mode Utilisateur (Accès Restreint)</span>
+            </div>
         </div>
 
-        <div class="status-strip">
-            <div class="status-pill">
-                <span class="status-dot"></span>
-                <span>Maillage Local : <strong style="color:var(--primary);" id="nodeHostStatus">127.0.0.1:8000</strong></span>
-            </div>
-            <div class="status-pill">
-                <span>E2EE : <strong style="color:var(--cyan);">X25519 / Ed25519</strong></span>
-            </div>
-            <div class="status-pill">
-                <span>DHT Kademlia : <strong style="color:#a855f7;">Actif (UDP)</strong></span>
-            </div>
+        <div class="header-actions">
+            <button class="btn btn-sm btn-secondary" onclick="generateFreeKey()">
+                ✨ Obtenir ma Clé Gratuite
+            </button>
+            <button class="btn btn-sm btn-admin" id="adminAuthToggleBtn" onclick="toggleAdminModal()">
+                👑 Accès Maître Guichet Freebox 🔒
+            </button>
         </div>
     </header>
 
-    <!-- Navigation Tabs -->
-    <div class="tabs-nav-wrapper">
-        <div class="tabs-nav">
-            <button class="tab-btn active" onclick="switchTab('overview')">🌟 Vue d'ensemble & 3D Mesh</button>
-            <button class="tab-btn" onclick="switchTab('wan')">🌐 Passerelle & Nœud WAN</button>
-            <button class="tab-btn" onclick="switchTab('chat')">🤖 Chat IA & Multi-Modèles</button>
-            <button class="tab-btn" onclick="switchTab('models')">📥 Hub de Modèles & VRAM</button>
-            <button class="tab-btn" onclick="switchTab('benchmark')">⚔️ Live Benchmark Multi-GPU</button>
-            <button class="tab-btn" onclick="switchTab('playground')">🧪 Playground API & Skills</button>
-            <button class="tab-btn" onclick="switchTab('keys')">🔑 Clés d'Accès & Sécurité</button>
-            <button class="tab-btn" onclick="switchTab('docs')">📖 SDKs & Documentation</button>
-        </div>
-    </div>
-
-    <!-- Guichet Unique & Mesh Sovereign Live Banner -->
+    <!-- ── Guichet Unique Freebox Banner ── -->
     <div class="guichet-banner" id="guichetBanner">
-        <div class="guichet-banner-content">
-            <div class="guichet-status-group">
-                <span class="guichet-indicator" id="guichetIndicator"></span>
-                <span style="font-weight:700; color:var(--text-main);">⚡ Guichet Unique Freebox :</span>
-                <span id="guichetUrlText" style="color:var(--primary); font-family:monospace; font-weight:600;">Détection en cours...</span>
-                <span class="badge badge-green" id="guichetBadge">Accès Gratuit &amp; Souverain</span>
+        <div class="guichet-title">
+            <span class="guichet-indicator" id="guichetIndicator"></span>
+            <span>👑 Orchestration Centrale : Guichet Unique Freebox Ultra</span>
+            <span class="badge badge-cyan" id="guichetBadge">Connexion...</span>
+        </div>
+
+        <div class="guichet-stats">
+            <div class="guichet-stat-item">
+                <span>Passerelle :</span>
+                <strong id="guichetUrlText" class="font-mono">82.67.166.90:8790</strong>
             </div>
-            <div class="guichet-details-group">
-                <div class="guichet-detail-item">
-                    <span>IP WireGuard :</span>
-                    <strong id="guichetIpText" style="color:var(--cyan); font-family:monospace;">-</strong>
-                </div>
-                <div class="guichet-detail-item">
-                    <span>Latence RTT :</span>
-                    <strong id="guichetRttText" style="color:var(--amber);">-</strong>
-                </div>
-                <div class="guichet-detail-item">
-                    <span>Machines Maillage :</span>
-                    <strong id="guichetPeersCountText" style="color:var(--purple); font-weight:700;">0 active(s)</strong>
-                </div>
-                <button class="btn btn-secondary" onclick="promptReconnectGuichet()" style="padding:0.35rem 0.8rem; font-size:0.75rem; border-radius:0.5rem;">
-                    🔄 Reconnexion
-                </button>
+            <div class="guichet-stat-item">
+                <span>IP Mesh Maître :</span>
+                <strong id="guichetIpText" class="font-mono">10.88.0.x</strong>
             </div>
+            <div class="guichet-stat-item">
+                <span>Latence RTT :</span>
+                <strong id="guichetRttText" style="color:var(--primary);">&lt; 1 ms</strong>
+            </div>
+            <div class="guichet-stat-item">
+                <span>Pairs Actifs :</span>
+                <strong id="guichetPeersCountText" style="color:var(--cyan);">0 active(s)</strong>
+            </div>
+        </div>
+
+        <div id="guichetAdminActions">
+            <button class="btn btn-sm btn-secondary" style="padding:0.25rem 0.6rem; font-size:0.72rem;" onclick="handleGuichetReconnect()">
+                🔄 Reconnecter Guichet
+            </button>
         </div>
     </div>
 
-    <!-- Main Content -->
+    <!-- ── Navigation Tabs ── -->
+    <div class="tabs-nav-wrapper">
+        <div class="tabs-group">
+            <span class="tabs-group-label">Espace Public</span>
+            <button class="tab-btn active" onclick="switchTab('chat')">💬 Chat & Inférence</button>
+            <button class="tab-btn" onclick="switchTab('playground')">🧪 Playground Skills</button>
+            <button class="tab-btn" onclick="switchTab('benchmark')">📊 Duel Benchmark</button>
+            <button class="tab-btn" onclick="switchTab('user-key')">🔑 Mon Espace & Clé</button>
+            <button class="tab-btn" onclick="switchTab('overview')">🌐 Topologie & Réseau 3D</button>
+            <button class="tab-btn" onclick="switchTab('docs')">📖 SDKs & Docs</button>
+        </div>
+
+        <div class="tabs-divider"></div>
+
+        <div class="tabs-group">
+            <span class="tabs-group-label" style="color:var(--gold);">Guichet Maître</span>
+            <button class="tab-btn admin-tab" id="navBtnWan" onclick="handleAdminTabClick('wan')">
+                🛡️ Passerelle WAN (0.0.0.0) <span class="badge badge-lock" id="lockBadgeWan">🔒</span>
+            </button>
+            <button class="tab-btn admin-tab" id="navBtnKeys" onclick="handleAdminTabClick('admin-keys')">
+                🔐 Administration des Clés <span class="badge badge-lock" id="lockBadgeKeys">🔒</span>
+            </button>
+            <button class="tab-btn admin-tab" id="navBtnModels" onclick="handleAdminTabClick('models')">
+                📦 Hub & Modèles Cluster <span class="badge badge-lock" id="lockBadgeModels">🔒</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Main Workspace ── -->
     <main>
 
         <!-- ========================================== -->
-        <!-- TAB 1 : VUE D'ENSEMBLE & TOPOLOGIE 3D      -->
+        <!-- TAB : CHAT IA & INFERENCE DISTRIBUEE       -->
         <!-- ========================================== -->
-        <div id="tab-overview" class="tab-panel active">
-
-            <!-- Hero Banner -->
-            <div class="hero-banner">
-                <span class="badge badge-cyan" style="margin-bottom:0.8rem;">🚀 Inférence IA Souveraine & Décentralisée</span>
-                <h1 class="hero-title">Maillage P2P Haute Performance<br>pour Agents Autonomes & Modèles IA</h1>
-                <p class="hero-subtitle">
-                    Fédérez vos GPUs (Apple Silicon Metal MLX, NVIDIA CUDA, ROCm) et NPUs en un cluster souverain ultra-basse latence. Accès illimité sans carte bancaire ni dépendance centralisée.
-                </p>
-                <div class="hero-actions">
-                    <button class="btn btn-primary" onclick="generateFreeKey()">✨ Générer une Clé Gratuite Immédiate</button>
-                    <button class="btn btn-secondary" onclick="switchTab('wan')">🌐 Configurer le Nœud WAN (0.0.0.0)</button>
-                    <button class="btn btn-cyan" onclick="switchTab('chat')">💬 Ouvrir le Chat Live</button>
-                </div>
-            </div>
-
-            <!-- Stats Bar -->
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-label">Latence Moyenne RTT <span>⚡</span></div>
-                    <div class="metric-val" id="metricLatency">4.2 <span class="metric-unit">ms</span></div>
-                    <div class="metric-sub">✓ Sub-10ms direct UDP QUIC</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">Débit Inférence <span>🚀</span></div>
-                    <div class="metric-val" id="metricTps">142 <span class="metric-unit">tok/s</span></div>
-                    <div class="metric-sub">✓ Metal GPU & CUDA combinés</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">KV-Cache Sémantique <span>🧠</span></div>
-                    <div class="metric-val" id="metricKv">98.4 <span class="metric-unit">%</span></div>
-                    <div class="metric-sub">✓ Réduction 0-latency sur prompts</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">Nœuds Connectés (Mesh) <span>🕸️</span></div>
-                    <div class="metric-val" id="metricNodes">6 <span class="metric-unit">pairs</span></div>
-                    <div class="metric-sub">✓ DHT Kademlia 160-bit & mDNS</div>
-                </div>
-            </div>
-
-            <!-- Répertoire en direct des machines du Maillage P2P -->
-            <div class="card" style="margin-bottom:2rem;">
+        <div id="tab-chat" class="tab-panel active">
+            <div class="card">
                 <div class="card-header">
                     <div>
-                        <div class="card-title">🌐 Répertoire des Machines du Maillage P2P (Découvertes via le Guichet Unique)</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">
-                            Machines souveraines actives prêtes pour la délégation de calcul IA (LLM, Vision, Code).
+                        <div class="card-title">💬 Studio d'Inférence & Chat Distribué</div>
+                        <div class="card-desc">
+                            Interrogez en direct les modèles IA hébergés sur le maillage souverain OpenClawMesh avec routage automatique vers le GPU le plus rapide.
                         </div>
                     </div>
                     <div style="display:flex; gap:0.5rem; align-items:center;">
-                        <span class="badge badge-cyan" id="meshPeersBadge">0 Machines</span>
-                        <button class="btn btn-secondary" onclick="fetchMeshPeers(true)" style="padding:0.4rem 0.8rem; font-size:0.8rem;">
-                            🔄 Actualiser
+                        <span id="chatLatencyBadge" class="badge badge-green font-mono">0 ms</span>
+                        <span id="kvCacheBadge" class="badge badge-purple font-mono" style="display:none;">⚡ KV-Cache Hit</span>
+                        <span class="badge badge-cyan font-mono">100% Free & Accès Libre</span>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
+                    <div>
+                        <label class="form-label">Cible du Maillage (Orchestrateur Guichet Unique ou Pair Précis) :</label>
+                        <select id="chatTargetNode" class="form-control">
+                            <option value="auto">🌐 Maillage Intelligent (Orchestrateur Guichet Unique · Meilleur GPU)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Modèle IA Actif :</label>
+                        <select id="chatModel" class="form-control">
+                            <option value="qwen2.5-coder-7b">Qwen 2.5 Coder 7B (Haute Vitesse)</option>
+                            <option value="llama3.1-8b">Llama 3.1 8B (Polyvalent)</option>
+                            <option value="deepseek-r1-8b">DeepSeek R1 8B (Raisonnement)</option>
+                            <option value="mistral-nemo-12b">Mistral NeMo 12B (Grand Contexte)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Messages Container -->
+                <div class="chat-box" id="chatMessages">
+                    <div class="chat-bubble bot">
+                        <div class="chat-avatar">⚡</div>
+                        <div class="chat-text">
+                            <strong>Bienvenue sur le maillage OpenClaw Mesh !</strong><br>
+                            Le cluster est opérationnel sous l'orchestration du Guichet Unique Freebox. Vous pouvez envoyer des prompts librement : vos requêtes sont distribuées sur les nœuds GPU disponibles en toute confidentialité.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Zone -->
+                <div style="display:flex; gap:0.75rem;">
+                    <input type="text" id="chatInput" class="form-control" placeholder="Posez une question, demandez du code ou un calcul distribué..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                    <input type="hidden" id="chatApiKey" value="">
+                    <button class="btn btn-primary" onclick="sendChatMessage()" style="padding:0.75rem 1.6rem;">
+                        Envoyer ⚡
+                    </button>
+                </div>
+
+                <div style="display:flex; gap:0.5rem; margin-top:0.8rem; flex-wrap:wrap;">
+                    <span style="font-size:0.75rem; color:var(--text-dim); align-self:center;">Suggestions rapides :</span>
+                    <button class="btn btn-sm btn-secondary" onclick="insertPrompt('Écris une fonction Python asynchrone pour faire du streaming d\'inférence')">Python Async Stream</button>
+                    <button class="btn btn-sm btn-secondary" onclick="insertPrompt('Explique l\'architecture P2P de découvrabilité avec Guichet Unique Freebox')">Freebox Guichet Architecture</button>
+                    <button class="btn btn-sm btn-secondary" onclick="insertPrompt('Optimise un calcul d\'attention matricielle avec FlashAttention')">FlashAttention CUDA</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB : PLAYGROUND SKILLS & OUTILS           -->
+        <!-- ========================================== -->
+        <div id="tab-playground" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">🧪 Playground API & Compétences d'Agents</div>
+                        <div class="card-desc">
+                            Testez l'exécution directe des compétences (`skills`) exposées par les nœuds du maillage via JSON universel.
+                        </div>
+                    </div>
+                    <span class="badge badge-cyan">Exécution Sandboxed</span>
+                </div>
+
+                <div class="grid-2">
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label">Compétence Cible :</label>
+                            <select id="playSkill" class="form-control">
+                                <option value="llm">llm (Inférence Textuelle / Code)</option>
+                                <option value="chat">chat (Conversation Contextuelle)</option>
+                                <option value="vision">vision (Analyse d'Images Multimodale)</option>
+                                <option value="code">code (Génération & Refactoring)</option>
+                                <option value="gateway">gateway (Routage Réseau)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Clé d'API (Optionnelle si clé locale enregistrée) :</label>
+                            <input type="text" id="playKey" class="form-control font-mono" placeholder="sk_claw_...">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Payload JSON d'Entrée :</label>
+                            <textarea id="playPayload" class="form-control font-mono" rows="6">{{
+  "prompt": "Explique comment OpenClawMesh fédère la VRAM distribuée.",
+  "model": "qwen2.5-coder-7b",
+  "temperature": 0.2
+}}</textarea>
+                        </div>
+
+                        <button class="btn btn-primary" style="width:100%;" onclick="runPlayground()">
+                            🚀 Exécuter la Compétence
                         </button>
                     </div>
+
+                    <div>
+                        <label class="form-label">Réponse de la Passerelle :</label>
+                        <pre id="playOutput" class="code-block" style="height: 330px;">En attente de soumission...</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB : BENCHMARK DUEL MULTI-GPU             -->
+        <!-- ========================================== -->
+        <div id="tab-benchmark" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">📊 Live Benchmark Multi-GPU & Duel de Nœuds</div>
+                        <div class="card-desc">
+                            Comparez en temps réel le temps jusqu'au premier token (TTFT) et le débit de génération entre les backends disponibles sur cette machine (Apple Silicon Metal, GPU CUDA, CPU / NPU).
+                        </div>
+                    </div>
+                    <span class="badge badge-green">Accès Gratuit &amp; Souverain</span>
+                </div>
+
+                <div style="display:flex; gap:0.75rem; margin-bottom:1.5rem;">
+                    <input type="text" id="comparePrompt" class="form-control" value="Calcule la suite de Fibonacci en Rust et explique la complexité spatiale." placeholder="Prompt de test pour le benchmark...">
+                    <button class="btn btn-cyan" onclick="runBenchmarkCompare()" style="white-space:nowrap;">
+                        ⚔️ Lancer le Duel
+                    </button>
+                </div>
+
+                <div id="compareResultsGrid" class="grid-3" style="min-height:120px;">
+                    <div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:2.5rem 0; font-size:0.95rem;">
+                        ⚡️ Cliquez sur <strong>Lancer le Duel</strong> pour exécuter un benchmark réel sur votre matériel détecté.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB : MON ESPACE UTILISATEUR & CLE API     -->
+        <!-- ========================================== -->
+        <div id="tab-user-key" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">🔑 Mon Espace & Clé d'Accès Communautaire</div>
+                        <div class="card-desc">
+                            Générez instantanément votre clé d'API personnelle gratuite pour vos scripts et vérifiez vos quotas.
+                        </div>
+                    </div>
+                    <span class="badge badge-green">Accès Gratuit Permanent</span>
+                </div>
+
+                <div class="grid-2">
+                    <div style="background:rgba(0,255,157,0.03); border:1px solid var(--border-highlight); border-radius:1.25rem; padding:1.8rem;">
+                        <h3 style="font-size:1.15rem; font-weight:700; color:var(--primary); margin-bottom:0.6rem;">✨ Générer ma Clé Personnelle Gratuite</h3>
+                        <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.6; margin-bottom:1.4rem;">
+                            Aucune carte bancaire, aucun abonnement requis. Cette clé vous permet d'effectuer des requêtes vers le maillage OpenClawMesh depuis vos applications Python, TypeScript ou agents Claude/Cursor.
+                        </p>
+                        <button class="btn btn-primary" style="width:100%; padding:0.85rem;" onclick="generateFreeKey()">
+                            🔑 Générer une Nouvelle Clé Immédiatement
+                        </button>
+                    </div>
+
+                    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:1.25rem; padding:1.8rem;">
+                        <h3 style="font-size:1.15rem; font-weight:700; color:var(--cyan); margin-bottom:0.6rem;">🔍 Vérificateur de Clé & Quota</h3>
+                        <div class="form-group">
+                            <label class="form-label">Tester une Clé d'API :</label>
+                            <input type="text" id="verifyKeyInput" class="form-control font-mono" placeholder="sk_claw_...">
+                        </div>
+                        <button class="btn btn-secondary" style="width:100%;" onclick="verifyUserKey()">
+                            Vérifier l'État de ma Clé
+                        </button>
+                        <div id="verifyKeyResult" style="margin-top:1rem;"></div>
+                    </div>
+                </div>
+
+                <!-- Modèle Zero-Trust -->
+                <div style="margin-top:1.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:1.25rem; padding:1.4rem;">
+                    <h4 style="color:var(--text-main); font-size:0.95rem; margin-bottom:0.5rem;">🛡️ Confidentialité & Respect de la Vie Privée</h4>
+                    <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.6;">
+                        Vos requêtes d'inférence ne sont ni revendues, ni archivées pour l'entraînement d'entités tierces. Le maillage chiffre les échanges de bout en bout (ChaCha20-Poly1305 / Ed25519) sous le contrôle du Guichet Unique Freebox.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB : TOPOLOGIE 3D & RESEAU MESH           -->
+        <!-- ========================================== -->
+        <div id="tab-overview" class="tab-panel">
+            <!-- Metrics Row -->
+            <div class="grid-4">
+                <div class="metric-card">
+                    <span class="metric-label">Latence P50 Cluster</span>
+                    <div class="metric-value" id="metricLatency">0.0 <span class="metric-unit">ms</span></div>
+                    <span class="badge badge-green">⚡ Temps Réel</span>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Débit Global Inférence</span>
+                    <div class="metric-value" id="metricTps">120 <span class="metric-unit">tok/s</span></div>
+                    <span class="badge badge-cyan">P2P Distribué</span>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Taux d'Économie KV-Cache</span>
+                    <div class="metric-value" id="metricKv">100.0 <span class="metric-unit">%</span></div>
+                    <span class="badge badge-purple">Zéro Recalcul</span>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Nœuds & Pairs Actifs</span>
+                    <div class="metric-value" id="metricNodes">1 <span class="metric-unit">pairs</span></div>
+                    <span class="badge badge-green" id="nodeHostStatus">127.0.0.1:8000</span>
+                </div>
+            </div>
+
+            <!-- 3D Canvas -->
+            <div class="card" style="padding:1.4rem;">
+                <div class="card-header" style="margin-bottom:0.8rem;">
+                    <div>
+                        <div class="card-title">🌐 Topologie 3D du Maillage Décentralisé</div>
+                        <div class="card-desc">Visualisation interactive des flux de tokens et connexions P2P entre les pairs.</div>
+                    </div>
+                    <button class="btn btn-sm btn-secondary" onclick="resetCanvasRotation()">Réinitialiser la Vue</button>
+                </div>
+                <canvas id="meshCanvas" style="width:100%; height:340px; border-radius:0.75rem; background:#030509; cursor:grab;"></canvas>
+            </div>
+
+            <!-- Public Peers Table -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">👥 Annuaire des Machines du Maillage</div>
+                        <div class="card-desc">
+                            Nœuds découverts et synchronisés via le Guichet Unique Freebox.
+                        </div>
+                    </div>
+                    <span class="badge badge-cyan" id="meshPeersBadge">0 Machine(s)</span>
                 </div>
 
                 <div style="overflow-x:auto;">
                     <table class="mesh-table" id="meshPeersTable">
                         <thead>
                             <tr>
-                                <th>Machine / Nœud</th>
-                                <th>Rôle &amp; Statut</th>
-                                <th>Adresse IP (Mesh / LAN)</th>
-                                <th>Matériel &amp; Accélérateur</th>
-                                <th>Compétences IA</th>
-                                <th>Latence</th>
+                                <th>Identifiant / Nœud</th>
+                                <th>Rôle & Statut</th>
+                                <th>IP Mesh</th>
+                                <th>Accélérateur Matériel</th>
+                                <th>Compétences Exposées</th>
+                                <th>RTT</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="meshPeersBody">
                             <tr>
-                                <td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.5rem;">
-                                    Chargement de l'annuaire mondial du maillage...
+                                <td colspan="7" style="text-align:center; color:var(--text-muted); padding:2rem;">
+                                    Recherche des pairs sur le Guichet Unique Freebox en cours...
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-
-            <!-- 3D Mesh Topology Canvas -->
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">🕸️ Topologie 3D & Flux de Tokens en Transit</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">
-                            Représentation interactive temps réel des nœuds actifs, liaisons chiffrées E2EE et paquets de tokens distribués.
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:0.5rem; align-items:center;">
-                        <span class="badge badge-green">GossipSub v1.1 Actif</span>
-                        <button class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="resetCanvasRotation()">Recentrer 3D</button>
-                    </div>
-                </div>
-
-                <div style="position:relative; background:#040711; border:1px solid var(--border-color); border-radius:1rem; overflow:hidden; display:flex; justify-content:center;">
-                    <canvas id="meshCanvas" width="1200" height="380" style="width:100%; max-height:400px; display:block; cursor:grab;"></canvas>
-                    <div style="position:absolute; bottom:12px; left:16px; font-size:0.75rem; color:var(--text-dim); pointer-events:none;">
-                        💡 Faites glisser la souris pour orienter la vue 3D
-                    </div>
-                </div>
-            </div>
-
         </div>
 
         <!-- ========================================== -->
-        <!-- TAB 2 : PASSERELLE & NOEUD WAN            -->
-        <!-- ========================================== -->
-        <div id="tab-wan" class="tab-panel">
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">🌐 Contrôleur du Nœud WAN (100% Confiance & Auto-Sécurisé)</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">
-                            Basculez instantanément votre nœud d'un environnement privé local (127.0.0.1) à une passerelle mondiale (0.0.0.0) avec génération automatique de certificats TLS et clés PSK.
-                        </div>
-                    </div>
-                    <span id="wanBadge" class="badge badge-cyan">Mode Local (127.0.0.1)</span>
-                </div>
-
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem; margin-bottom:1.5rem;">
-                    <div>
-                        <div class="form-group">
-                            <label class="form-label">Jeton Administrateur (Optionnel en local)</label>
-                            <input type="password" id="wanAdminToken" class="form-control font-mono" placeholder="X-Admin-Token (automatiquement mémorisé)">
-                        </div>
-                        <label style="display:flex; align-items:center; gap:0.6rem; color:var(--text-main); margin-bottom:1.2rem; cursor:pointer; font-size:0.9rem;">
-                            <input type="checkbox" id="wanRemoteAccess" checked style="accent-color:var(--primary); width:18px; height:18px;">
-                            <strong>Exposer sur toutes les interfaces réseau (0.0.0.0 / WAN)</strong>
-                        </label>
-                        <button id="wanToggleBtn" class="btn btn-primary" style="width:100%; padding:0.9rem;" onclick="toggleWanNode()">
-                            🌐 Activer le Nœud WAN (Auto-Génération TLS & PSK)
-                        </button>
-                    </div>
-
-                    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:1rem; padding:1.2rem; display:flex; flex-direction:column; justify-content:space-between;">
-                        <div>
-                            <div style="font-weight:700; color:var(--cyan); margin-bottom:0.5rem; font-size:0.95rem;">🛡️ Sécurité & Chiffrement Automatisé</div>
-                            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.6;">
-                                Dès l'activation WAN, OpenClawMesh crée un contexte SSL/TLS éphémère certifié et impose une clé HMAC-SHA256 pré-partagée. Les flux sur 0.0.0.0 non chiffrés sont systématiquement rejetés pour votre sécurité.
-                            </p>
-                        </div>
-                        <div style="font-size:0.8rem; color:var(--primary); margin-top:1rem;">
-                            ✓ Protection anti-écoute · ✓ Isolation des processus · ✓ Découverte Kademlia
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Info Nœud WAN Actif -->
-                <div id="wanActiveCard" style="display:none; background:rgba(0,255,157,0.04); border:1px solid var(--border-highlight); border-radius:1rem; padding:1.4rem; margin-top:1rem;">
-                    <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem;">
-                        <span class="status-dot"></span>
-                        <strong style="color:var(--primary); font-size:1.05rem;">Nœud WAN Opérationnel & Sécurisé</strong>
-                    </div>
-
-                    <div style="display:grid; grid-template-columns:1fr; gap:1rem;">
-                        <div>
-                            <span class="form-label">Point de Terminaison WebSocket (WSS / WS) :</span>
-                            <div style="display:flex; gap:0.5rem;">
-                                <input type="text" id="wanEndpointVal" class="form-control font-mono" readonly style="color:var(--cyan);">
-                                <button class="btn btn-secondary" onclick="copyInput('wanEndpointVal')">Copier</button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <span class="form-label">Clé PSK de Sécurité Dédiée :</span>
-                            <div style="display:flex; gap:0.5rem;">
-                                <input type="text" id="wanPskVal" class="form-control font-mono" readonly style="color:var(--primary);">
-                                <button class="btn btn-secondary" onclick="copyInput('wanPskVal')">Copier</button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <span class="form-label">Commande d'appel CLI pour Agents OpenClaw :</span>
-                            <div style="display:flex; gap:0.5rem;">
-                                <input type="text" id="wanCliVal" class="form-control font-mono" readonly style="color:#f8fafc;">
-                                <button class="btn btn-primary" onclick="copyInput('wanCliVal')">Copier Commande</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="wanAlert" style="margin-top:1rem;"></div>
-            </div>
-        </div>
-
-        <!-- ========================================== -->
-        <!-- TAB 3 : CHAT IA & MULTI-MODELES           -->
-        <!-- ========================================== -->
-        <div id="tab-chat" class="tab-panel">
-            <div class="card" style="padding:1.5rem;">
-                <div class="card-header" style="margin-bottom:1rem;">
-                    <div>
-                        <div class="card-title">💬 Chat & Inférence Distribuée Multi-Nœuds</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">
-                            Testez en direct les modèles hébergés sur votre cluster ou vos pairs Mesh.
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:0.6rem; align-items:center;">
-                        <span id="kvCacheBadge" class="badge badge-green" style="display:none;">⚡ KV-Cache HIT (0ms TTFT)</span>
-                        <span id="chatLatencyBadge" class="badge badge-cyan">0 ms</span>
-                    </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:1rem; margin-bottom:1rem;">
-                    <div>
-                        <label class="form-label">Modèle IA Sélectionné</label>
-                        <select id="chatModel" class="form-control" style="background:#070a12;">
-                            <option value="qwen2.5-coder-7b">Qwen 2.5 Coder 7B (Inférence Rapide &amp; Code)</option>
-                            <option value="deepseek-v3-moe">DeepSeek-V3 MoE (Pipeline Distribué)</option>
-                            <option value="mlx-community/Qwen2.5-Coder-7B-Instruct-4bit">Apple Silicon Metal MLX (4-bit Local)</option>
-                            <option value="whisper-base-stt">Whisper Base (Audio Speech-to-Text)</option>
-                            <option value="qwen2-vl-vision">Qwen2-VL (Vision Multimodale)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label">Routage du Calcul IA</label>
-                        <select id="chatTargetNode" class="form-control" style="background:#070a12;">
-                            <option value="auto">🌐 Maillage Intelligent (Orchestrateur Guichet Unique)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label">Clé d'API (Optionnelle en mode gratuit)</label>
-                        <input type="text" id="chatApiKey" class="form-control font-mono" placeholder="sk_claw_... (auto-rempli en mode gratuit)">
-                    </div>
-                </div>
-
-                <!-- Chat Box -->
-                <div class="chat-container">
-                    <div class="chat-messages" id="chatMessages">
-                        <div class="chat-bubble bot">
-                            <div class="chat-avatar">⚡</div>
-                            <div class="chat-text">
-                                Bienvenue sur <strong>OpenClawMesh</strong> ! Votre application est configurée pour les <strong>utilisateurs gratuits</strong> et connectée au <strong>Guichet Unique Freebox</strong>. Vos requêtes sont distribuées de manière souveraine sur les machines GPU/NPU du maillage.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="chat-input-bar">
-                        <input type="text" id="chatInput" class="form-control" placeholder="Écrivez votre message (ex: Écris une fonction Python asynchrone pour consommer un WebSocket)..." onkeydown="if(event.key==='Enter') sendChatMessage()">
-                        <button class="btn btn-primary" onclick="sendChatMessage()">Envoyer 🚀</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========================================== -->
-        <!-- TAB 4 : HUB DE MODELES & ESTIMATION VRAM  -->
-        <!-- ========================================== -->
-        <div id="tab-models" class="tab-panel">
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">📥 Hub de Modèles & Détection VRAM 1-Clic</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">
-                            Chargez et activez instantanément des architectures optimisées pour votre matériel.
-                        </div>
-                    </div>
-                    <span class="badge badge-purple">Quantification AWQ / BitNet / FP8</span>
-                </div>
-
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;" id="modelsListGrid">
-                    <!-- Model Card 1 -->
-                    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:1.25rem; padding:1.4rem; display:flex; flex-direction:column; justify-content:space-between;">
-                        <div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                                <strong style="color:var(--primary); font-size:1.1rem;">Llama 3.2 3B Instruct</strong>
-                                <span class="badge badge-green">Meta AI</span>
-                            </div>
-                            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5; margin-bottom:1rem;">
-                                Ultra-rapide pour agents légers, extraction structurée JSON et Edge devices.
-                            </p>
-                            <div style="display:flex; flex-direction:column; gap:0.3rem; font-size:0.8rem; margin-bottom:1.2rem;">
-                                <div style="color:var(--cyan);">⚡ VRAM Estimée : ~2.2 Go</div>
-                                <div style="color:var(--text-dim);">Backends : Apple Metal MLX, NVIDIA, CPU</div>
-                            </div>
-                        </div>
-                        <button class="btn btn-secondary" onclick="activateModel('llama-3.2-3b-instruct')">⚡ Activer sur le Mesh</button>
-                    </div>
-
-                    <!-- Model Card 2 -->
-                    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:1.25rem; padding:1.4rem; display:flex; flex-direction:column; justify-content:space-between;">
-                        <div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                                <strong style="color:var(--cyan); font-size:1.1rem;">Qwen 2.5 Coder 7B</strong>
-                                <span class="badge badge-cyan">Alibaba Cloud</span>
-                            </div>
-                            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5; margin-bottom:1rem;">
-                                Référence pour la génération de code, scripts d'agents et refactoring complexe.
-                            </p>
-                            <div style="display:flex; flex-direction:column; gap:0.3rem; font-size:0.8rem; margin-bottom:1.2rem;">
-                                <div style="color:var(--cyan);">⚡ VRAM Estimée : ~5.4 Go</div>
-                                <div style="color:var(--text-dim);">Backends : Metal GPU, CUDA, ROCm</div>
-                            </div>
-                        </div>
-                        <button class="btn btn-secondary" onclick="activateModel('qwen-2.5-coder-7b')">⚡ Activer sur le Mesh</button>
-                    </div>
-
-                    <!-- Model Card 3 -->
-                    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:1.25rem; padding:1.4rem; display:flex; flex-direction:column; justify-content:space-between;">
-                        <div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                                <strong style="color:var(--purple); font-size:1.1rem;">DeepSeek R1 Distill 8B</strong>
-                                <span class="badge badge-purple">Reasoning</span>
-                            </div>
-                            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5; margin-bottom:1rem;">
-                                Raisonnement logique pas à pas (Chain of Thought) et résolution de problèmes.
-                            </p>
-                            <div style="display:flex; flex-direction:column; gap:0.3rem; font-size:0.8rem; margin-bottom:1.2rem;">
-                                <div style="color:var(--cyan);">⚡ VRAM Estimée : ~6.1 Go</div>
-                                <div style="color:var(--text-dim);">Backends : NVIDIA CUDA, Apple Metal, FP8</div>
-                            </div>
-                        </div>
-                        <button class="btn btn-secondary" onclick="activateModel('deepseek-r1-distill-8b')">⚡ Activer sur le Mesh</button>
-                    </div>
-
-                    <!-- Model Card 4 -->
-                    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:1.25rem; padding:1.4rem; display:flex; flex-direction:column; justify-content:space-between;">
-                        <div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                                <strong style="color:var(--amber); font-size:1.1rem;">BitNet b1.58 3B</strong>
-                                <span class="badge badge-amber">Ternaire {-1, 0, +1}</span>
-                            </div>
-                            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5; margin-bottom:1rem;">
-                                Modèle révolutionnaire 1.58-bit sans multiplication matricielle. Idéal CPU/NPU.
-                            </p>
-                            <div style="display:flex; flex-direction:column; gap:0.3rem; font-size:0.8rem; margin-bottom:1.2rem;">
-                                <div style="color:var(--cyan);">⚡ VRAM Estimée : ~0.8 Go</div>
-                                <div style="color:var(--text-dim);">Backends : Intel NPU, CPU, Raspberry Pi</div>
-                            </div>
-                        </div>
-                        <button class="btn btn-secondary" onclick="activateModel('bitnet-b1.58-3b')">⚡ Activer sur le Mesh</button>
-                    </div>
-                </div>
-
-                <div id="modelAlert" style="margin-top:1rem;"></div>
-            </div>
-        </div>
-
-        <!-- ========================================== -->
-        <!-- TAB 5 : LIVE BENCHMARK & DUEL DE NOEUDS   -->
-        <!-- ========================================== -->
-        <div id="tab-benchmark" class="tab-panel">
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">⚔️ Duel de Nœuds & Benchmark Matériel Côte à Côte</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">
-                            Mesurez simultanément le Time-to-First-Token (TTFT) et le débit (tok/s) entre vos backends.
-                        </div>
-                    </div>
-                    <span class="badge badge-cyan">Parallélisme Direct</span>
-                </div>
-
-                <div style="display:flex; gap:0.8rem; margin-bottom:1.5rem; flex-wrap:wrap;">
-                    <input type="text" id="comparePrompt" class="form-control" style="flex:1; min-width:280px;" value="Explique le parallélisme tensoriel en 2 phrases simples.">
-                    <button class="btn btn-primary" onclick="runBenchmarkCompare()">Lancer le Duel ⚔️</button>
-                </div>
-
-                <div id="compareResultsGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
-                    <!-- Placeholder initial -->
-                    <div style="background:rgba(255,255,255,0.02); border:1px dashed var(--border-color); border-radius:1rem; padding:2rem; text-align:center; color:var(--text-dim); grid-column:1/-1;">
-                        Cliquez sur « Lancer le Duel » pour mesurer la latence et le débit réel sur tous les accélérateurs.
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========================================== -->
-        <!-- TAB 6 : PLAYGROUND API & SKILLS           -->
-        <!-- ========================================== -->
-        <div id="tab-playground" class="tab-panel">
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">🧪 Playground d'Exécution de Compétences (REST & Tools)</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">
-                            Exécutez directement les compétences enregistrées sur la passerelle via l'API REST `/api/v1/execute` ou `/api/v1/skills/{{name}}`.
-                        </div>
-                    </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
-                    <div>
-                        <div class="form-group">
-                            <label class="form-label">Clé d'API (Header X-API-Key)</label>
-                            <input type="text" id="playKey" class="form-control font-mono" placeholder="sk_claw_...">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Compétence à Invoquer</label>
-                            <select id="playSkill" class="form-control">
-                                <option value="llm">llm — Inférence LLM (MLX / CUDA / CPU)</option>
-                                <option value="memory_search">memory_search — RAG Sémantique SQLite</option>
-                                <option value="echo">echo — Ping / Test de connectivité</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Payload JSON</label>
-                            <textarea id="playPayload" class="form-control font-mono" rows="5">{{"prompt": "Explique le protocole P2P OpenClawMesh en une phrase."}}</textarea>
-                        </div>
-
-                        <button class="btn btn-primary" style="width:100%;" onclick="runPlayground()">Exécuter la requête ⚡</button>
-                    </div>
-
-                    <div>
-                        <label class="form-label">Réponse de la Passerelle (JSON)</label>
-                        <pre id="playOutput" class="code-block" style="height:280px; overflow-y:auto;">// Le résultat de l'exécution s'affichera ici...</pre>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========================================== -->
-        <!-- TAB 7 : GESTIONNAIRE DE CLES & SECURITE   -->
-        <!-- ========================================== -->
-        <div id="tab-keys" class="tab-panel">
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">🔑 Clés d'Accès & Sécurité Communautaire</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">
-                            Émission instantanée, transparente et gratuite de clés d'API pour vos agents OpenClaw.
-                        </div>
-                    </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem;">
-                    <div style="background:rgba(0,255,157,0.03); border:1px solid var(--border-highlight); border-radius:1.25rem; padding:1.8rem;">
-                        <h3 style="font-size:1.15rem; font-weight:700; color:var(--primary); margin-bottom:0.6rem;">✨ Génération Immédiate (Sans Compte)</h3>
-                        <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.6; margin-bottom:1.4rem;">
-                            Obtenez une clé permanente avec requêtes illimitées pour vos scripts Python, TypeScript ou agents autonomes.
-                        </p>
-                        <button class="btn btn-primary" style="width:100%;" onclick="generateFreeKey()">🔑 Générer une Nouvelle Clé</button>
-                    </div>
-
-                    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:1.25rem; padding:1.8rem;">
-                        <h3 style="font-size:1.15rem; font-weight:700; color:var(--cyan); margin-bottom:0.6rem;">🛡️ Modèle de Sécurité Zero-Trust</h3>
-                        <ul style="list-style:none; display:flex; flex-direction:column; gap:0.6rem; font-size:0.85rem; color:var(--text-muted);">
-                            <li>✓ Chiffrement E2EE bout en bout des payloads (ChaCha20-Poly1305 / X25519)</li>
-                            <li>✓ Signatures cryptographiques Ed25519 par nœud</li>
-                            <li>✓ Aucune télémétrie ni fuite de vos données ou prompts</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========================================== -->
-        <!-- TAB 8 : SDks & DOCUMENTATION              -->
+        <!-- TAB : SDKs & DOCUMENTATION                 -->
         <!-- ========================================== -->
         <div id="tab-docs" class="tab-panel">
             <div class="card">
                 <div class="card-header">
                     <div>
                         <div class="card-title">📖 Intégration Rapide & SDKs Multi-Langages</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem;">
+                        <div class="card-desc">
                             Connectez vos agents à la passerelle OpenClawMesh en 3 lignes de code.
                         </div>
                     </div>
                 </div>
 
-                <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
-                    <button class="btn btn-secondary active" style="font-size:0.82rem; padding:0.4rem 0.9rem;" onclick="showCodeSnippet('curl')">cURL (OpenAI / Ollama / MCP)</button>
-                    <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.4rem 0.9rem;" onclick="showCodeSnippet('python')">Python (OpenAI / Anthropic)</button>
-                    <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.4rem 0.9rem;" onclick="showCodeSnippet('ts')">TypeScript / Node</button>
-                    <button class="btn btn-secondary" style="font-size:0.82rem; padding:0.4rem 0.9rem;" onclick="showCodeSnippet('mcp')">MCP (Claude / Cursor)</button>
+                <div style="display:flex; gap:0.5rem; margin-bottom:1.2rem; flex-wrap:wrap;">
+                    <button class="btn btn-secondary active" id="btnSnippetCurl" onclick="showCodeSnippet('curl')">cURL (OpenAI & Ollama)</button>
+                    <button class="btn btn-secondary" id="btnSnippetPython" onclick="showCodeSnippet('python')">Python (OpenAI / LangChain)</button>
+                    <button class="btn btn-secondary" id="btnSnippetTs" onclick="showCodeSnippet('ts')">TypeScript / Node.js</button>
+                    <button class="btn btn-secondary" id="btnSnippetMcp" onclick="showCodeSnippet('mcp')">MCP (Claude / Cursor)</button>
                 </div>
 
-                <div id="codeSnippetContainer">
-                    <pre class="code-block" id="snippetCurl"># 1. OpenAI Chat Completions
+                <div id="snippetCurl">
+                    <pre class="code-block"># 1. Chat Completions (Compatible OpenAI)
 curl -X POST http://127.0.0.1:8000/v1/chat/completions \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer VOTRE_CLE_API" \\
-  -d '{{"model": "qwen2.5-coder-7b", "messages": [{{"role": "user", "content": "Bonjour!"}}]}}'
+  -d '{{
+    "model": "qwen2.5-coder-7b",
+    "messages": [{{"role": "user", "content": "Bonjour OpenClaw Mesh!"}}]
+  }}'
 
-# 2. OpenAI Embeddings
-curl -X POST http://127.0.0.1:8000/v1/embeddings \\
+# 2. Inférence Ollama Native
+curl -X POST http://127.0.0.1:8000/api/chat \\
   -H "Content-Type: application/json" \\
-  -d '{{"input": "Recherche sémantique décentralisée", "model": "text-embedding-3-small"}}'
+  -d '{{"model": "llama3.1-8b", "messages": [{{"role": "user", "content": "Raconte une blague"}}]}}'</pre>
+                </div>
 
-# 3. Anthropic Messages
-curl -X POST http://127.0.0.1:8000/v1/messages \\
-  -H "Content-Type: application/json" \\
-  -d '{{"model": "claude-3-5-sonnet-20241022", "messages": [{{"role": "user", "content": "Hello Claude!"}}]}}'
+                <div id="snippetPython" style="display:none;">
+                    <pre class="code-block">from openai import OpenAI
 
-# 4. Ollama Native Generate
-curl -X POST http://127.0.0.1:8000/api/generate \\
-  -d '{{"model": "qwen2.5-coder:7b", "prompt": "Hello Ollama", "stream": false}}'</pre>
+client = OpenAI(
+    base_url="http://127.0.0.1:8000/v1",
+    api_key="VOTRE_CLE_API",  # Obtenue via l'onglet 'Mon Espace & Clé'
+)
 
-                    <pre class="code-block" id="snippetPython" style="display:none;"># --- OpenAI SDK ---
-from openai import OpenAI
-
-client = OpenAI(base_url="http://127.0.0.1:8000/v1", api_key="VOTRE_CLE_API")
 response = client.chat.completions.create(
     model="qwen2.5-coder-7b",
-    messages=[{{"role": "user", "content": "Écris un script d'agent autonome"}}],
+    messages=[{{"role": "user", "content": "Génère un test unitaire en Python"}}],
+    stream=True,
 )
-print(response.choices[0].message.content)
 
-# --- Anthropic SDK ---
-import anthropic
+for chunk in response:
+    print(chunk.choices[0].delta.content or "", end="", flush=True)</pre>
+                </div>
 
-cl_client = anthropic.Anthropic(base_url="http://127.0.0.1:8000", api_key="VOTRE_CLE_API")
-msg = cl_client.messages.create(
-    model="claude-3-5-sonnet-20241022",
-    max_tokens=512,
-    messages=[{{"role": "user", "content": "Hello OpenClawMesh Claude Gateway!"}}]
-)
-print(msg.content[0].text)</pre>
+                <div id="snippetTs" style="display:none;">
+                    <pre class="code-block">import OpenAI from 'openai';
 
-                    <pre class="code-block" id="snippetTs" style="display:none;">import OpenAI from 'openai';
-
-const openai = new OpenAI({{
+const client = new OpenAI({{
   baseURL: 'http://127.0.0.1:8000/v1',
-  apiKey: 'VOTRE_CLE_API'
+  apiKey: 'VOTRE_CLE_API',
 }});
 
 async function main() {{
-  const completion = await openai.chat.completions.create({{
+  const stream = await client.chat.completions.create({{
     model: 'qwen2.5-coder-7b',
-    messages: [{{ role: 'user', content: 'Hello Mesh!' }}],
+    messages: [{{ role: 'user', content: 'Explique le consensus distribué' }}],
+    stream: true,
   }});
-  console.log(completion.choices[0].message.content);
+
+  for await (const chunk of stream) {{
+    process.stdout.write(chunk.choices[0]?.delta?.content || '');
+  }}
 }}
 main();</pre>
+                </div>
 
-                    <pre class="code-block" id="snippetMcp" style="display:none;">// Configuration MCP pour Claude Desktop & Cursor (claude_desktop_config.json)
-{{
+                <div id="snippetMcp" style="display:none;">
+                    <pre class="code-block">{{
   "mcpServers": {{
     "openclaw-mesh": {{
-      "command": "openclaw-mesh",
-      "args": ["serve", "--no-zeroconf"]
-    }},
-    "openclaw-mesh-sse": {{
-      "url": "http://127.0.0.1:8000/mcp/sse"
+      "command": "python",
+      "args": ["-m", "openclaw_mesh.mcp_server", "--gateway", "http://127.0.0.1:8000"],
+      "env": {{
+        "OPENCLAW_API_KEY": "VOTRE_CLE_API"
+      }}
     }}
   }}
 }}</pre>
@@ -1383,69 +1298,350 @@ main();</pre>
             </div>
         </div>
 
+        <!-- ========================================================= -->
+        <!-- TAB ADMIN 1 : PASSERELLE & NŒUD WAN (0.0.0.0)             -->
+        <!-- ========================================================= -->
+        <div id="tab-wan" class="tab-panel">
+            <div id="wanLockedView" class="locked-container">
+                <div class="locked-icon">🔒</div>
+                <div class="locked-title">Accès Restreint : Administrateur Maître Guichet Freebox</div>
+                <div class="locked-desc">
+                    L'exposition sur l'ensemble des interfaces (0.0.0.0 / WAN) et la configuration des clés pré-partagées (PSK) sont strictement réservées à l'opérateur maître du Guichet Unique Freebox.
+                </div>
+                <button class="btn btn-admin" onclick="toggleAdminModal()">
+                    🔑 Saisir le Jeton Administrateur Maître
+                </button>
+            </div>
+
+            <div id="wanUnlockedView" style="display:none;">
+                <div class="card" style="border-color:var(--border-gold);">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title" style="color:var(--gold);">
+                                👑 Contrôleur du Nœud WAN (Exclusif Maître Guichet Freebox)
+                            </div>
+                            <div class="card-desc">
+                                Basculez instantanément votre passerelle entre le mode privé local (127.0.0.1) et l'accès mondial WAN (0.0.0.0) avec génération automatique de certificats TLS et clés PSK.
+                            </div>
+                        </div>
+                        <span id="wanBadge" class="badge badge-cyan">Mode Local (127.0.0.1)</span>
+                    </div>
+
+                    <div class="grid-2" style="margin-bottom:1.5rem;">
+                        <div>
+                            <label style="display:flex; align-items:center; gap:0.6rem; color:var(--text-main); margin-bottom:1.2rem; cursor:pointer;">
+                                <input type="checkbox" id="wanRemoteAccess" checked style="accent-color:var(--gold); width:18px; height:18px;">
+                                <strong>Exposer sur toutes les interfaces réseau (0.0.0.0 / WAN)</strong>
+                            </label>
+                            <button id="wanToggleBtn" class="btn btn-admin" style="width:100%; padding:0.9rem;" onclick="toggleWanNode()">
+                                🌐 Activer / Reconfigurer le Nœud WAN (Auto TLS & PSK)
+                            </button>
+                        </div>
+
+                        <div style="background:rgba(251,191,36,0.03); border:1px solid var(--border-gold); border-radius:1rem; padding:1.2rem;">
+                            <div style="font-weight:700; color:var(--gold); margin-bottom:0.5rem; font-size:0.95rem;">🛡️ Sécurité & Chiffrement Guichet Ultra</div>
+                            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.6;">
+                                Dès l'activation WAN, OpenClawMesh crée un contexte SSL/TLS éphémère certifié et impose une clé HMAC-SHA256 pré-partagée. Les flux non authentifiés sur 0.0.0.0 sont rejetés.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Info Nœud WAN Actif -->
+                    <div id="wanActiveCard" style="display:none; background:rgba(0,255,157,0.04); border:1px solid var(--border-highlight); border-radius:1rem; padding:1.4rem; margin-top:1rem;">
+                        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem;">
+                            <span class="status-dot"></span>
+                            <strong style="color:var(--primary); font-size:1.05rem;">Nœud WAN Opérationnel & Sécurisé</strong>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr; gap:1rem;">
+                            <div>
+                                <span class="form-label">Point de Terminaison WebSocket (WSS / WS) :</span>
+                                <div style="display:flex; gap:0.5rem;">
+                                    <input type="text" id="wanEndpointVal" class="form-control font-mono" readonly style="color:var(--cyan);">
+                                    <button class="btn btn-secondary" onclick="copyInput('wanEndpointVal')">Copier</button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="form-label">Clé PSK de Sécurité Dédiée :</span>
+                                <div style="display:flex; gap:0.5rem;">
+                                    <input type="text" id="wanPskVal" class="form-control font-mono" readonly style="color:var(--primary);">
+                                    <button class="btn btn-secondary" onclick="copyInput('wanPskVal')">Copier</button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="form-label">Commande d'appel CLI pour Agents OpenClaw :</span>
+                                <div style="display:flex; gap:0.5rem;">
+                                    <input type="text" id="wanCliVal" class="form-control font-mono" readonly style="color:#f8fafc;">
+                                    <button class="btn btn-primary" onclick="copyInput('wanCliVal')">Copier Commande</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="wanAlert" style="margin-top:1rem;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- TAB ADMIN 2 : GESTIONNAIRE GLOBAL DES CLES                -->
+        <!-- ========================================================= -->
+        <div id="tab-admin-keys" class="tab-panel">
+            <div id="keysLockedView" class="locked-container">
+                <div class="locked-icon">🔒</div>
+                <div class="locked-title">Accès Restreint : Gestion des Clés du Cluster</div>
+                <div class="locked-desc">
+                    Seul l'administrateur détenant le jeton maître Guichet Freebox est autorisé à consulter l'intégralité des clés d'accès, à émettre des quotas personnalisés ou à révoquer des pairs.
+                </div>
+                <button class="btn btn-admin" onclick="toggleAdminModal()">
+                    🔑 Déverrouiller la Console d'Administration
+                </button>
+            </div>
+
+            <div id="keysUnlockedView" style="display:none;">
+                <div class="card" style="border-color:var(--border-gold);">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title" style="color:var(--gold);">
+                                👑 Administration Centrale des Clés d'Accès
+                            </div>
+                            <div class="card-desc">
+                                Supervision complète de toutes les clés d'API persistées dans la base SQLite du nœud maître.
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-secondary" onclick="fetchAdminKeysList()">
+                            🔄 Actualiser la Liste
+                        </button>
+                    </div>
+
+                    <!-- Création Manuelle de Clé -->
+                    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:1rem; padding:1.4rem; margin-bottom:1.5rem;">
+                        <h4 style="font-size:0.95rem; margin-bottom:1rem; color:var(--text-main);">➕ Émettre une Clé Personnalisée</h4>
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Email / Identifiant :</label>
+                                <input type="email" id="adminNewKeyEmail" class="form-control" placeholder="user@domain.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Plan d'Accès :</label>
+                                <select id="adminNewKeyPlan" class="form-control">
+                                    <option value="free_community">free_community (Illimité)</option>
+                                    <option value="vip_free">vip_free (Prioritaire)</option>
+                                    <option value="node_operator">node_operator (Opérateur)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Limite Quota (-1 = illimité) :</label>
+                                <input type="number" id="adminNewKeyQuota" class="form-control" value="-1">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="createKeyAdmin()">
+                            Créer la Clé Admin
+                        </button>
+                    </div>
+
+                    <!-- Liste des Clés -->
+                    <div style="overflow-x:auto;">
+                        <table class="mesh-table">
+                            <thead>
+                                <tr>
+                                    <th>Identifiant / Empreinte</th>
+                                    <th>Email Associé</th>
+                                    <th>Plan</th>
+                                    <th>Quota Utilisé</th>
+                                    <th>Statut</th>
+                                    <th>Création</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminKeysTableBody">
+                                <tr>
+                                    <td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.5rem;">
+                                        Chargement des clés d'API...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- TAB ADMIN 3 : HUB & DEPLOIEMENT DE MODELES                -->
+        <!-- ========================================================= -->
+        <div id="tab-models" class="tab-panel">
+            <div id="modelsLockedView" class="locked-container">
+                <div class="locked-icon">🔒</div>
+                <div class="locked-title">Accès Restreint : Gestion des Modèles du Cluster</div>
+                <div class="locked-desc">
+                    Le téléchargement (pull) de modèles lourds sur le disque local de l'hôte et la purge de cache sont réservés à l'Administrateur Maître Guichet Freebox.
+                </div>
+                <button class="btn btn-admin" onclick="toggleAdminModal()">
+                    🔑 Déverrouiller le Gestionnaire de Modèles
+                </button>
+            </div>
+
+            <div id="modelsUnlockedView" style="display:none;">
+                <div class="card" style="border-color:var(--border-gold);">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title" style="color:var(--gold);">
+                                👑 Hub de Modèles & Allocation VRAM
+                            </div>
+                            <div class="card-desc">
+                                Déployez ou activez des modèles d'inférence directement sur le cluster souverain.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="modelAlert" style="margin-bottom:1rem;"></div>
+
+                    <div class="grid-3">
+                        <div class="card" style="background:rgba(255,255,255,0.02); margin:0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                                <strong style="color:var(--cyan); font-size:1.05rem;">Qwen 2.5 Coder 7B</strong>
+                                <span class="badge badge-green">Actif</span>
+                            </div>
+                            <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:1rem;">
+                                Optimisé pour la génération et compréhension de code polyglotte.
+                            </div>
+                            <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem;">
+                                VRAM Estimée : ~5.2 Go (4-bit AWQ)
+                            </div>
+                            <button class="btn btn-cyan btn-sm" style="width:100%;" onclick="activateModel('qwen2.5-coder-7b')">
+                                Activer sur le Cluster ⚡
+                            </button>
+                        </div>
+
+                        <div class="card" style="background:rgba(255,255,255,0.02); margin:0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                                <strong style="color:var(--primary); font-size:1.05rem;">Llama 3.1 8B</strong>
+                                <span class="badge badge-cyan">Prêt</span>
+                            </div>
+                            <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:1rem;">
+                                Modèle généraliste Meta avec fenêtre de contexte 128k.
+                            </div>
+                            <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem;">
+                                VRAM Estimée : ~5.8 Go (4-bit AWQ)
+                            </div>
+                            <button class="btn btn-primary btn-sm" style="width:100%;" onclick="activateModel('llama3.1-8b')">
+                                Activer sur le Cluster ⚡
+                            </button>
+                        </div>
+
+                        <div class="card" style="background:rgba(255,255,255,0.02); margin:0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                                <strong style="color:var(--purple); font-size:1.05rem;">DeepSeek R1 8B</strong>
+                                <span class="badge badge-purple">Raisonnement</span>
+                            </div>
+                            <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:1rem;">
+                                Distillation de raisonnement mathématique et logique complexe.
+                            </div>
+                            <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem;">
+                                VRAM Estimée : ~5.8 Go (4-bit AWQ)
+                            </div>
+                            <button class="btn btn-secondary btn-sm" style="width:100%;" onclick="activateModel('deepseek-r1-8b')">
+                                Activer sur le Cluster ⚡
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
-    <!-- Modal Clé Gratuite -->
-    <div class="modal-backdrop" id="keyModal">
-        <div class="modal-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                <h2 style="font-size:1.4rem; font-weight:800; color:#fff;">🎉 Clé d'Accès Générée !</h2>
-                <span class="badge badge-green">Accès Permanent & Illimité</span>
-            </div>
-            <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.2rem;">
-                Voici votre clé d'API souveraine. Elle est déjà pré-remplie dans le Chat et le Playground :
-            </p>
+    <!-- ── Footer ── -->
+    <footer style="text-align:center; padding:2rem; border-top:1px solid var(--border-color); color:var(--text-dim); font-size:0.82rem; margin-top:auto;">
+        OpenClawMesh &copy; 2026 — Hub & Command Center Inférence IA Décentralisée.<br>
+        Orchestration par le Guichet Unique Freebox Ultra · 100% Gratuit & Souverain.
+    </footer>
 
-            <div style="display:flex; gap:0.6rem; margin-bottom:1.2rem;">
-                <input type="text" id="modalApiKey" class="form-control font-mono" readonly style="color:var(--primary); font-weight:700;">
-                <button class="btn btn-primary" onclick="copyInput('modalApiKey')">Copier</button>
+    <!-- ── Modal : Authentification Administrateur Maître Guichet Freebox ── -->
+    <div id="adminAuthModal" class="modal-backdrop">
+        <div class="modal-card" style="border-color:var(--border-gold);">
+            <button class="modal-close" onclick="toggleAdminModal()">&times;</button>
+            <div style="text-align:center; margin-bottom:1.5rem;">
+                <div style="font-size:2.4rem; margin-bottom:0.5rem;">👑</div>
+                <h3 style="font-size:1.3rem; font-weight:800; color:var(--gold);">
+                    Accès Administrateur Maître Guichet Freebox
+                </h3>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.3rem;">
+                    Saisissez votre jeton secret <span class="font-mono" style="color:var(--gold);">X-Admin-Token</span> pour déverrouiller l'accès complet au nœud WAN, aux clés et à l'infrastructure.
+                </p>
             </div>
 
-            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:0.75rem; padding:0.9rem; margin-bottom:1.5rem;">
-                <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.4rem;">Export Variable d'Environnement :</div>
-                <code style="color:var(--cyan); font-size:0.82rem; word-break:break-all;" id="modalKeyExport">export OPENCLAW_API_KEY="..."</code>
+            <div class="form-group">
+                <label class="form-label">Jeton Administrateur Maître :</label>
+                <input type="password" id="modalAdminTokenInput" class="form-control font-mono" placeholder="Jeton admin..." onkeydown="if(event.key==='Enter') submitAdminAuth()">
             </div>
 
-            <div style="display:flex; gap:0.8rem;">
-                <button class="btn btn-primary" style="flex:1;" onclick="closeModalAndGo('chat')">Tester dans le Chat 💬</button>
-                <button class="btn btn-secondary" onclick="closeModal()">Fermer</button>
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1.5rem; font-size:0.8rem; color:var(--text-muted);">
+                <input type="checkbox" id="rememberAdminToken" checked style="accent-color:var(--gold);">
+                <label for="rememberAdminToken">Mémoriser pour cette session de navigation</label>
+            </div>
+
+            <div id="adminAuthError" style="display:none; color:var(--rose); font-size:0.85rem; margin-bottom:1rem; text-align:center;"></div>
+
+            <div style="display:flex; gap:0.75rem;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="toggleAdminModal()">Annuler</button>
+                <button class="btn btn-admin" style="flex:2;" onclick="submitAdminAuth()">Déverrouiller le Mode Maître 👑</button>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notifications -->
+    <!-- ── Modal : Clé d'Accès Gratuite Générée ── -->
+    <div id="keyModal" class="modal-backdrop">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div style="text-align:center; margin-bottom:1.5rem;">
+                <div style="font-size:2.2rem; margin-bottom:0.4rem;">🎉</div>
+                <h3 style="font-size:1.3rem; font-weight:800; color:var(--primary);">
+                    Votre Clé d'API Gratuite est Prête !
+                </h3>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.3rem;">
+                    Accès souverain et permanent au maillage d'inférence.
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Votre Clé d'Accès :</label>
+                <div style="display:flex; gap:0.5rem;">
+                    <input type="text" id="modalApiKey" class="form-control font-mono" readonly style="color:var(--primary); font-weight:700;">
+                    <button class="btn btn-secondary" onclick="copyInput('modalApiKey')">Copier</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Export Shell (.bashrc / .zshrc) :</label>
+                <pre class="code-block" id="modalKeyExport" style="margin:0; font-size:0.78rem;">export OPENCLAW_API_KEY="..."</pre>
+            </div>
+
+            <button class="btn btn-primary" style="width:100%; margin-top:0.5rem;" onclick="closeModalAndGo('chat')">
+                Commencer à Discuter 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Toast Notifications ── -->
     <div id="toastContainer"></div>
 
-    <!-- Footer -->
-    <footer style="text-align:center; padding:2rem; border-top:1px solid var(--border-color); color:var(--text-dim); font-size:0.85rem; margin-top:auto;">
-        OpenClawMesh &copy; 2026 — Inférence IA Décentralisée & Multi-Matériels (Apple Silicon, CUDA, NPU).<br>
-        100% Free & Open-Source · Calcul Souverain Libre.
-    </footer>
-
-    <!-- JavaScript Logic -->
+    <!-- ── JavaScript Logic ── -->
     <script>
-        // ── Tab Management ──
-        function switchTab(tabId) {{
-            document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        // ── State Management ──
+        let isAdminAuthenticated = false;
+        let storedAdminToken = sessionStorage.getItem('openclaw_admin_token') || localStorage.getItem('openclaw_admin_token') || '';
+        let currentGuichetUrl = '';
 
-            const target = document.getElementById('tab-' + tabId);
-            if (target) target.classList.add('active');
-
-            const btns = document.querySelectorAll('.tab-btn');
-            btns.forEach(btn => {{
-                if (btn.getAttribute('onclick').includes(tabId)) {{
-                    btn.classList.add('active');
-                }}
-            }});
-            window.scrollTo({{ top: 0, behavior: 'smooth' }});
-        }}
-
+        // ── Toast Notification System ──
         function showToast(msg, isSuccess = true) {{
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
             toast.className = 'toast';
-            toast.style.borderColor = isSuccess ? 'var(--border-highlight)' : 'rgba(239, 68, 68, 0.4)';
+            toast.style.borderColor = isSuccess ? 'var(--border-highlight)' : 'rgba(244, 63, 94, 0.4)';
             toast.innerHTML = `<span>${{isSuccess ? '✅' : '⚠️'}}</span> <span>${{msg}}</span>`;
             container.appendChild(toast);
             setTimeout(() => {{
@@ -1453,7 +1649,7 @@ main();</pre>
                 toast.style.transform = 'translateY(10px)';
                 toast.style.transition = 'all 0.25s ease';
                 setTimeout(() => toast.remove(), 250);
-            }}, 3000);
+            }}, 3200);
         }}
 
         function copyInput(id) {{
@@ -1463,7 +1659,195 @@ main();</pre>
             showToast('Copié dans le presse-papier !');
         }}
 
-        // ── Free Key Modal ──
+        // ── Tab Management ──
+        function switchTab(tabId) {{
+            // Remove active classes
+            document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            // Activate tab panel
+            const target = document.getElementById('tab-' + tabId);
+            if (target) target.classList.add('active');
+
+            // Activate button
+            const btns = document.querySelectorAll('.tab-btn');
+            btns.forEach(btn => {{
+                const onclickStr = btn.getAttribute('onclick') || '';
+                if (onclickStr.includes(`'${{tabId}}'`) || onclickStr.includes(`"${{tabId}}"`)) {{
+                    btn.classList.add('active');
+                }}
+            }});
+
+            window.scrollTo({{ top: 0, behavior: 'smooth' }});
+
+            // If switching to admin keys and authenticated, fetch keys
+            if (tabId === 'admin-keys' && isAdminAuthenticated) {{
+                fetchAdminKeysList();
+            }}
+        }}
+
+        function handleAdminTabClick(tabId) {{
+            if (!isAdminAuthenticated) {{
+                toggleAdminModal();
+                showToast("Accès réservé à l'Administrateur Maître Guichet Freebox.", false);
+                return;
+            }}
+            switchTab(tabId);
+        }}
+
+        // ── Admin Modal & Authentication ──
+        function toggleAdminModal() {{
+            const modal = document.getElementById('adminAuthModal');
+            if (isAdminAuthenticated) {{
+                // If already admin, clicking toggle button asks to lock/logout
+                if (confirm("Voulez-vous verrouiller la session Administrateur et repasser en Mode Utilisateur ?")) {{
+                    lockAdminSession();
+                }}
+                return;
+            }}
+            const isVisible = modal.style.display === 'flex';
+            modal.style.display = isVisible ? 'none' : 'flex';
+            if (!isVisible) {{
+                document.getElementById('adminAuthError').style.display = 'none';
+                const input = document.getElementById('modalAdminTokenInput');
+                if (input) {{
+                    input.value = storedAdminToken;
+                    input.focus();
+                }}
+            }}
+        }}
+
+        async function submitAdminAuth() {{
+            const tokenInput = document.getElementById('modalAdminTokenInput');
+            const token = tokenInput ? tokenInput.value.trim() : '';
+            const errEl = document.getElementById('adminAuthError');
+
+            if (!token) {{
+                errEl.style.display = 'block';
+                errEl.innerText = 'Veuillez saisir votre jeton administrateur maître.';
+                return;
+            }}
+
+            try {{
+                const res = await fetch('/api/v1/admin/auth/verify', {{
+                    method: 'POST',
+                    headers: {{
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': token
+                    }}
+                }});
+
+                const data = await res.json();
+                if (res.ok && data.ok) {{
+                    storedAdminToken = token;
+                    if (document.getElementById('rememberAdminToken').checked) {{
+                        sessionStorage.setItem('openclaw_admin_token', token);
+                        localStorage.setItem('openclaw_admin_token', token);
+                    }}
+                    unlockAdminSession();
+                    document.getElementById('adminAuthModal').style.display = 'none';
+                    showToast('👑 Session Administrateur Maître Guichet Freebox validée !');
+                }} else {{
+                    errEl.style.display = 'block';
+                    errEl.innerText = data.detail || 'Jeton administrateur invalide.';
+                }}
+            }} catch (err) {{
+                errEl.style.display = 'block';
+                errEl.innerText = 'Erreur réseau : ' + err.message;
+            }}
+        }}
+
+        function unlockAdminSession() {{
+            isAdminAuthenticated = true;
+
+            // Update Header Role Pill
+            const pill = document.getElementById('currentRoleBadge');
+            const dot = document.getElementById('roleStatusDot');
+            const label = document.getElementById('roleLabelText');
+            const authBtn = document.getElementById('adminAuthToggleBtn');
+
+            pill.className = 'role-pill admin-active';
+            dot.className = 'status-dot gold';
+            label.innerHTML = '👑 <strong>Administrateur Maître (Guichet Freebox)</strong>';
+            authBtn.className = 'btn btn-sm btn-danger';
+            authBtn.innerHTML = '🔒 Verrouiller le Mode Admin';
+
+            // Unlock Lock Badges in Navbar
+            ['lockBadgeWan', 'lockBadgeKeys', 'lockBadgeModels'].forEach(id => {{
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '✓';
+            }});
+
+            // Show Unlocked Views
+            document.getElementById('wanLockedView').style.display = 'none';
+            document.getElementById('wanUnlockedView').style.display = 'block';
+
+            document.getElementById('keysLockedView').style.display = 'none';
+            document.getElementById('keysUnlockedView').style.display = 'block';
+
+            document.getElementById('modelsLockedView').style.display = 'none';
+            document.getElementById('modelsUnlockedView').style.display = 'block';
+        }}
+
+        function lockAdminSession() {{
+            isAdminAuthenticated = false;
+            storedAdminToken = '';
+            sessionStorage.removeItem('openclaw_admin_token');
+            localStorage.removeItem('openclaw_admin_token');
+
+            // Reset Header Role Pill
+            const pill = document.getElementById('currentRoleBadge');
+            const dot = document.getElementById('roleStatusDot');
+            const label = document.getElementById('roleLabelText');
+            const authBtn = document.getElementById('adminAuthToggleBtn');
+
+            pill.className = 'role-pill';
+            dot.className = 'status-dot';
+            label.innerText = '👤 Mode Utilisateur (Accès Restreint)';
+            authBtn.className = 'btn btn-sm btn-admin';
+            authBtn.innerHTML = '👑 Accès Maître Guichet Freebox 🔒';
+
+            // Reset Lock Badges
+            ['lockBadgeWan', 'lockBadgeKeys', 'lockBadgeModels'].forEach(id => {{
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '🔒';
+            }});
+
+            // Hide Unlocked Views
+            document.getElementById('wanLockedView').style.display = 'block';
+            document.getElementById('wanUnlockedView').style.display = 'none';
+
+            document.getElementById('keysLockedView').style.display = 'block';
+            document.getElementById('keysUnlockedView').style.display = 'none';
+
+            document.getElementById('modelsLockedView').style.display = 'block';
+            document.getElementById('modelsUnlockedView').style.display = 'none';
+
+            switchTab('chat');
+            showToast('Session Administrateur verrouillée. Mode Utilisateur actif.');
+        }}
+
+        // Auto-check stored token on load
+        async function checkStoredAdminAuth() {{
+            if (!storedAdminToken) return;
+            try {{
+                const res = await fetch('/api/v1/admin/auth/verify', {{
+                    method: 'POST',
+                    headers: {{ 'X-Admin-Token': storedAdminToken }}
+                }});
+                if (res.ok) {{
+                    unlockAdminSession();
+                }} else {{
+                    storedAdminToken = '';
+                    sessionStorage.removeItem('openclaw_admin_token');
+                    localStorage.removeItem('openclaw_admin_token');
+                }}
+            }} catch (e) {{
+                // Ignore transient network errors
+            }}
+        }}
+
+        // ── Free Community Key Generation ──
         async function generateFreeKey() {{
             try {{
                 const res = await fetch('/api/v1/auth/free-key', {{ method: 'POST' }});
@@ -1475,14 +1859,15 @@ main();</pre>
 
                     if (document.getElementById('chatApiKey')) document.getElementById('chatApiKey').value = keyVal;
                     if (document.getElementById('playKey')) document.getElementById('playKey').value = keyVal;
+                    if (document.getElementById('verifyKeyInput')) document.getElementById('verifyKeyInput').value = keyVal;
 
                     document.getElementById('keyModal').style.display = 'flex';
-                    showToast('Clé d’accès gratuite générée avec succès !');
+                    showToast('🎉 Clé communautaire gratuite générée avec succès !');
                 }} else {{
                     showToast('Erreur : ' + (data.detail || 'Inconnue'), false);
                 }}
             }} catch (err) {{
-                showToast('Erreur serveur : ' + err, false);
+                showToast('Erreur serveur : ' + err.message, false);
             }}
         }}
 
@@ -1495,11 +1880,46 @@ main();</pre>
             switchTab(tabId);
         }}
 
-        // ── WAN Controller ──
+        // ── User Key Verifier ──
+        async function verifyUserKey() {{
+            const key = document.getElementById('verifyKeyInput').value.trim();
+            const resBox = document.getElementById('verifyKeyResult');
+            if (!key) {{
+                showToast('Veuillez entrer une clé à tester.', false);
+                return;
+            }}
+
+            resBox.innerHTML = '<span style="color:var(--cyan);">Vérification en cours...</span>';
+            try {{
+                const res = await fetch('/api/v1/auth/verify', {{
+                    method: 'POST',
+                    headers: {{ 'X-API-Key': key }}
+                }});
+                const data = await res.json();
+                if (res.ok && data.valid) {{
+                    resBox.innerHTML = `
+                        <div style="background:rgba(0,255,157,0.06); border:1px solid var(--border-highlight); border-radius:0.75rem; padding:1rem; font-size:0.85rem;">
+                            <strong style="color:var(--primary);">✅ Clé Valide & Active</strong><br>
+                            <span style="color:var(--text-muted);">Plan :</span> <strong style="color:var(--cyan);">${{data.plan || 'free_community'}}</strong><br>
+                            <span style="color:var(--text-muted);">Quota :</span> ${{data.quota_limit === -1 ? 'Illimité (Accès Libre)' : (data.quota_used + ' / ' + data.quota_limit)}}
+                        </div>
+                    `;
+                }} else {{
+                    resBox.innerHTML = `
+                        <div style="background:rgba(244,63,94,0.08); border:1px solid rgba(244,63,94,0.3); border-radius:0.75rem; padding:1rem; font-size:0.85rem; color:var(--rose);">
+                            ❌ Clé Invalide ou Révoquée : ${{data.message || 'Non reconnue'}}
+                        </div>
+                    `;
+                }}
+            }} catch (err) {{
+                resBox.innerHTML = `<span style="color:var(--rose);">Erreur réseau : ${{err.message}}</span>`;
+            }}
+        }}
+
+        // ── Admin WAN Controller ──
         async function toggleWanNode() {{
             const btn = document.getElementById('wanToggleBtn');
             const alertBox = document.getElementById('wanAlert');
-            const token = document.getElementById('wanAdminToken').value;
             const remoteAccess = document.getElementById('wanRemoteAccess').checked;
 
             btn.disabled = true;
@@ -1507,7 +1927,7 @@ main();</pre>
 
             try {{
                 const headers = {{ 'Content-Type': 'application/json' }};
-                if (token) headers['X-Admin-Token'] = token;
+                if (storedAdminToken) headers['X-Admin-Token'] = storedAdminToken;
 
                 const res = await fetch('/api/v1/admin/wan/toggle', {{
                     method: 'POST',
@@ -1530,64 +1950,124 @@ main();</pre>
                     showToast('Erreur : ' + (data.detail || JSON.stringify(data)), false);
                 }}
             }} catch (err) {{
-                showToast('Erreur réseau : ' + err, false);
+                showToast('Erreur réseau : ' + err.message, false);
             }} finally {{
                 btn.disabled = false;
                 btn.innerText = '🌐 Reconfigurer le Nœud WAN';
             }}
         }}
 
+        // ── Admin Key Management ──
+        async function fetchAdminKeysList() {{
+            const tbody = document.getElementById('adminKeysTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1rem;">Chargement des clés...</td></tr>';
+
+            try {{
+                const headers = {{}};
+                if (storedAdminToken) headers['X-Admin-Token'] = storedAdminToken;
+
+                const res = await fetch('/api/v1/admin/keys', {{ headers: headers }});
+                const data = await res.json();
+                if (res.ok && data.keys) {{
+                    if (data.keys.length === 0) {{
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.5rem;">Aucune clé en base.</td></tr>';
+                        return;
+                    }}
+                    tbody.innerHTML = '';
+                    data.keys.forEach(k => {{
+                        const tr = document.createElement('tr');
+                        const isActive = k.active;
+                        const dateStr = k.created_at ? new Date(k.created_at * 1000).toLocaleString('fr-FR') : '-';
+                        const keyDisplay = k.key ? k.key : (k.key_hash ? k.key_hash.substring(0, 16) + '...' : 'sk_claw_***');
+                        tr.innerHTML = `
+                            <td><strong class="font-mono" style="color:var(--cyan); font-size:0.8rem;">${{escapeHtml(keyDisplay)}}</strong></td>
+                            <td>${{escapeHtml(k.email || '-')}}</td>
+                            <td><span class="badge badge-purple">${{escapeHtml(k.plan || 'custom')}}</span></td>
+                            <td class="font-mono">${{k.quota_used}} / ${{k.quota_limit === -1 ? '∞' : k.quota_limit}}</td>
+                            <td><span class="badge ${{isActive ? 'badge-green' : 'badge-amber'}}">${{isActive ? 'Active' : 'Révoquée'}}</span></td>
+                            <td style="font-size:0.75rem; color:var(--text-dim);">${{dateStr}}</td>
+                            <td>
+                                ${{isActive ? `<button class="btn btn-sm btn-danger" onclick="revokeAdminKey('${{escapeHtml(k.key || k.key_hash)}}')">Révoquer ❌</button>` : '<span style="color:var(--text-dim); font-size:0.75rem;">Révoquée</span>'}}
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    }});
+                }} else {{
+                    tbody.innerHTML = `<tr><td colspan="7" style="color:var(--rose); text-align:center; padding:1.5rem;">Erreur : ${{data.detail || 'Non autorisé'}}</td></tr>`;
+                }}
+            }} catch (err) {{
+                tbody.innerHTML = `<tr><td colspan="7" style="color:var(--rose); text-align:center; padding:1.5rem;">Erreur réseau : ${{err.message}}</td></tr>`;
+            }}
+        }}
+
+        async function createKeyAdmin() {{
+            const email = document.getElementById('adminNewKeyEmail').value.trim();
+            const plan = document.getElementById('adminNewKeyPlan').value;
+            const quota = parseInt(document.getElementById('adminNewKeyQuota').value, 10);
+
+            if (!email) {{
+                showToast("Veuillez entrer une adresse email.", false);
+                return;
+            }}
+
+            try {{
+                const headers = {{ 'Content-Type': 'application/json' }};
+                if (storedAdminToken) headers['X-Admin-Token'] = storedAdminToken;
+
+                const res = await fetch('/api/v1/admin/keys/create', {{
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({{
+                        email: email,
+                        plan: plan,
+                        quota_limit: isNaN(quota) ? -1 : quota
+                    }})
+                }});
+                const data = await res.json();
+                if (res.ok && data.ok) {{
+                    showToast("Clé d'administration créée avec succès !");
+                    fetchAdminKeysList();
+                }} else {{
+                    showToast('Erreur : ' + (data.detail || JSON.stringify(data)), false);
+                }}
+            }} catch (err) {{
+                showToast('Erreur réseau : ' + err.message, false);
+            }}
+        }}
+
+        async function revokeAdminKey(keyIdentifier) {{
+            if (!confirm(`Confirmez-vous la révocation définitive de la clé ${{keyIdentifier}} ?`)) return;
+            try {{
+                const headers = {{}};
+                if (storedAdminToken) headers['X-Admin-Token'] = storedAdminToken;
+
+                const res = await fetch(`/api/v1/admin/keys/${{encodeURIComponent(keyIdentifier)}}`, {{
+                    method: 'DELETE',
+                    headers: headers
+                }});
+                const data = await res.json();
+                if (res.ok && data.ok) {{
+                    showToast('Clé révoquée avec succès !');
+                    fetchAdminKeysList();
+                }} else {{
+                    showToast('Erreur révocation : ' + (data.detail || 'Inconnue'), false);
+                }}
+            }} catch (err) {{
+                showToast('Erreur réseau : ' + err.message, false);
+            }}
+        }}
+
         // ── Model Activation ──
         async function activateModel(modelId) {{
             const alertEl = document.getElementById('modelAlert');
-            alertEl.innerHTML = `<div class="status-pill" style="color:var(--cyan);">⚡ Activation du modèle <strong>${{modelId}}</strong> sur le cluster...</div>`;
+            alertEl.innerHTML = `<div style="background:rgba(0,240,255,0.06); border:1px solid var(--border-cyan); border-radius:0.75rem; padding:0.8rem; color:var(--cyan); font-size:0.85rem;">⚡ Activation du modèle <strong>${{modelId}}</strong> sur le cluster...</div>`;
             setTimeout(() => {{
-                alertEl.innerHTML = `<div class="status-pill" style="color:var(--primary); border-color:var(--border-highlight);">✅ Modèle <strong>${{modelId}}</strong> chargé et prêt !</div>`;
+                alertEl.innerHTML = `<div style="background:rgba(0,255,157,0.06); border:1px solid var(--border-highlight); border-radius:0.75rem; padding:0.8rem; color:var(--primary); font-size:0.85rem;">✅ Modèle <strong>${{modelId}}</strong> chargé en VRAM et prêt pour le maillage !</div>`;
                 const sel = document.getElementById('chatModel');
                 if (sel) sel.value = modelId;
-                showToast(`Modèle ${{modelId}} activé pour le chat !`);
+                showToast(`Modèle ${{modelId}} activé !`);
             }}, 600);
-        }}
-
-        // ── Live Benchmark Duel ──
-        async function runBenchmarkCompare() {{
-            const prompt = document.getElementById('comparePrompt').value;
-            const container = document.getElementById('compareResultsGrid');
-            container.innerHTML = '<div style="color:var(--cyan); padding:1rem; grid-column:1/-1;">⚡ Exécution en cours sur tous les backends matériels...</div>';
-
-            try {{
-                const res = await fetch('/api/v1/benchmarks/compare', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ prompt: prompt }})
-                }});
-                const data = await res.json();
-                container.innerHTML = '';
-
-                data.results.forEach((r, idx) => {{
-                    const card = document.createElement('div');
-                    const isWinner = idx === 0;
-                    card.style.cssText = `background:${{isWinner ? 'rgba(0,255,157,0.06)' : 'rgba(255,255,255,0.02)'}}; border:1px solid ${{isWinner ? 'var(--border-highlight)' : 'var(--border-color)'}}; border-radius:1.25rem; padding:1.4rem; display:flex; flex-direction:column; justify-content:space-between;`;
-                    card.innerHTML = `
-                        <div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
-                                <strong style="color:${{isWinner ? 'var(--primary)' : '#fff'}}; font-size:1.05rem;">${{r.target_name}}</strong>
-                                ${{isWinner ? '<span class="badge badge-green">🏆 Plus Rapide</span>' : ''}}
-                            </div>
-                            <div style="display:flex; gap:1.2rem; margin:0.8rem 0; font-size:0.9rem;">
-                                <div><span style="color:var(--text-muted);">TTFT :</span> <strong style="color:var(--cyan);">${{r.ttft_ms}} ms</strong></div>
-                                <div><span style="color:var(--text-muted);">Débit :</span> <strong style="color:var(--primary);">${{r.tokens_per_sec}} tok/s</strong></div>
-                            </div>
-                            <div style="background:rgba(0,0,0,0.4); padding:0.75rem; border-radius:0.6rem; font-size:0.85rem; color:var(--text-main); margin-top:0.6rem; line-height:1.5;">
-                                "${{escapeHtml(r.response)}}"
-                            </div>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                }});
-            }} catch (err) {{
-                container.innerHTML = `<div style="color:var(--rose); padding:1rem; grid-column:1/-1;">Erreur lors du benchmark : ${{err}}</div>`;
-            }}
         }}
 
         // ── Chat Live ──
@@ -1603,7 +2083,7 @@ main();</pre>
             const latencyBadge = document.getElementById('chatLatencyBadge');
             const kvBadge = document.getElementById('kvCacheBadge');
 
-            // Add user message
+            // Add user bubble
             const userBubble = document.createElement('div');
             userBubble.className = 'chat-bubble user';
             userBubble.innerHTML = `<div class="chat-avatar">U</div><div class="chat-text">${{escapeHtml(prompt)}}</div>`;
@@ -1628,7 +2108,6 @@ main();</pre>
                 if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
 
                 if (targetNode !== 'auto') {{
-                    // Routage direct vers un pair précis
                     const res = await fetch('/api/v1/mesh/dispatch', {{
                         method: 'POST',
                         headers: {{ 'Content-Type': 'application/json' }},
@@ -1644,7 +2123,7 @@ main();</pre>
                     latencyBadge.textContent = duration + ' ms';
                     if (res.ok && data.ok) {{
                         const text = data.result && data.result.text ? data.result.text : JSON.stringify(data.result);
-                        botText.innerHTML = `<span class="badge badge-purple" style="margin-bottom:0.4rem; font-size:0.7rem;">⚡ Nœud Mesh : ${{escapeHtml(data.target_node || targetNode)}}</span><br>` + escapeHtml(text).replace(/\n/g, '<br>');
+                        botText.innerHTML = `<span class="badge badge-purple" style="margin-bottom:0.4rem; font-size:0.7rem;">⚡ Nœud Mesh : ${{escapeHtml(data.target_node || targetNode)}}</span><br>` + escapeHtml(text).split('\\\\n').join('<br>');
                     }} else {{
                         botText.innerText = 'Erreur maillage : ' + (data.message || JSON.stringify(data));
                     }}
@@ -1669,15 +2148,23 @@ main();</pre>
                     }}
 
                     if (res.ok && data.choices && data.choices[0]) {{
-                        botText.innerHTML = escapeHtml(data.choices[0].message.content).replace(/\n/g, '<br>');
+                        botText.innerHTML = escapeHtml(data.choices[0].message.content).split('\\\\n').join('<br>');
                     }} else {{
                         botText.innerText = 'Erreur : ' + (data.detail || JSON.stringify(data));
                     }}
                 }}
             }} catch (err) {{
-                botText.innerText = 'Erreur réseau : ' + err;
+                botText.innerText = 'Erreur réseau : ' + err.message;
             }}
             chatBox.scrollTop = chatBox.scrollHeight;
+        }}
+
+        function insertPrompt(text) {{
+            const input = document.getElementById('chatInput');
+            if (input) {{
+                input.value = text;
+                input.focus();
+            }}
         }}
 
         // ── Skills Playground ──
@@ -1689,7 +2176,7 @@ main();</pre>
 
             try {{
                 const payloadJson = JSON.parse(rawPayload);
-                out.innerText = 'Exécution de la compétence en cours...';
+                out.innerText = 'Exécution de la compétence en cours sur le maillage...';
 
                 const headers = {{ 'Content-Type': 'application/json' }};
                 if (key) headers['X-API-Key'] = key;
@@ -1709,16 +2196,61 @@ main();</pre>
             }}
         }}
 
-        // ── Snippets Switcher ──
+        // ── Benchmark Live ──
+        async function runBenchmarkCompare() {{
+            const prompt = document.getElementById('comparePrompt').value;
+            const container = document.getElementById('compareResultsGrid');
+            container.innerHTML = '<div style="color:var(--cyan); padding:1rem; grid-column:1/-1;">⚡ Exécution du benchmark en cours sur les backends matériels...</div>';
+
+            try {{
+                const res = await fetch('/api/v1/benchmarks/compare', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ prompt: prompt }})
+                }});
+                const data = await res.json();
+                container.innerHTML = '';
+
+                data.results.forEach((r, idx) => {{
+                    const card = document.createElement('div');
+                    const isWinner = idx === 0;
+                    card.style.cssText = `background:${{isWinner ? 'rgba(0,255,157,0.06)' : 'rgba(255,255,255,0.02)'}}; border:1px solid ${{isWinner ? 'var(--border-highlight)' : 'var(--border-color)'}}; border-radius:1.25rem; padding:1.4rem; display:flex; flex-direction:column; justify-content:space-between;`;
+                    card.innerHTML = `
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                                <strong style="color:${{isWinner ? 'var(--primary)' : '#fff'}}; font-size:1.05rem;">${{r.target_name}}</strong>
+                                ${{isWinner ? '<span class="badge badge-green">🏆 Plus Rapide</span>' : ''}}
+                            </div>
+                            <div style="display:flex; gap:1.2rem; margin:0.8rem 0; font-size:0.9rem;">
+                                <div><span style="color:var(--text-muted);">TTFT :</span> <strong style="color:var(--cyan);">${{r.ttft_ms}} ms</strong></div>
+                                <div><span style="color:var(--text-muted);">Débit :</span> <strong style="color:var(--primary);">${{r.tokens_per_sec}} tok/s</strong></div>
+                            </div>
+                            <div style="background:rgba(0,0,0,0.4); padding:0.75rem; border-radius:0.6rem; font-size:0.82rem; color:var(--text-main); margin-top:0.6rem; line-height:1.5;">
+                                "${{escapeHtml(r.response)}}"
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                }});
+            }} catch (err) {{
+                container.innerHTML = `<div style="color:var(--rose); padding:1rem; grid-column:1/-1;">Erreur lors du benchmark : ${{err.message}}</div>`;
+            }}
+        }}
+
+        // ── Code Snippet Switcher ──
         function showCodeSnippet(lang) {{
-            document.getElementById('snippetCurl').style.display = lang === 'curl' ? 'block' : 'none';
-            document.getElementById('snippetPython').style.display = lang === 'python' ? 'block' : 'none';
-            document.getElementById('snippetTs').style.display = lang === 'ts' ? 'block' : 'none';
+            ['curl', 'python', 'ts', 'mcp'].forEach(l => {{
+                const el = document.getElementById('snippet' + l.charAt(0).toUpperCase() + l.slice(1));
+                const btn = document.getElementById('btnSnippet' + l.charAt(0).toUpperCase() + l.slice(1));
+                if (el) el.style.display = l === lang ? 'block' : 'none';
+                if (btn) btn.className = l === lang ? 'btn btn-secondary active' : 'btn btn-secondary';
+            }});
         }}
 
         function escapeHtml(text) {{
+            if (!text) return '';
             const div = document.createElement('div');
-            div.innerText = text;
+            div.innerText = String(text);
             return div.innerHTML;
         }}
 
@@ -1738,14 +2270,14 @@ main();</pre>
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
             let w = canvas.width = canvas.offsetWidth || 1000;
-            let h = canvas.height = 380;
+            let h = canvas.height = 340;
 
             const nodes3D = [
                 {{ id: 'local', name: 'OpenClaw Gateway', x: 0, y: 0, z: 0, radius: 18, color: '#00ff9d' }},
                 {{ id: 'gpu1', name: 'Apple Metal GPU (MLX)', x: -160, y: -70, z: 90, radius: 13, color: '#00f0ff' }},
-                {{ id: 'gpu2', name: 'NVIDIA RTX 4090 (CUDA)', x: 160, y: -70, z: -90, radius: 13, color: '#38bdf8' }},
+                {{ id: 'gpu2', name: 'GPU CUDA (Nœud Distant)', x: 160, y: -70, z: -90, radius: 13, color: '#38bdf8' }},
                 {{ id: 'npu', name: 'Intel Ultra NPU', x: -120, y: 100, z: -110, radius: 12, color: '#c084fc' }},
-                {{ id: 'dht', name: 'S/Kademlia DHT 160-bit', x: 140, y: 90, z: 100, radius: 12, color: '#a855f7' }},
+                {{ id: 'dht', name: 'Guichet Freebox Ultra', x: 140, y: 90, z: 100, radius: 12, color: '#fbbf24' }},
                 {{ id: 'relay', name: 'QUIC / TURN Relay', x: 0, y: -140, z: -130, radius: 12, color: '#f59e0b' }},
             ];
 
@@ -1758,10 +2290,9 @@ main();</pre>
                 {{ from: 0, to: 1, progress: 0.1, speed: 0.015, color: '#00ff9d' }},
                 {{ from: 0, to: 2, progress: 0.6, speed: 0.02, color: '#00f0ff' }},
                 {{ from: 2, to: 5, progress: 0.3, speed: 0.012, color: '#f59e0b' }},
-                {{ from: 4, to: 0, progress: 0.8, speed: 0.018, color: '#a855f7' }}
+                {{ from: 4, to: 0, progress: 0.8, speed: 0.018, color: '#fbbf24' }}
             ];
 
-            // Interactive mouse rotation
             canvas.addEventListener('mousedown', (e) => {{
                 isDragging = true;
                 lastMouseX = e.clientX;
@@ -1806,25 +2337,24 @@ main();</pre>
 
             function animate() {{
                 ctx.clearRect(0, 0, w, h);
-                if (!isDragging) meshAngleY += 0.005;
+                if (!isDragging) meshAngleY += 0.004;
 
                 const projected = nodes3D.map(n => ({{ ...n, proj: project(n) }}));
                 projected.sort((a, b) => b.proj.z - a.proj.z);
 
-                // Draw links
+                // Links
                 links.forEach(([i, j]) => {{
                     const p1 = project(nodes3D[i]);
                     const p2 = project(nodes3D[j]);
-
                     ctx.beginPath();
                     ctx.moveTo(p1.x, p1.y);
                     ctx.lineTo(p2.x, p2.y);
-                    ctx.strokeStyle = 'rgba(0, 255, 157, 0.16)';
-                    ctx.lineWidth = 1.4 * Math.min(p1.scale, p2.scale);
+                    ctx.strokeStyle = 'rgba(0, 255, 157, 0.15)';
+                    ctx.lineWidth = 1.3 * Math.min(p1.scale, p2.scale);
                     ctx.stroke();
                 }});
 
-                // Draw token packets
+                // Packets
                 packets.forEach(pkt => {{
                     pkt.progress = (pkt.progress + pkt.speed) % 1.0;
                     const pA = project(nodes3D[pkt.from]);
@@ -1836,39 +2366,36 @@ main();</pre>
                     ctx.arc(curX, curY, 4, 0, Math.PI * 2);
                     ctx.fillStyle = pkt.color;
                     ctx.shadowColor = pkt.color;
-                    ctx.shadowBlur = 10;
+                    ctx.shadowBlur = 8;
                     ctx.fill();
                     ctx.shadowBlur = 0;
                 }});
 
-                // Draw nodes
+                // Nodes
                 const now = Date.now() / 1000;
                 projected.forEach(n => {{
                     const p = n.proj;
                     const r = n.radius * p.scale;
                     const pulse = Math.sin(now * 3 + n.x) * 3 * p.scale;
 
-                    // Glow outer ring
                     ctx.beginPath();
-                    ctx.arc(p.x, p.y, Math.max(1, r + pulse + 5), 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(0, 255, 157, 0.12)';
+                    ctx.arc(p.x, p.y, Math.max(1, r + pulse + 4), 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(0, 255, 157, 0.1)';
                     ctx.fill();
 
-                    // Node core
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, Math.max(1, r), 0, Math.PI * 2);
                     ctx.fillStyle = n.color;
                     ctx.shadowColor = n.color;
-                    ctx.shadowBlur = 14;
+                    ctx.shadowBlur = 12;
                     ctx.fill();
                     ctx.shadowBlur = 0;
 
-                    // Label
                     if (p.scale > 0.5) {{
                         ctx.fillStyle = '#f8fafc';
                         ctx.font = `600 ${{Math.round(11 * p.scale)}}px 'Plus Jakarta Sans', sans-serif`;
                         ctx.textAlign = 'center';
-                        ctx.fillText(n.name, p.x, p.y + r + 15 * p.scale);
+                        ctx.fillText(n.name, p.x, p.y + r + 14 * p.scale);
                     }}
                 }});
 
@@ -1877,7 +2404,7 @@ main();</pre>
 
             window.addEventListener('resize', () => {{
                 w = canvas.width = canvas.offsetWidth || 1000;
-                h = canvas.height = 380;
+                h = canvas.height = 340;
             }});
 
             animate();
@@ -1890,7 +2417,6 @@ main();</pre>
                 if (!res.ok) return;
                 const data = await res.json();
 
-                // Update metrics
                 if (document.getElementById('metricLatency')) {{
                     document.getElementById('metricLatency').innerHTML = `${{data.avg_latency_ms || '0.0'}} <span class="metric-unit">ms</span>`;
                 }}
@@ -1911,7 +2437,6 @@ main();</pre>
                     document.getElementById('nodeHostStatus').innerText = `127.0.0.1:8000 · ${{chip}}`;
                 }}
 
-                // Update WAN badge if active
                 if (data.wan_node_active) {{
                     const wanBadge = document.getElementById('wanBadge');
                     if (wanBadge && !wanBadge.className.includes('badge-green')) {{
@@ -1920,11 +2445,9 @@ main();</pre>
                     }}
                 }}
             }} catch (err) {{
-                // Ignore transient network errors during poll
+                // Ignore transient network errors
             }}
         }}
-
-        let currentGuichetUrl = '';
 
         async function fetchGuichetStatus() {{
             try {{
@@ -1940,8 +2463,8 @@ main();</pre>
 
                 if (data.connected) {{
                     if (indicator) indicator.className = 'guichet-indicator online';
-                    currentGuichetUrl = data.guichet_url || '';
-                    if (urlText) urlText.innerText = currentGuichetUrl;
+                    currentGuichetUrl = data.guichet_url || 'http://82.67.166.90:8790';
+                    if (urlText) urlText.innerText = currentGuichetUrl.replace('http://', '');
                     if (ipText) ipText.innerText = data.assigned_ip || '10.88.0.x (Alloué)';
                     if (rttText) rttText.innerText = (data.rtt_ms !== null && data.rtt_ms !== undefined ? data.rtt_ms + ' ms' : '< 1 ms');
                     const count = data.bootstrap_peers_count || data.known_peers_count || 1;
@@ -1952,17 +2475,16 @@ main();</pre>
                     }}
                 }} else if (data.guichet_url) {{
                     if (indicator) indicator.className = 'guichet-indicator';
-                    if (urlText) urlText.innerText = data.guichet_url;
+                    if (urlText) urlText.innerText = data.guichet_url.replace('http://', '');
                     if (badge) {{
                         badge.className = 'badge badge-cyan';
-                        badge.innerText = 'Connexion en cours...';
+                        badge.innerText = 'Connexion...';
                     }}
                 }} else {{
                     if (indicator) indicator.className = 'guichet-indicator offline';
-                    if (urlText) urlText.innerText = 'Non connecté (Mode Local)';
                     if (badge) {{
                         badge.className = 'badge badge-amber';
-                        badge.innerText = 'Hors-ligne Guichet';
+                        badge.innerText = 'Mode Local';
                     }}
                 }}
             }} catch (e) {{
@@ -1970,8 +2492,14 @@ main();</pre>
             }}
         }}
 
-        async function promptReconnectGuichet() {{
-            const url = prompt("Entrez l'URL du Guichet Unique Freebox (ex: http://127.0.0.1:8790 ou http://82.67.166.90:8790) :", currentGuichetUrl || "http://127.0.0.1:8790");
+        async function handleGuichetReconnect() {{
+            if (!isAdminAuthenticated) {{
+                showToast("Seul l'Administrateur Maître Guichet Freebox peut forcer la reconnexion.", false);
+                toggleAdminModal();
+                return;
+            }}
+
+            const url = prompt("Entrez l'adresse du Guichet Unique Freebox :", currentGuichetUrl || "http://127.0.0.1:8790");
             if (!url) return;
             try {{
                 const res = await fetch('/api/v1/guichet/connect', {{
@@ -1980,11 +2508,11 @@ main();</pre>
                     body: JSON.stringify({{ guichet_url: url.trim() }})
                 }});
                 const data = await res.json();
-                showToast(data.message || (data.ok ? 'Raccordement réussi !' : 'Échec de connexion'));
+                showToast(data.message || (data.ok ? 'Raccordement Guichet réussi !' : 'Échec de connexion'));
                 fetchGuichetStatus();
                 fetchMeshPeers();
             }} catch (err) {{
-                showToast('Erreur réseau lors de la reconnexion : ' + err, false);
+                showToast('Erreur de reconnexion : ' + err.message, false);
             }}
         }}
 
@@ -2014,7 +2542,7 @@ main();</pre>
 
                 if (tbody) {{
                     if (peers.length === 0) {{
-                        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.5rem;">Aucun autre pair détecté pour l'instant. Le Guichet Unique recherche activement les pairs sur le maillage mondial.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.5rem;">Aucun pair externe détecté pour le moment. L'orchestrateur Guichet Freebox surveille les annonces.</td></tr>`;
                         return;
                     }}
                     tbody.innerHTML = '';
@@ -2023,28 +2551,32 @@ main();</pre>
                         const isOnline = p.status === 'online';
                         const roleColor = p.role === 'hub' ? 'var(--cyan)' : (p.role === 'gpu_compute' ? 'var(--primary)' : 'var(--purple)');
                         const skillsStr = (p.skills || []).slice(0, 4).join(', ') || 'Inférence IA';
-                        const ipDisplay = p.mesh_ip ? `<span style="color:var(--cyan); font-family:monospace;">${{p.mesh_ip}}</span>` : `<span style="color:var(--text-muted); font-family:monospace;">${{p.local_ip || p.public_ip || '-'}}</span>`;
+                        // Privacy protection: for non-admins, mask sensitive WAN IP parts
+                        let ipDisplay = p.mesh_ip ? `<span style="color:var(--cyan); font-family:monospace;">${{p.mesh_ip}}</span>` : `<span style="color:var(--text-muted); font-family:monospace;">10.88.0.***</span>`;
+                        if (isAdminAuthenticated && (p.public_ip || p.local_ip)) {{
+                            ipDisplay = `<span style="color:var(--primary); font-family:monospace;">${{p.public_ip || p.local_ip}}</span>`;
+                        }}
                         const hw = p.hardware_summary || (p.hardware ? (p.hardware.accelerator_name || p.hardware.model || 'Machine IA') : 'CPU / GPU Standard');
 
                         tr.innerHTML = `
                             <td>
-                                <strong style="color:var(--text-main); font-size:0.92rem;">${{p.name || p.node_id}}</strong>
-                                <div style="font-size:0.75rem; color:var(--text-dim); font-family:monospace;">${{p.node_id || ''}}</div>
+                                <strong style="color:var(--text-main); font-size:0.92rem;">${{escapeHtml(p.name || p.node_id)}}</strong>
+                                <div style="font-size:0.75rem; color:var(--text-dim); font-family:monospace;">${{escapeHtml((p.node_id || '').substring(0, 18))}}</div>
                             </td>
                             <td>
                                 <span class="badge" style="background:rgba(255,255,255,0.06); color:${{roleColor}}; border:1px solid ${{roleColor}}; font-size:0.72rem;">
-                                    ${{p.role_label || p.role || 'Nœud Mesh'}}
+                                    ${{escapeHtml(p.role_label || p.role || 'Nœud Mesh')}}
                                 </span>
                                 <span class="badge ${{isOnline ? 'badge-green' : 'badge-amber'}}" style="margin-left:0.3rem;">
                                     ${{isOnline ? 'En ligne' : 'Inactif'}}
                                 </span>
                             </td>
                             <td>${{ipDisplay}}</td>
-                            <td><span style="font-size:0.8rem; color:var(--text-muted);">${{hw}}</span></td>
-                            <td><span class="badge badge-cyan" style="font-size:0.72rem;">${{skillsStr}}</span></td>
+                            <td><span style="font-size:0.8rem; color:var(--text-muted);">${{escapeHtml(hw)}}</span></td>
+                            <td><span class="badge badge-cyan" style="font-size:0.72rem;">${{escapeHtml(skillsStr)}}</span></td>
                             <td><strong style="color:var(--amber); font-size:0.85rem;">${{p.rtt_ms !== undefined ? p.rtt_ms + ' ms' : '< 1 ms'}}</strong></td>
                             <td>
-                                <button class="btn btn-sm btn-secondary" onclick="testPingPeer('${{p.name || p.node_id}}')" style="padding:0.25rem 0.6rem; font-size:0.72rem;">
+                                <button class="btn btn-sm btn-secondary" onclick="testPingPeer('${{escapeHtml(p.name || p.node_id)}}')" style="padding:0.25rem 0.6rem; font-size:0.72rem;">
                                     Tester ⚡
                                 </button>
                             </td>
@@ -2052,17 +2584,13 @@ main();</pre>
                         tbody.appendChild(tr);
                     }});
                 }}
-
-                if (manualAlert) {{
-                    showToast(`Annuaire du maillage mis à jour : ${{peers.length}} machine(s) active(s).`);
-                }}
             }} catch (e) {{
                 // Ignore transient errors
             }}
         }}
 
         function testPingPeer(peerName) {{
-            showToast(`Test de connectivité avec '${{peerName}}' envoyé sur le maillage.`);
+            showToast(`Sélection du pair '${{peerName}}' pour le chat.`);
             switchTab('chat');
             const targetSelect = document.getElementById('chatTargetNode');
             if (targetSelect) {{
@@ -2075,7 +2603,9 @@ main();</pre>
             }}
         }}
 
+        // ── Initialization ──
         document.addEventListener('DOMContentLoaded', () => {{
+            checkStoredAdminAuth();
             initMeshCanvas();
             fetchLiveClusterStatus();
             fetchGuichetStatus();
